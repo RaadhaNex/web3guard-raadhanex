@@ -20,27 +20,17 @@ export async function getSupabaseServerClient() {
       get(name: string) {
         return cookieStore.get(name)?.value;
       },
-
       set(name: string, value: string, options: CookieOptions) {
         try {
-          cookieStore.set({
-            name,
-            value,
-            ...options,
-          });
+          cookieStore.set({ name, value, ...options });
         } catch {
           // Server Components cannot always set cookies.
-          // Middleware/client auth flow will handle refresh/logout.
+          // Middleware/proxy and client auth refresh keep sessions in sync.
         }
       },
-
       remove(name: string, options: CookieOptions) {
         try {
-          cookieStore.set({
-            name,
-            value: "",
-            ...options,
-          });
+          cookieStore.set({ name, value: "", ...options });
         } catch {
           // Server Components cannot always delete cookies.
         }

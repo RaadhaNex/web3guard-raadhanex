@@ -1,5 +1,11 @@
 import { ScanDetailClient } from "@/components/dashboard/ScanDetailClient";
 
-export default function ScanDetailPage({ params }: { params: { id: string } }) {
-  return <ScanDetailClient scanId={params.id} />;
+export default async function ScanDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const paramsValue = await params;
+
+  return <ScanDetailClient scanId={paramsValue.id} />;
 }

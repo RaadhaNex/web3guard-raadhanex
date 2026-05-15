@@ -1,5 +1,11 @@
 import { ReportDetailClient } from "@/components/dashboard/ReportDetailClient";
 
-export default function ReportDetailPage({ params }: { params: { id: string } }) {
-  return <ReportDetailClient reportId={params.id} />;
+export default async function ReportDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const paramsValue = await params;
+
+  return <ReportDetailClient reportId={paramsValue.id} />;
 }
