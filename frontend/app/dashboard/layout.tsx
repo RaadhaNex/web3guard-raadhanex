@@ -20,7 +20,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     );
   }
 
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const { data } = await supabase!.auth.getSession();
   if (!data.session) redirect("/auth/login?redirect=/dashboard");
 
