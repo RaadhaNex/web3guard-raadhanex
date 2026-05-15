@@ -17,15 +17,15 @@ function statusClass(status: string) {
 }
 
 export function UnifiedUrlScannerClient() {
-  const [websiteUrl, setWebsiteUrl] = useState("https://example.com");
-  const [projectName, setProjectName] = useState("RAADHANEX Demo Project");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [projectName, setProjectName] = useState("");
   const [projectType, setProjectType] = useState("ERC20 / dApp");
   const [chain, setChain] = useState("Polygon");
   const [contractAddress, setContractAddress] = useState("");
   const [apiBaseUrl, setApiBaseUrl] = useState("");
   const [githubRepoUrl, setGithubRepoUrl] = useState("");
   const [solidityCode, setSolidityCode] = useState("");
-  const [authorized, setAuthorized] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
   const [realOnly, setRealOnly] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,7 +104,7 @@ export function UnifiedUrlScannerClient() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="max-w-4xl">
-        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Phase 5.5.1 • Real-only unified URL scanner</p>
+        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Real-only unified URL scanner</p>
         <h1 className="mt-3 text-3xl font-black sm:text-5xl">Unified Website URL Launch Scanner</h1>
         <p className="mt-4 text-slate-400">
           Enter one public website URL and optional real inputs. The scanner will only score modules that are actually assessed. Missing contract/API/wallet/admin/GitHub inputs are marked as <strong className="text-white">Not assessed</strong>, not fake-scored.

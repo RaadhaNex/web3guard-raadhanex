@@ -4,12 +4,9 @@ import { brand } from "@/lib/constants";
 
 const visibleNav = [
   { href: "/scanner/unified-url", label: "URL Scan" },
-  { href: "/scanner", label: "Scanners" },
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/dashboard/securescore", label: "SecureScore" },
   { href: "/report/professional", label: "Reports" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/billing", label: "Billing" },
 ];
 
 const moreGroups = [
@@ -75,7 +72,6 @@ const moreGroups = [
 
 const mobileQuickNav = [
   { href: "/scanner/unified-url", label: "URL Scan" },
-  { href: "/scanner", label: "Scanners" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/report/professional", label: "Reports" },
   { href: "/feature-status", label: "Status" },

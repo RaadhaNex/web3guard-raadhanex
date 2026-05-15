@@ -18,10 +18,10 @@ type WorkspaceStatus = {
 export function WorkspaceClient() {
   const [organizations, setOrganizations] = useState<OrganizationRecord[]>([]);
   const [status, setStatus] = useState<WorkspaceStatus | null>(null);
-  const [name, setName] = useState("RAADHANEX Client Workspace");
+  const [name, setName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [billingEmail, setBillingEmail] = useState("");
-  const [notes, setNotes] = useState("Manual pre-audit review workspace.");
+  const [notes, setNotes] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,7 +63,7 @@ export function WorkspaceClient() {
         billing_email: billingEmail || null,
         notes,
       }, { headers });
-      setMessage("Workspace saved as a real organization record. No fake team members or fake activity were created.");
+      setMessage("Workspace saved as a real organization record.");
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create workspace");
@@ -76,9 +76,9 @@ export function WorkspaceClient() {
     <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan">Phase 7.2 workspace</p>
+          <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan">Team workspace</p>
           <h1 className="mt-2 text-4xl font-black">Organization + team workspace</h1>
-          <p className="mt-3 max-w-3xl text-slate-400">Create real client/team workspaces, invite manual reviewer records, assign findings, and track comments. Email invite sending and paid seat billing are not faked.</p>
+          <p className="mt-3 max-w-3xl text-slate-400">Create real client/team workspaces, invite manual reviewer records, assign findings, and track comments. Email invite sending and paid seat billing are marked manual until configured.</p>
         </div>
         <Link className="btn-secondary" href="/dashboard">Dashboard</Link>
       </div>
@@ -90,13 +90,13 @@ export function WorkspaceClient() {
         <div className="card p-6">
           <h2 className="text-2xl font-black">Create workspace</h2>
           <label className="mt-4 block text-sm font-bold text-slate-300">Organization name</label>
-          <input className="input mt-2" value={name} onChange={(e) => setName(e.target.value)} />
+          <input className="input mt-2" value={name} onChange={(e) => setName(e.target.value)} placeholder="Organization / client name" />
           <label className="mt-4 block text-sm font-bold text-slate-300">Website URL</label>
           <input className="input mt-2" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://client-project.com" />
           <label className="mt-4 block text-sm font-bold text-slate-300">Billing email</label>
           <input className="input mt-2" value={billingEmail} onChange={(e) => setBillingEmail(e.target.value)} placeholder="billing@example.com" />
           <label className="mt-4 block text-sm font-bold text-slate-300">Notes</label>
-          <textarea className="textarea mt-2 min-h-[100px]" value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <textarea className="textarea mt-2 min-h-[100px]" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Internal notes for manual review" />
           <button className="btn-primary mt-5" onClick={createWorkspace}>Save real workspace</button>
         </div>
 

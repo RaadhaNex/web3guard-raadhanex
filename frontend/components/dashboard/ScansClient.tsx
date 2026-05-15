@@ -30,7 +30,7 @@ export function ScansClient() {
     <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan">Phase 7.2 dashboard</p>
+          <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan">Dashboard scan history</p>
           <h1 className="mt-2 text-4xl font-black">Scan history</h1>
           <p className="mt-3 max-w-3xl text-slate-400">Only scans explicitly saved from scanner/dashboard APIs appear here.</p>
         </div>

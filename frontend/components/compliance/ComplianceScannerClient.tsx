@@ -4,7 +4,7 @@ import { apiGet, apiPost } from "@/lib/api";
 function JsonBlock({ value }: { value: unknown }) { return <pre className="mono max-h-96 overflow-auto rounded-2xl border border-white/10 bg-black/30 p-4 text-xs text-slate-300">{JSON.stringify(value, null, 2)}</pre>; }
 export function ComplianceScannerClient() {
   const [status, setStatus] = useState<any>(null);
-  const [projectName, setProjectName] = useState("RAADHANEX demo project");
+  const [projectName, setProjectName] = useState("");
   const [jurisdictions, setJurisdictions] = useState("general_web3,india_vda,gdpr");
   const [flags, setFlags] = useState({ has_terms:false, has_privacy_policy:false, has_refund_policy:false, collects_personal_data:true, has_data_deletion_flow:false, handles_payments_in_inr:true, has_gst_invoice_flow:false, has_risk_disclosure:false, has_incident_response:false, has_bug_bounty_safe_harbor:false });
   const [result, setResult] = useState<any>(null);

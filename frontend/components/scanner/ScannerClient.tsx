@@ -32,13 +32,13 @@ type RuleInfo = { id: string; name: string; category: string };
 const severityOrder: Severity[] = ["critical", "high", "medium", "low", "info"];
 
 export function ScannerClient({ module }: { module: string }) {
-  const [projectName, setProjectName] = useState("Demo Project");
-  const [input, setInput] = useState(module === "website" ? "https://example.com" : sampleContract);
+  const [projectName, setProjectName] = useState("");
+  const [input, setInput] = useState(module === "website" ? "" : sampleContract);
   const [contractType, setContractType] = useState("ERC20");
   const [language, setLanguage] = useState("Hinglish");
   const [frontendCode, setFrontendCode] = useState(sampleDappCode);
   const [packageJson, setPackageJson] = useState(samplePackageJson);
-  const [apiBaseUrl, setApiBaseUrl] = useState("https://example.com");
+  const [apiBaseUrl, setApiBaseUrl] = useState("");
   const [apiCode, setApiCode] = useState(sampleApiCode);
   const [notes, setNotes] = useState(module === "wallet" ? sampleWalletNotes : module === "admin-opsec" ? sampleAdminNotes : "");
   const [authorized, setAuthorized] = useState(false);
@@ -231,7 +231,7 @@ export function ScannerClient({ module }: { module: string }) {
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8" onMouseEnter={loadChecklist}>
       <div className="mb-8 max-w-4xl">
-        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">{module === "website" ? "Phase 5.5/5.9 passive website surface scanner" : module === "dapp" || module === "api" ? "Phase 5.6 dApp + API risk scanner" : module === "wallet" || module === "admin-opsec" ? "Phase 5.7 wallet + admin OpSec scanner" : "Web3Guard AI scanner module"}</p>
+        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">{module === "website" ? "Passive website surface scanner" : module === "dapp" || module === "api" ? "dApp + API risk scanner" : module === "wallet" || module === "admin-opsec" ? "Wallet + admin OpSec scanner" : "Web3Guard AI scanner module"}</p>
         <h1 className="mt-3 text-3xl font-black sm:text-5xl">{moduleTitle[module]}</h1>
         <p className="mt-4 text-slate-400">
           {module === "website"
@@ -658,7 +658,7 @@ function groupFindingsBySeverity(findings: Finding[]): Record<Severity, Finding[
 const sampleContract = `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-contract DemoToken {
+contract UnsafeSampleToken {
     address public owner;
     mapping(address => uint256) public balanceOf;
 
@@ -676,9 +676,9 @@ contract DemoToken {
 }`;
 
 const sampleDappCode = `const config = {
-  rpcUrl: "https://eth-mainnet.g.alchemy.com/v2/demo-key",
+  rpcUrl: "https://eth-mainnet.g.alchemy.com/v2/unsafe-placeholder-key",
   contractAddress: "0x1111111111111111111111111111111111111111",
-  NEXT_PUBLIC_ADMIN_API_KEY: "demo_public_key"
+  NEXT_PUBLIC_ADMIN_API_KEY: "unsafe_public_placeholder_key"
 };
 
 export function MintButton() {
@@ -699,7 +699,7 @@ const samplePackageJson = `{
 const sampleApiCode = `from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-JWT_SECRET = "demo-hardcoded-secret"
+JWT_SECRET = "unsafe-hardcoded-secret"
 app = FastAPI(debug=True)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True)
 

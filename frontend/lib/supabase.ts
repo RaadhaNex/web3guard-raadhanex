@@ -1,4 +1,5 @@
-import { createClient, type Session, type SupabaseClient, type User } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
+import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
@@ -9,8 +10,9 @@ let browserClient: SupabaseClient | null = null;
 
 export function getSupabaseClient(): SupabaseClient | null {
   if (!isSupabaseConfigured) return null;
+
   if (!browserClient) {
-    browserClient = createClient(supabaseUrl, supabaseAnonKey, {
+    browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -18,13 +20,17 @@ export function getSupabaseClient(): SupabaseClient | null {
       },
     });
   }
+
   return browserClient;
 }
 
 export async function getSession(): Promise<Session | null> {
   const client = getSupabaseClient();
   if (!client) return null;
-  const { data } = await client.auth.getSession();
+
+  const { data, error } = await client.auth.getSession();
+  if (error) return null;
+
   return data.session ?? null;
 }
 
@@ -36,18 +42,41 @@ export async function getSessionToken(): Promise<string | null> {
 export async function getCurrentUser(): Promise<User | null> {
   const client = getSupabaseClient();
   if (!client) return null;
-  const { data } = await client.auth.getUser();
+
+  const { data, error } = await client.auth.getUser();
+  if (error) return null;
+
   return data.user ?? null;
 }
 
 export async function getCurrentUserId(): Promise<string> {
-  const user = await getCurrentUser();
-  if (user?.id) return user.id;
-  return process.env.NEXT_PUBLIC_LOCAL_DEMO_USER_ID || "local-demo-user";
+  const client = getSupabaseClient();
+
+  if (!client) {
+    throw new Error(
+      "Supabase frontend keys are missing. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel, then redeploy."
+    );
+  }
+
+  const {
+    data: { session },
+    error,
+  } = await client.auth.getSession();
+
+  if (error) {
+    throw new Error(error.message || "Could not read login session.");
+  }
+
+  if (!session?.user?.id) {
+    throw new Error("Login required. Please login again.");
+  }
+
+  return session.user.id;
 }
 
 export async function signOutSupabase(): Promise<void> {
   const client = getSupabaseClient();
   if (!client) return;
+
   await client.auth.signOut();
 }
