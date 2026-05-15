@@ -1,0 +1,30 @@
+name: Web3Guard AI Pre-Audit Scan
+
+on:
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  web3guard-preaudit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run Web3Guard pre-audit scan
+        env:
+          WEB3GUARD_API_BASE_URL: ${{ secrets.WEB3GUARD_API_BASE_URL }}
+          WEB3GUARD_API_KEY: ${{ secrets.WEB3GUARD_API_KEY }}
+          WEB3GUARD_FAIL_ON: critical
+        run: |
+          python .github/web3guard/scan.py

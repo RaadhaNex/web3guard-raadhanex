@@ -1,0 +1,45 @@
+{
+  "version": "phase5-trust-builder-v1",
+  "company": "RAADHANEX",
+  "product": "Web3Guard AI",
+  "positioning": "AI-assisted preliminary Web3 launch security review before expensive professional audit.",
+  "primary_disclaimer": "This is a preliminary security review and does not replace a full manual audit.",
+  "what_we_check": [
+    "User-submitted Solidity code for common launch-blocking patterns",
+    "Safe passive website headers and public readiness signals",
+    "dApp frontend checklist risks such as exposed public keys, chain mismatch, and unclear transaction UX",
+    "API backend checklist risks such as CORS, docs exposure, missing rate limit, auth, and webhook signature gaps",
+    "Wallet flow risks such as unlimited approvals, permit signatures, unknown spender display, and blind signing",
+    "Founder/admin OpSec risks such as single owner wallet, missing multisig, no timelock, shared keys, and missing incident response"
+  ],
+  "what_we_do_not_do": [
+    "We do not claim certified audit coverage from automated scans",
+    "We do not guarantee that a project is 100% secure",
+    "We do not run exploit automation against third-party systems",
+    "We do not brute-force, bypass logins, test credentials, or perform destructive testing",
+    "We do not perform deep website or infrastructure testing without ownership verification and written scope",
+    "We do not provide investment, legal, tax, or financial advice"
+  ],
+  "scan_boundaries": [
+    "Website checks are passive by default and use limited HEAD/GET requests only",
+    "Deep scans require authorization and future ownership verification",
+    "Private/internal IP ranges must be blocked by scanner logic",
+    "All URL scans should use timeout, redirect safety, and rate limiting",
+    "User must confirm that they own the project or are authorized to scan it"
+  ],
+  "manual_review_scope": [
+    "Manual review can review scanner findings and prioritize launch fixes",
+    "Manual review can inspect submitted code, website, dApp flow, wallet flow, and admin setup within agreed scope",
+    "Manual review deliverables depend on selected package and provided project material",
+    "Manual review is still not a guarantee of complete security unless separately contracted as a full professional audit by qualified auditors"
+  ],
+  "refund_scope_rules": [
+    "Free scan has no payment and no refund requirement",
+    "Paid quick reports start after payment reference is verified manually",
+    "If the project is out of scope before work starts, the lead may be rejected or refunded manually",
+    "Once manual review work has started, refunds depend on delivered effort, scope, and written agreement",
+    "Any change in scope can require a new quote"
+  ],
+  "responsible_use_summary": "Use Web3Guard AI only for projects you own or are authorized to review. Do not use it to probe third-party systems or generate exploit instructions.",
+  "data_retention_summary": "MVP stores leads and payment references in local JSONL files. Future production should move to encrypted database storage with retention limits and deletion/export workflow."
+}

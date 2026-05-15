@@ -1,0 +1,50 @@
+rules:
+  - id: web3guard-solidity-tx-origin-auth
+    message: Avoid tx.origin for authorization. Use msg.sender with explicit access control.
+    severity: ERROR
+    languages: [solidity]
+    patterns:
+      - pattern: tx.origin
+    metadata:
+      category: access-control
+      confidence: high
+  - id: web3guard-solidity-selfdestruct
+    message: selfdestruct creates destructive/forced-ether risks and requires manual launch review.
+    severity: ERROR
+    languages: [solidity]
+    patterns:
+      - pattern-either:
+          - pattern: selfdestruct($X)
+          - pattern: suicide($X)
+    metadata:
+      category: destructive-call
+      confidence: high
+  - id: web3guard-solidity-delegatecall
+    message: delegatecall can execute external code in the caller context. Review target trust and access control.
+    severity: WARNING
+    languages: [solidity]
+    patterns:
+      - pattern: $X.delegatecall(...)
+    metadata:
+      category: external-call
+      confidence: medium
+  - id: web3guard-solidity-unchecked-low-level-call
+    message: Low-level call result should be checked and handled.
+    severity: WARNING
+    languages: [solidity]
+    patterns:
+      - pattern: $X.call(...);
+    metadata:
+      category: unchecked-call
+      confidence: medium
+  - id: web3guard-solidity-weak-randomness
+    message: block.timestamp/blockhash are weak randomness sources for lotteries, mints, or rewards.
+    severity: WARNING
+    languages: [solidity]
+    patterns:
+      - pattern-either:
+          - pattern: block.timestamp
+          - pattern: blockhash(...)
+    metadata:
+      category: randomness
+      confidence: medium

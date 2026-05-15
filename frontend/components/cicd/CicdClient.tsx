@@ -1,0 +1,15 @@
+"use client";
+import { useState } from "react";
+import { apiGet, apiPost } from "@/lib/api";
+function JsonBlock({ value }: { value: unknown }) { return <pre className="mono max-h-96 overflow-auto rounded-2xl border border-white/10 bg-black/30 p-4 text-xs text-slate-300">{typeof value === "string" ? value : JSON.stringify(value, null, 2)}</pre>; }
+export function CicdClient() {
+  const [status, setStatus] = useState<any>(null);
+  const [template, setTemplate] = useState<any>(null);
+  const [validation, setValidation] = useState<any>(null);
+  const [configText, setConfigText] = useState("name: Web3Guard AI Pre-Audit Scan\non: [pull_request]\njobs:\n  scan:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n");
+  const [error, setError] = useState<string | null>(null);
+  async function loadStatus() { setError(null); try { setStatus(await apiGet("/cicd/status")); } catch (e) { setError(e instanceof Error ? e.message : "Status failed"); } }
+  async function makeTemplate() { setError(null); try { setTemplate(await apiPost("/cicd/template", { api_base_url: "http://localhost:8000", fail_on: "critical", real_only_acknowledged: true })); } catch (e) { setError(e instanceof Error ? e.message : "Template failed"); } }
+  async function validate() { setError(null); try { setValidation(await apiPost("/cicd/validate", { config_text: configText, real_only_acknowledged: true })); } catch (e) { setError(e instanceof Error ? e.message : "Validation failed"); } }
+  return <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8"><p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Mega Phase E • Phase 28</p><h1 className="mt-3 text-3xl font-black sm:text-5xl">CI/CD GitHub Action</h1><p className="mt-4 max-w-3xl text-slate-400">Generate a real GitHub Actions pre-audit scanner template that calls your Web3Guard Developer API. No fake CI status, no dependency install, no private key collection.</p><div className="mt-8 grid gap-6 lg:grid-cols-[0.85fr_1.15fr]"><div className="card space-y-4 p-6"><button className="btn-primary" onClick={loadStatus}>Load CI status</button><button className="btn-secondary" onClick={makeTemplate}>Generate templates</button><label className="block text-sm font-bold text-slate-200">Validate workflow/config text<textarea className="input mt-2 min-h-52" value={configText} onChange={(e) => setConfigText(e.target.value)} /></label><button className="btn-secondary" onClick={validate}>Validate CI config</button>{error && <p className="rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-100">{error}</p>}</div><div className="space-y-5">{status && <div className="card p-6"><p className="font-black text-white">Status</p><JsonBlock value={status} /></div>}{template && <div className="card p-6"><p className="font-black text-white">Generated workflow</p><JsonBlock value={template.workflow_yml} /><p className="mt-4 font-black text-white">Scan helper</p><JsonBlock value={template.scan_py} /></div>}{validation && <div className="card p-6"><p className="font-black text-white">Validation result</p><JsonBlock value={validation} /></div>}</div></div></div>;
+}

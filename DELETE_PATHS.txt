@@ -1,0 +1,5 @@
+# Patch H cleanup instructions
+# Delete these paths from the full project checkout after applying patch files.
+# Reason: root /app is a confusing duplicate data folder. backend/app is the source of truth.
+
+app/

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "== Web3Guard AI by RAADHANEX - Phase 6 Local QA =="
+echo "Backend:"
+echo "  cd backend"
+echo "  python3.12 -m venv .venv"
+echo "  source .venv/bin/activate"
+echo "  python -m pip install --upgrade pip setuptools wheel"
+echo "  pip install -r requirements.txt"
+echo "  cp .env.example .env"
+echo "  uvicorn main:app --reload --host 0.0.0.0 --port 8000"
+echo "Frontend:"
+echo "  cd frontend"
+echo "  npm install"
+echo "  cp .env.local.example .env.local"
+echo "  npm run dev"
+echo "URLs:"
+echo "  http://localhost:8000/health"
+echo "  http://localhost:8000/health/readiness"
+echo "  http://localhost:3000/local-qa"

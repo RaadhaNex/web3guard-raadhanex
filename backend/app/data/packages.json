@@ -1,0 +1,110 @@
+[
+  {
+    "id": "free-scan",
+    "name": "Free Scan",
+    "category": "free",
+    "price_inr": 0,
+    "billing_cycles": ["one_time"],
+    "description": "Basic preliminary scan with launch-readiness score preview.",
+    "deliverables": ["Contract/website/checklist scan", "Basic score", "Top risk hints"],
+    "turnaround_time": "Instant",
+    "cta": "Start Free Scan",
+    "popular": false
+  },
+  {
+    "id": "quick-risk-report",
+    "name": "Quick Risk Scan Report",
+    "category": "service",
+    "price_inr": 999,
+    "billing_cycles": ["one_time"],
+    "description": "Founder-friendly quick report with prioritized risks and fix direction.",
+    "deliverables": ["Manual review of scan output", "Priority risk summary", "Hinglish/English explanation", "UPI payment supported"],
+    "turnaround_time": "24-48 hours",
+    "cta": "Request ₹999 Report",
+    "popular": false
+  },
+  {
+    "id": "detailed-launch-readiness",
+    "name": "Detailed Web3 Launch Readiness Report",
+    "category": "service",
+    "price_inr": 2999,
+    "billing_cycles": ["one_time"],
+    "description": "Detailed contract + website + dApp + API + wallet + admin launch readiness report.",
+    "deliverables": ["Multi-surface review", "Founder impact summary", "Developer fix guidance", "Before-launch checklist", "UPI payment supported"],
+    "turnaround_time": "2-4 days",
+    "cta": "Request ₹2,999 Report",
+    "popular": true
+  },
+  {
+    "id": "fix-suggestion-pack",
+    "name": "Fix Suggestion Pack",
+    "category": "service",
+    "price_inr": 7999,
+    "billing_cycles": ["one_time"],
+    "description": "Detailed fix direction, safer patterns, and test checklist for launch risks.",
+    "deliverables": ["Fix suggestions", "Safer code patterns", "Testing checklist", "Follow-up scan"],
+    "turnaround_time": "3-5 days",
+    "cta": "Request Fix Pack",
+    "popular": false
+  },
+  {
+    "id": "manual-pre-audit",
+    "name": "Manual Pre-Audit Review",
+    "category": "service",
+    "price_inr": 14999,
+    "billing_cycles": ["one_time"],
+    "description": "Manual pre-audit review for teams preparing for professional audits or mainnet launch.",
+    "deliverables": ["Manual security review", "Scope notes", "Risk matrix", "Pre-audit readiness package"],
+    "turnaround_time": "5-7 days",
+    "cta": "Request Manual Review",
+    "popular": false
+  },
+  {
+    "id": "full-launch-readiness",
+    "name": "Full Launch Readiness Review",
+    "category": "service",
+    "price_inr": 29999,
+    "billing_cycles": ["one_time"],
+    "description": "Full launch readiness review across contract, dApp, API, wallet UX, admin OpSec, and trust pages.",
+    "deliverables": ["Complete launch readiness report", "Founder OpSec review", "Public trust copy review", "Final before-launch checklist"],
+    "turnaround_time": "7-10 days",
+    "cta": "Request Full Review",
+    "popular": false
+  },
+  {
+    "id": "builder-monthly",
+    "name": "Builder Monthly Subscription",
+    "category": "subscription",
+    "price_inr": 2999,
+    "billing_cycles": ["monthly"],
+    "description": "Monthly subscription for agencies/freelancers who need repeated scans and lead-ready reports.",
+    "deliverables": ["20 preliminary scans/month", "5 saved report drafts/month", "Priority email/WhatsApp follow-up", "UPI monthly payment supported"],
+    "turnaround_time": "Monthly access after manual payment verification",
+    "cta": "Pay Monthly by UPI",
+    "popular": true
+  },
+  {
+    "id": "shield-monthly",
+    "name": "Shield Monthly Subscription",
+    "category": "subscription",
+    "price_inr": 9999,
+    "billing_cycles": ["monthly"],
+    "description": "Higher-touch monthly plan for startups preparing multiple launch surfaces.",
+    "deliverables": ["Unlimited preliminary local scans", "10 report reviews/month", "2 manual readiness calls/month", "Admin OpSec + wallet flow review"],
+    "turnaround_time": "Monthly access after manual payment verification",
+    "cta": "Pay Shield by UPI",
+    "popular": false
+  },
+  {
+    "id": "launch-annual",
+    "name": "Launch Partner Annual",
+    "category": "subscription",
+    "price_inr": 99999,
+    "billing_cycles": ["annual"],
+    "description": "Annual support for agencies/startups that need ongoing pre-audit launch readiness support.",
+    "deliverables": ["Annual readiness support", "Quarterly launch security checklist", "Priority manual review slots", "UPI/bank transfer supported"],
+    "turnaround_time": "Annual access after manual payment verification",
+    "cta": "Request Annual Plan",
+    "popular": false
+  }
+]

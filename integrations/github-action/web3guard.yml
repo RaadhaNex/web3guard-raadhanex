@@ -1,0 +1,10 @@
+# Web3Guard AI by RAADHANEX CI configuration
+# Real-only note: this config triggers your backend API; it does not fake scans.
+api_base_url: https://your-backend.example.com
+severity_threshold: critical
+fail_on: critical
+scan_mode: rule-engine
+paths:
+  - contracts/**/*.sol
+  - src/**/*.sol
+max_files: 20

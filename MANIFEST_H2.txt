@@ -1,0 +1,16 @@
+Mega Final Patch H.2 Combined Manifest
+
+Built from provided ZIPs:
+- web3guard-raadhanex-mega-phase-g(2).zip
+- web3guard-raadhanex-mega-final-patch-h (1).zip
+- web3guard-raadhanex-mega-final-patch-h1-nav-theme(1).zip
+
+Correct frontend structure:
+- frontend/app
+- frontend/components
+- frontend/lib
+- frontend/public
+
+No frontend/src paths are used.
+
+Checks: frontend typecheck passed; backend pytest passed; Next build compiled then timed out in sandbox final stage.

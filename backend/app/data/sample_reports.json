@@ -1,0 +1,85 @@
+[
+  {
+    "id": "erc20-sample",
+    "title": "ERC20 Token Launch Readiness Sample",
+    "project_type": "ERC20 Token",
+    "score": 72,
+    "risk_label": "Medium Risk, Fix Before Launch",
+    "modules": ["contract", "website", "wallet", "admin_opsec"],
+    "summary": "Owner centralization, missing multisig, and allowance UX require review before launch.",
+    "critical_findings": [],
+    "high_findings": [
+      "Owner can change sensitive launch settings from a single wallet",
+      "No documented multisig or timelock process for privileged functions"
+    ],
+    "priority_actions": [
+      "Move owner/admin powers to multisig before launch",
+      "Publish owner privilege disclosure on website",
+      "Add clear approval/spender explanation in wallet flow",
+      "Request manual pre-audit review before mainnet launch"
+    ],
+    "package_recommendation": "Detailed Web3 Launch Readiness Report — ₹2,999"
+  },
+  {
+    "id": "nft-mint-sample",
+    "title": "NFT Mint dApp Sample",
+    "project_type": "NFT Mint",
+    "score": 65,
+    "risk_label": "Medium Risk, Fix Before Launch",
+    "modules": ["contract", "dapp", "website", "wallet"],
+    "summary": "Mint flow needs clearer transaction preview, metadata freeze plan, and website headers.",
+    "critical_findings": [],
+    "high_findings": [
+      "Mint page does not clearly display contract address, chain, and total transaction cost",
+      "Metadata freeze plan is missing from founder transparency copy"
+    ],
+    "priority_actions": [
+      "Add chain ID and verified contract link near mint button",
+      "Add clear failed-transaction error messages",
+      "Document metadata freeze or mutability policy",
+      "Enable CSP/HSTS headers on landing page"
+    ],
+    "package_recommendation": "Fix Suggestion Pack — ₹7,999"
+  },
+  {
+    "id": "staking-sample",
+    "title": "Staking dApp Sample",
+    "project_type": "Staking / Rewards",
+    "score": 54,
+    "risk_label": "High Risk, Manual Review Recommended",
+    "modules": ["contract", "api", "admin_opsec"],
+    "summary": "Reward calculation, privileged admin roles, and API abuse protection require manual review.",
+    "critical_findings": [
+      "Reward distribution logic needs manual review because it can affect user funds"
+    ],
+    "high_findings": [
+      "No rate-limit or abuse protection documented for rewards/claim API",
+      "Admin wallet and treasury operation process is not documented"
+    ],
+    "priority_actions": [
+      "Freeze launch until reward math is reviewed",
+      "Add rate limiting and webhook/request validation",
+      "Move treasury operations to multisig",
+      "Prepare full launch readiness review"
+    ],
+    "package_recommendation": "Manual Pre-Audit Review — ₹14,999+"
+  },
+  {
+    "id": "website-only-sample",
+    "title": "Website-only Web3 Landing Page Sample",
+    "project_type": "Web3 Landing Page",
+    "score": 81,
+    "risk_label": "Low Risk, Fix Recommended",
+    "modules": ["website", "wallet"],
+    "summary": "Website has HTTPS but needs stronger browser security headers and clearer anti-phishing trust copy.",
+    "critical_findings": [],
+    "high_findings": [],
+    "priority_actions": [
+      "Add strict Content-Security-Policy",
+      "Add HSTS and X-Content-Type-Options headers",
+      "Add official links and contract address verification section",
+      "Add clear disclaimer that users must verify domain before wallet connection"
+    ],
+    "package_recommendation": "Quick Risk Scan Report — ₹999"
+  }
+]

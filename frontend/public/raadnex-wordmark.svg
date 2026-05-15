@@ -1,0 +1,20 @@
+<svg width="720" height="160" viewBox="0 0 720 160" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Web3Guard AI by RAADHANEX">
+  <g transform="translate(18 18) scale(.48)">
+    <rect width="256" height="256" rx="64" fill="url(#bg)"/>
+    <path d="M123 61C97 29 51 30 34 62C17 94 42 135 101 137C72 151 59 177 72 199C88 226 124 209 128 159C132 209 168 226 184 199C197 177 184 151 155 137C214 135 239 94 222 62C205 30 159 29 133 61C131 65 129 72 128 82C127 72 125 65 123 61Z" fill="url(#wing)"/>
+    <path d="M105 92H139C159 92 172 104 172 122C172 136 164 146 151 150L176 190H147L126 154H126V190H105V92ZM126 113V136H138C146 136 151 132 151 124C151 117 146 113 138 113H126Z" fill="#07111F"/>
+  </g>
+  <text x="160" y="73" fill="currentColor" font-family="Inter, Segoe UI, Arial, sans-serif" font-weight="850" font-size="40" letter-spacing="-1.5">Web3Guard AI</text>
+  <text x="162" y="111" fill="currentColor" fill-opacity="0.72" font-family="Inter, Segoe UI, Arial, sans-serif" font-weight="650" font-size="20" letter-spacing="3.5">BY RAADHANEX</text>
+  <defs>
+    <linearGradient id="bg" x1="28" y1="18" x2="234" y2="238" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#05070D"/>
+      <stop offset="1" stop-color="#101827"/>
+    </linearGradient>
+    <linearGradient id="wing" x1="34" y1="39" x2="222" y2="220" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FBFF"/>
+      <stop offset="0.44" stop-color="#D7E9FF"/>
+      <stop offset="1" stop-color="#7DD3FC"/>
+    </linearGradient>
+  </defs>
+</svg>

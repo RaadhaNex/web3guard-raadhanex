@@ -1,0 +1,15 @@
+"use client";
+import { useEffect, useState } from "react";
+import { apiGet, apiPost } from "@/lib/api";
+function JsonBlock({ value }: { value: unknown }) { return <pre className="mono max-h-80 overflow-auto rounded-2xl border border-white/10 bg-black/30 p-4 text-xs text-slate-300">{JSON.stringify(value, null, 2)}</pre>; }
+export function LearningCenterClient() {
+  const [status, setStatus] = useState<any>(null);
+  const [lessons, setLessons] = useState<any[]>([]);
+  const [progress, setProgress] = useState<any[]>([]);
+  const [selected, setSelected] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  async function load() { setError(null); try { const [s, l, p] = await Promise.all([apiGet<any>("/learning/status"), apiGet<any>("/learning/lessons"), apiGet<any>("/learning/progress")]); setStatus(s); setLessons(l.lessons || []); setProgress(p.progress || []); } catch(e) { setError(e instanceof Error ? e.message : "Learning load failed"); } }
+  async function markComplete(lessonId: string) { setError(null); try { const data = await apiPost<any>("/learning/progress", { lesson_id: lessonId, status: "completed", real_only_acknowledged: true }); setSelected(data); await load(); } catch(e) { setError(e instanceof Error ? e.message : "Progress save failed"); } }
+  useEffect(() => { load(); }, []);
+  return <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8"><p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Mega Phase E • Phase 29</p><h1 className="mt-3 text-3xl font-black sm:text-5xl">Learning Center + Hinglish KB</h1><p className="mt-4 max-w-3xl text-slate-400">Real starter knowledge base for Web3 launch security. Progress is saved only when you mark lessons. No fake certificate or fake quiz badge.</p>{error && <p className="mt-6 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-100">{error}</p>}<div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]"><div className="grid gap-4">{lessons.map((lesson) => <div key={lesson.id} className="card p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan">{lesson.category} • {lesson.language}</p><h2 className="mt-2 text-xl font-black text-white">{lesson.title}</h2><p className="mt-2 text-sm text-slate-400">{lesson.summary}</p><ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-300">{lesson.takeaways?.map((t: string) => <li key={t}>{t}</li>)}</ul></div><button className="btn-secondary" onClick={() => markComplete(lesson.id)}>Mark complete</button></div></div>)}</div><div className="space-y-5"><div className="card p-5"><p className="font-black text-white">Status</p>{status ? <JsonBlock value={status} /> : <p className="text-sm text-slate-400">Loading...</p>}</div><div className="card p-5"><p className="font-black text-white">Progress records</p><JsonBlock value={progress} /></div>{selected && <div className="card p-5"><p className="font-black text-white">Latest saved progress</p><JsonBlock value={selected} /></div>}</div></div></div>;
+}

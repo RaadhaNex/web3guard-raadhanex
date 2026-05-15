@@ -1,0 +1,20 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="RAADHANEX butterfly R logo">
+  <rect width="256" height="256" rx="64" fill="url(#bg)"/>
+  <path d="M123 61C97 29 51 30 34 62C17 94 42 135 101 137C72 151 59 177 72 199C88 226 124 209 128 159C132 209 168 226 184 199C197 177 184 151 155 137C214 135 239 94 222 62C205 30 159 29 133 61C131 65 129 72 128 82C127 72 125 65 123 61Z" fill="url(#wing)"/>
+  <path d="M128 70C138 88 138 117 128 145C118 117 118 88 128 70Z" fill="#FFFFFF" fill-opacity="0.92"/>
+  <path d="M105 92H139C159 92 172 104 172 122C172 136 164 146 151 150L176 190H147L126 154H126V190H105V92ZM126 113V136H138C146 136 151 132 151 124C151 117 146 113 138 113H126Z" fill="#07111F"/>
+  <path d="M128 46V71" stroke="#FFFFFF" stroke-opacity="0.85" stroke-width="8" stroke-linecap="round"/>
+  <path d="M108 48L123 72" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="5" stroke-linecap="round"/>
+  <path d="M148 48L133 72" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="5" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="bg" x1="28" y1="18" x2="234" y2="238" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#05070D"/>
+      <stop offset="1" stop-color="#101827"/>
+    </linearGradient>
+    <linearGradient id="wing" x1="34" y1="39" x2="222" y2="220" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FBFF"/>
+      <stop offset="0.44" stop-color="#D7E9FF"/>
+      <stop offset="1" stop-color="#7DD3FC"/>
+    </linearGradient>
+  </defs>
+</svg>

@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Next.js build/cache
+.next/
+frontend/.next/
+out/
+frontend/out/
+
+# Python env/cache
+.venv/
+backend/.venv/
+venv/
+backend/venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+backend/.pytest_cache/
+
+# Env/secrets
+.env
+.env.*
+!.env.example
+!.env.local.example
+frontend/.env.local
+backend/.env
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archives / large files
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Binary/media
+*.apk
+*.aab
+*.exe
+*.msi
+*.dmg
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
