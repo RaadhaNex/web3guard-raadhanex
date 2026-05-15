@@ -1,17 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 
 export default function LoginClient() {
-  const router = useRouter();
-
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-
-  const [clientError, setClientError] = useState("");
 
   const supabase = useMemo(() => {
     if (!supabaseUrl || !supabaseAnonKey) {
@@ -20,13 +15,7 @@ export default function LoginClient() {
 
     try {
       return createBrowserClient(supabaseUrl, supabaseAnonKey);
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to initialize Supabase client.";
-
-      setClientError(message);
+    } catch {
       return null;
     }
   }, [supabaseUrl, supabaseAnonKey]);
@@ -52,13 +41,14 @@ export default function LoginClient() {
       setStatus({
         type: "error",
         message:
-          clientError ||
-          "Supabase frontend keys are missing or invalid. Check Vercel Environment Variables and redeploy.",
+          "Supabase frontend keys are missing or invalid. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel, then redeploy.",
       });
       return;
     }
 
-    if (!email.trim() || !password.trim()) {
+    const cleanEmail = email.trim();
+
+    if (!cleanEmail || !password.trim()) {
       setStatus({
         type: "error",
         message: "Please enter your email and password.",
@@ -71,7 +61,7 @@ export default function LoginClient() {
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: cleanEmail,
         password,
       });
 
@@ -83,13 +73,29 @@ export default function LoginClient() {
         return;
       }
 
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        setStatus({
+          type: "error",
+          message:
+            sessionError?.message ||
+            "Login completed, but session was not created. Please refresh and try again.",
+        });
+        return;
+      }
+
       setStatus({
         type: "success",
         message: "Login successful. Opening dashboard...",
       });
 
-      router.replace("/dashboard");
-      router.refresh();
+      setTimeout(() => {
+        window.location.assign("/dashboard");
+      }, 500);
     } catch (error) {
       const message =
         error instanceof Error
@@ -125,9 +131,6 @@ export default function LoginClient() {
             Supabase frontend keys are missing or invalid. Add
             NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in
             Vercel, then redeploy.
-            {clientError ? (
-              <p className="mt-2 text-xs font-medium">{clientError}</p>
-            ) : null}
           </div>
         ) : null}
 
