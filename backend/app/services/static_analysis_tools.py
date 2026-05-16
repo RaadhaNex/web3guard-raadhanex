@@ -56,7 +56,7 @@ def static_analysis_status() -> dict[str, Any]:
         }
     return {
         "ok": True,
-        "phase": "Mega Final Patch H - Real Static Analysis Engine",
+        "version": "1.0",
         "integration_level": "actual subprocess execution when tool is installed/enabled",
         "not_regex_only": True,
         "engine_version": ENGINE_VERSION,
@@ -242,14 +242,14 @@ def _tool_disabled_finding(idx: int, tool: str, reason: str) -> Finding:
         business_impact="This does not create a fake vulnerability score; it tells the founder which real tool evidence is missing.",
         developer_explanation="Install and enable the tool to run real static analysis. Until then, only local rule-engine/checklist findings are available.",
         recommendation=f"Install/configure {tool} and set the related environment flags, then rerun the static analysis scanner.",
-        references=["Phase 13 real-only tool status"],
+        references=["Web3Guard real-only tool status"],
         paid_review_recommended=False,
     )
 
 
 def run_static_analysis(solidity_code: str, project_name: str | None, file_name: str, requested_tools: list[str]) -> ScanResponse:
     if len(solidity_code) > settings.max_static_analysis_code_chars:
-        raise ValueError(f"Solidity input is too large for Phase 13 static analysis limit ({settings.max_static_analysis_code_chars} chars)")
+        raise ValueError(f"Solidity input is too large for Web3Guard static analysis limit ({settings.max_static_analysis_code_chars} chars)")
     valid_tools = [tool for tool in requested_tools if tool in SUPPORTED_TOOLS]
     if not valid_tools:
         valid_tools = list(SUPPORTED_TOOLS)

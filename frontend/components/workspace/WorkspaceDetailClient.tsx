@@ -36,7 +36,7 @@ export function WorkspaceDetailClient({ organizationId }: { organizationId: stri
         email: memberEmail,
         role: memberRole,
         status: "invited",
-        note: "Manual invite record only. No email is sent in Phase 7.2.",
+        note: "Manual invite record only. No email is sent automatically.",
       }, { headers: ctx.headers });
       setMessage("Manual member invite record saved. No fake email invite was sent.");
       await load();

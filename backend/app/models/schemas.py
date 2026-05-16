@@ -65,7 +65,7 @@ class ScanResponse(BaseModel):
 
 
 
-# Mega Phase C — Phase 23/24: Monitoring Lite + Threat Intelligence Feed
+# Monitoring Lite + Threat Intelligence Feed
 class MonitoringConfigCreate(BaseModel):
     project_name: str = Field(min_length=2, max_length=160)
     contract_address: str = Field(min_length=42, max_length=42)
@@ -152,7 +152,7 @@ class GitHubRepoScanRequest(BaseModel):
 
 
 
-# Mega Phase B — Phase 20/21/22: advanced website, API deep readiness, wallet risk API integration
+# advanced website, API deep readiness, wallet risk API integration
 class AdvancedWebsiteScanRequest(BaseModel):
     website_url: str = Field(min_length=8, max_length=2048)
     project_name: str | None = Field(default=None, max_length=160)
@@ -184,7 +184,7 @@ class WalletRiskApiRequest(BaseModel):
     real_only_acknowledged: bool = True
 
 
-# Mega Phase A — Phase 17/18/19: launch transparency, contract diff, upgrade safety
+# launch transparency, contract diff, upgrade safety
 class LaunchTransparencyRequest(BaseModel):
     project_name: str | None = Field(default=None, max_length=160)
     project_type: str | None = Field(default=None, max_length=80)
@@ -219,7 +219,7 @@ class UpgradeSafetyRequest(BaseModel):
     real_only_acknowledged: bool = True
 
 
-# Phase 16 — Contract Permission Map + Centralization Risk Report
+# Web3Guard — Contract Permission Map + Centralization Risk Report
 class PermissionMapRequest(BaseModel):
     project_name: str | None = Field(default=None, max_length=160)
     solidity_code: str | None = Field(default=None, max_length=220000)
@@ -326,7 +326,7 @@ class AIExplanation(BaseModel):
     safety_note: str = "AI output is guidance only. Review before production use. This does not replace a manual audit."
 
 
-# Phase 15 — Real AI Fix Assistant
+# Web3Guard — Real AI Fix Assistant
 class AIFixAssistantRequest(BaseModel):
     finding: Finding
     code_context: str | None = Field(default=None, max_length=220000)
@@ -579,7 +579,7 @@ class OwnershipVerifyResponse(BaseModel):
     note: str = "Owner verification unlocks owner-approved deeper review workflows in future phases. MVP scanners remain passive/checklist/code-submitted only."
 
 
-# Phase 7 — Auth + database + dashboard foundation
+# Web3Guard — Auth + database + dashboard foundation
 class UserProfile(BaseModel):
     id: str
     email: EmailStr | None = None
@@ -715,7 +715,7 @@ class DashboardOverview(BaseModel):
     real_only_note: str = "Dashboard only shows records that are actually saved. No fake scan history, fake subscription, or fake audit status is generated."
 
 
-# Phase 7.2 — Organization + Team Workspace foundation
+# Web3Guard — Organization + Team Workspace foundation
 WorkspaceRole = Literal["owner", "admin", "reviewer", "member", "viewer"]
 MemberStatus = Literal["active", "invited", "removed"]
 FindingTaskStatus = Literal["open", "in_progress", "fixed", "false_positive", "accepted_risk", "needs_manual_review"]
@@ -876,7 +876,7 @@ class WorkspaceOverview(BaseModel):
     real_only_note: str = "Workspace data is created only from real user actions. Invites are stored as manual invite records; no fake email invite is sent."
 
 
-# Mega Phase D — Phase 25/26/27: Bug Bounty Readiness, Public Registry/Trust Badge, Developer API/API Keys
+# Bug Bounty Readiness, Public Registry/Trust Badge, Developer API/API Keys
 BountyStatus = Literal["draft", "published", "paused", "closed"]
 BountySubmissionStatus = Literal["submitted", "triage", "needs_more_info", "accepted", "rejected", "duplicate", "paid_manually"]
 ReportRegistryStatus = Literal["active", "expired", "revoked", "superseded", "private"]
@@ -978,7 +978,7 @@ class DeveloperAuditRequest(BaseModel):
     website_url: str | None = Field(default=None, max_length=2048)
     real_only_acknowledged: bool = True
 
-# Mega Phase E — Phase 28/29/30: CI/CD, Learning Center, Admin Super Panel v2
+# CI/CD, Learning Center, Admin Super Panel v2
 LearningProgressStatus = Literal["started", "completed", "bookmarked"]
 
 
@@ -1008,7 +1008,7 @@ class AdminFeatureFlagUpdate(BaseModel):
     real_only_acknowledged: bool = True
 
 
-# Mega Phase F — Phase 31/32/33: Notifications, Compliance Scanner, Cross-chain Support
+# Notifications, Compliance Scanner, Cross-chain Support
 NotificationChannel = Literal["email", "telegram", "discord", "whatsapp", "manual"]
 NotificationEventType = Literal["scan_completed", "critical_finding", "payment_received", "report_ready", "monitoring_alert", "manual_note"]
 ComplianceJurisdiction = Literal["india_vda", "mica_eu", "gdpr", "fatf_aml", "general_web3"]

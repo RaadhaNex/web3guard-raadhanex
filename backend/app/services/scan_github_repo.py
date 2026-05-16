@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import hashlib
 import json
@@ -54,7 +54,7 @@ def parse_github_repo_url(repo_url: str) -> dict[str, str | None]:
     if parsed.scheme not in {"https", "http"}:
         raise ValueError("Only http/https GitHub repository URLs are allowed.")
     if parsed.netloc.lower() not in {"github.com", "www.github.com"}:
-        raise ValueError("Only github.com repository URLs are supported in Phase 11.")
+        raise ValueError("Only github.com repository URLs are supported.")
     parts = [part for part in parsed.path.strip("/").split("/") if part]
     if len(parts) < 2:
         raise ValueError("GitHub URL must be in the form https://github.com/owner/repo")
@@ -255,7 +255,7 @@ def _content_findings(path: str, text: str, start_idx: int) -> list[Finding]:
                 recommendation=rec,
                 path=path,
                 line=line,
-                snippet=f"{path}:{line} — {snippet}",
+                snippet=f"{path}:{line} â€” {snippet}",
                 paid=paid,
                 refs=refs,
             ))
@@ -401,7 +401,7 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
                         data = finding.model_copy(update={
                             "id": f"github-contract-{idx:03d}-{_hash(path + finding.id)[:6]}",
                             "source": f"GitHub Solidity Rule Engine ({path})",
-                            "affected_code": f"{path}:{finding.affected_line or '?'} — {finding.affected_code or finding.title}",
+                            "affected_code": f"{path}:{finding.affected_line or '?'} â€” {finding.affected_code or finding.title}",
                         })
                         findings.append(data)
                         idx += 1
@@ -480,7 +480,7 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
 
     score = score_findings(findings)
     metadata = {
-        "phase": "Phase 11 - GitHub Repo Scanner",
+        "version": "1.0",
         "mode": "read_only_public_github_api_scan",
         "repo": {"owner": owner, "name": repo, "url": f"https://github.com/{owner}/{repo}", "default_branch": default_branch, "scanned_branch": effective_branch},
         "repo_metadata": {
@@ -528,7 +528,7 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
 def github_scanner_status() -> dict[str, Any]:
     return {
         "ok": True,
-        "phase": "Phase 11 - GitHub Repo Scanner",
+        "version": "1.0",
         "engine_version": "web3guard-github-repo-scanner-v11.0",
         "github_token_configured": bool(settings.github_api_token),
         "live_features": [
@@ -544,7 +544,7 @@ def github_scanner_status() -> dict[str, Any]:
             "No repository cloning",
             "No dependency install or npm audit execution",
             "No private repo scan unless a real GitHub token is configured and authorized",
-            "No Slither/Aderyn/Mythril execution in Phase 11",
+            "No Slither/Aderyn/Mythril execution in current",
             "No automatic code patching",
         ],
         "limits": {

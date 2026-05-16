@@ -9,7 +9,7 @@ from app.services.mega_phase_d_store import MEGA_PHASE_D_REAL_ONLY_NOTE, append_
 
 def registry_status() -> dict[str, Any]:
     return {
-        "phase": "Mega Phase D - Phase 26 Public Registry + Trust Badge",
+        "version": "1.0",
         "enabled": True,
         "badge_base_url": settings.registry_badge_base_url,
         "live_capabilities": ["Publish real report metadata", "Verify report hash", "Generate non-certified pre-audit badge payload", "Revoke/expire/supersede records"],

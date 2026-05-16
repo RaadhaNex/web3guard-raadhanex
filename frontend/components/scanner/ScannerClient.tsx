@@ -300,7 +300,7 @@ export function ScannerClient({ module }: { module: string }) {
             <div className="mt-5 space-y-4 rounded-2xl border border-cyan/20 bg-cyan/10 p-4">
               <div>
                 <p className="text-sm font-black text-white">Optional API URL/config hints</p>
-                <p className="mt-1 text-xs text-slate-300">Phase 5.6 validates public URL safety and scans pasted API config/code for CORS, auth, rate-limit, docs exposure, hardcoded secrets, webhook signature, and debug risks. No fuzzing or auth bypass.</p>
+                <p className="mt-1 text-xs text-slate-300">validates public URL safety and scans pasted API config/code for CORS, auth, rate-limit, docs exposure, hardcoded secrets, webhook signature, and debug risks. No fuzzing or auth bypass.</p>
               </div>
               <div>
                 <label className="text-sm font-bold text-slate-200">API base URL</label>
@@ -431,7 +431,7 @@ export function ScannerClient({ module }: { module: string }) {
           ) : (
             <div className="card p-8">
               <p className="text-xl font-black">Result + report preview</p>
-              <p className="mt-3 text-slate-400">Run a scan to see findings, then generate the Phase 5.8 final combined report with weighted score, coverage confidence, report hash, export buttons, priority actions, limitations, and paid package recommendation.</p>
+              <p className="mt-3 text-slate-400">Run a scan to see findings, then generate the final combined report with weighted score, coverage confidence, report hash, export buttons, priority actions, limitations, and paid package recommendation.</p>
               <div className="mt-6 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><p className="text-3xl font-black">100</p><p className="text-xs text-slate-400">Base score</p></div>
                 <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><p className="text-3xl font-black">AI</p><p className="text-xs text-slate-400">Optional provider</p></div>
@@ -481,7 +481,7 @@ function WalletAdminEvidence({ result }: { result: ScanResponse }) {
     <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-black text-white">Phase 5.7 evidence</p>
+          <p className="text-sm font-black text-white">evidence</p>
           <p className="mt-1 text-xs text-slate-400">Checklist + notes hints only. No wallet connection, no transaction signing, no private-key collection, no seed phrase collection.</p>
         </div>
         <span className="badge">{String(metadata.mode || "checklist_plus_notes_hints")}</span>
@@ -514,7 +514,7 @@ function DappApiEvidence({ result }: { result: ScanResponse }) {
     <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-black text-white">Phase 5.6 evidence</p>
+          <p className="text-sm font-black text-white">evidence</p>
           <p className="mt-1 text-xs text-slate-400">Checklist + optional static hints only. No exploit execution, package install, fuzzing, or auth bypass.</p>
         </div>
         <span className="badge">{String(metadata.mode || "static_hints")}</span>

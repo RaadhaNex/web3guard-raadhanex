@@ -29,7 +29,7 @@ export function SecurityHardeningClient() {
   return (
     <main className="section space-y-8">
       <section className="hero-grid rounded-[2rem] border border-white/10 bg-white/[0.03] p-8">
-        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Mega Phase G</p>
+        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Web3Guard AI</p>
         <h1 className="mt-3 text-4xl font-black text-white md:text-5xl">Platform Security Hardening</h1>
         <p className="mt-4 max-w-3xl text-slate-300">Production readiness checks for admin token, CORS, Supabase, Razorpay, AI privacy, deep-tool sandboxing, retention, backups, and monitoring. This page does not fake readiness; missing production config is shown as action required.</p>
         <div className="mt-6 grid gap-4 md:grid-cols-3">

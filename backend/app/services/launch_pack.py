@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 from app.core.config import settings
 
-PHASE = "Phase 6.2 - UI/UX Pro Polish + Deploy Launch Pack"
+PHASE = "Web3Guard - UI/UX Pro Polish + Deploy Launch Pack"
 
 REAL_ONLY_STATUS = [
     {"area": "Unified URL Scanner", "status": "live", "proof": "POST /scan/unified-url uses real website passive scan and marks missing modules Not assessed."},

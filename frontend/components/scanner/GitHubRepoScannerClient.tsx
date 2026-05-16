@@ -78,7 +78,7 @@ export function GitHubRepoScannerClient() {
         user_id: userId,
         name: projectName || "GitHub Repo Scan",
         github_repo_url: repoUrl,
-        description: "Created from Phase 11 GitHub public repo scanner. Only fetched public evidence was scored.",
+        description: "Created from GitHub public repo scanner. Only fetched public evidence was scored.",
       }, { headers });
       await apiPost("/scan-history", {
         user_id: userId,
@@ -110,7 +110,7 @@ export function GitHubRepoScannerClient() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="max-w-4xl">
-        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Phase 11 • Real read-only repo scanner</p>
+        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">• Real read-only repo scanner</p>
         <h1 className="mt-3 text-3xl font-black sm:text-5xl">GitHub Repository Launch Scanner</h1>
         <p className="mt-4 text-slate-400">
           Scan a public GitHub repo with safe read-only GitHub API/raw file checks. It detects Solidity files, package.json, frontend/API/config/deploy hints, and secret-hygiene risks. It does not clone, execute, install packages, or fake Slither/Aderyn output.

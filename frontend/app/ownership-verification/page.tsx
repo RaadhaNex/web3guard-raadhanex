@@ -95,7 +95,7 @@ export default function OwnershipVerificationPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-      <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Phase 5.9 ownership + abuse prevention</p>
+      <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">ownership + abuse prevention</p>
       <h1 className="mt-3 text-4xl font-black sm:text-5xl">Prove project ownership before future deep scans.</h1>
       <p className="mt-4 max-w-3xl text-slate-400">
         Web3Guard AI remains passive/checklist/code-submitted by default. This page creates DNS TXT or well-known file verification challenges for future owner-approved workflows.

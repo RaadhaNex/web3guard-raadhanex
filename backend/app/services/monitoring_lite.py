@@ -113,7 +113,7 @@ def monitoring_status() -> dict[str, Any]:
     chains = {chain: bool(rpc_url_for_chain(chain)) for chain in CHAIN_RPC_SETTING}
     return {
         "ok": True,
-        "phase": "Mega Phase C - Phase 23 Monitoring Lite",
+        "version": "1.0",
         "monitoring_enabled": settings.monitoring_enabled,
         "rpc_enabled": settings.monitoring_rpc_enabled,
         "configured_rpc_chains": chains,

@@ -9,7 +9,7 @@ export function TrustBuilderSection() {
           <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Trust builder</p>
           <h2 className="mt-3 text-3xl font-black sm:text-4xl">Honest security copy that founders can actually use.</h2>
           <p className="mt-4 text-sm leading-6 text-slate-400">
-            Phase 5 turns Web3Guard AI into a trust-ready pre-audit platform: scope boundaries, methodology, sample reports, responsible-use policy, and paid-review clarity.
+            turns Web3Guard AI into a trust-ready pre-audit platform: scope boundaries, methodology, sample reports, responsible-use policy, and paid-review clarity.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/trust" className="btn-primary">Read Trust Policy</Link>

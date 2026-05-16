@@ -9,7 +9,7 @@ from app.core.config import settings
 from app.services.database_store import active_storage_mode, supabase_configured
 
 PHASE_G_NOTE = (
-    "Mega Phase G is a production hardening and launch QA layer. It does not make external services real by itself; "
+    " is a production hardening and launch QA layer. It does not make external services real by itself; "
     "it verifies which integrations are configured and clearly marks missing items as manual or not configured."
 )
 
@@ -181,7 +181,7 @@ def security_status() -> dict[str, Any]:
         readiness = "ready_for_controlled_launch"
     return {
         "ok": True,
-        "phase": "Mega Phase G - Platform Security Hardening",
+        "version": "1.0",
         "readiness": readiness,
         "score": max(0, round(100 - len(critical_failed) * 25 - len(high_failed) * 15 - (len(failed) - len(critical_failed) - len(high_failed)) * 5)),
         "passed": len(checks) - len(failed),

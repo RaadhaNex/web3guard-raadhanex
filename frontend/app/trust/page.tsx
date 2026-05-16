@@ -44,7 +44,7 @@ export default function TrustPage() {
 
       <div className="card mt-10 p-6">
         <h2 className="text-2xl font-black">Manual review scope clarity</h2>
-        <p className="mt-3 text-sm leading-6 text-slate-400">Paid review is useful when scanner findings show launch risk, but it still needs clear scope. Phase 5 adds this clarity to avoid overpromising.</p>
+        <p className="mt-3 text-sm leading-6 text-slate-400">Paid review is useful when scanner findings show launch risk, but it still needs clear scope. adds this clarity to avoid overpromising.</p>
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           {manualScope.map((item) => <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-300">{item}</div>)}
         </div>

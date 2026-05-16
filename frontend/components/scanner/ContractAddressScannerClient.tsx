@@ -70,7 +70,7 @@ export function ContractAddressScannerClient() {
         name: projectName || address,
         contract_address: address,
         chain,
-        description: "Created from Phase 12 verified contract address scanner.",
+        description: "Created from verified contract address scanner.",
       }, { headers });
       await apiPost("/scan-history", {
         user_id: userId,
@@ -101,7 +101,7 @@ export function ContractAddressScannerClient() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="max-w-4xl">
-        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Phase 12 • Verified explorer source scanner</p>
+        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">• Verified explorer source scanner</p>
         <h1 className="mt-3 text-3xl font-black sm:text-5xl">Contract Address Scanner</h1>
         <p className="mt-4 text-slate-400">
           Fetch verified source/ABI metadata from Etherscan API V2-compatible explorer flow, then run RAADHANEX local Solidity rule checks. No private key collection, wallet signing, bytecode decompilation, or fake score when source is unavailable.

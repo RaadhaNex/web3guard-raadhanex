@@ -49,7 +49,7 @@ contract Phase14DeepRisk {
 
 export function DeepAnalysisScannerClient() {
   const [status, setStatus] = useState<DeepStatus | null>(null);
-  const [projectName, setProjectName] = useState("Phase 14 Deep Analysis Project");
+  const [projectName, setProjectName] = useState("Deep Analysis Project");
   const [fileName, setFileName] = useState("Contract.sol");
   const [code, setCode] = useState(sampleSolidity);
   const [scanDepth, setScanDepth] = useState("quick");
@@ -105,7 +105,7 @@ export function DeepAnalysisScannerClient() {
         user_id: userId,
         name: projectName || "Deep Analysis Scan",
         project_type: "Deep analysis",
-        description: "Created from Phase 14 deep-analysis scanner. Only real installed/enabled tool outputs are treated as evidence.",
+        description: "Created from deep-analysis scanner. Only real installed/enabled tool outputs are treated as evidence.",
       }, { headers });
       await apiPost("/scan-history", {
         user_id: userId,
@@ -132,7 +132,7 @@ export function DeepAnalysisScannerClient() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
       <div className="max-w-4xl">
-        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Phase 14 · Deep analysis</p>
+        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">· Deep analysis</p>
         <h1 className="mt-3 text-4xl font-black sm:text-5xl">Mythril / Manticore / Echidna runner with no fake output.</h1>
         <p className="mt-4 text-slate-400">This layer is disabled by default. It runs real tools only when they are installed and enabled. Missing tools become Not Run evidence, not fake vulnerabilities.</p>
       </div>

@@ -203,7 +203,7 @@ export function DashboardClient() {
               <h2 className="text-2xl font-black">Real-only note</h2>
               <p className="mt-3 text-slate-600">{overview.real_only_note}</p>
               <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                Subscription/payment records are real Phase 8 records only. SecureScore and finding workflows are real saved-scan records only.
+                Subscription/payment records are real records only. SecureScore and finding workflows are real saved-scan records only.
               </div>
             </div>
           </section>

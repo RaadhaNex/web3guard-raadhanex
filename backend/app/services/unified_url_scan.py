@@ -183,7 +183,7 @@ def _github_not_assessed() -> dict:
         "github",
         "Not assessed",
         required_input=["Public GitHub repository URL"],
-        limitations=["Provide a GitHub repo URL to run the Phase 11 read-only repository scanner."],
+        limitations=["Provide a GitHub repo URL to run the Web3Guard read-only repository scanner."],
     )
 
 
@@ -325,7 +325,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
                         f"Branch: {github_report.scan_metadata.get('repo', {}).get('scanned_branch')}",
                         f"Files seen: {github_report.scan_metadata.get('structure_summary', {}).get('total_files_seen')}",
                     ],
-                    limitations=["Read-only public GitHub API/raw file scan. No clone, execution, dependency install, or Slither/Aderyn in Phase 11."],
+                    limitations=["Read-only public GitHub API/raw file scan. No clone, execution, dependency install, or Slither/Aderyn in current."],
                 )
             )
         except ValueError as exc:
@@ -389,7 +389,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
             "Provide API base URL/code for backend review.",
             "Complete wallet-flow checklist for approval/signature UX.",
             "Complete founder/admin OpSec checklist for multisig/timelock/key policy.",
-            "Provide a public GitHub repo URL to run the Phase 11 read-only repo scanner.",
+            "Provide a public GitHub repo URL to run the Web3Guard read-only repo scanner.",
         ],
         "disclaimer": "This is a preliminary security review and does not replace a full manual audit. URL-only scans are partial by design.",
     }

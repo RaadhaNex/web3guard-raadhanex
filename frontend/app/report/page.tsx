@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function ReportPage() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
-      <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan">Phase 9 professional report layer</p>
+      <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan">professional report layer</p>
       <h1 className="mt-3 text-4xl font-black sm:text-6xl">Combined Launch Readiness + Professional Delivery</h1>
       <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-300">
         Combine Smart Contract, Website, dApp, API, Wallet, and Admin OpSec module outputs into one weighted

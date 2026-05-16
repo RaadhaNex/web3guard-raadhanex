@@ -10,7 +10,7 @@ from typing import Any, Iterable
 from app.core.config import settings
 
 MEGA_PHASE_D_REAL_ONLY_NOTE = (
-    "Mega Phase D stores real user-created bug bounty, registry, and API-key records only. "
+    "Web3Guard stores real user-created bug bounty, registry, and API-key records only. "
     "Escrow, on-chain certificates, email delivery, and live public trust badges are not faked; "
     "they remain manual or verification-hash based until their real providers are connected."
 )

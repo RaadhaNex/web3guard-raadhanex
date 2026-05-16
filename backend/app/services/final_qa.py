@@ -80,7 +80,7 @@ def launch_readiness() -> dict[str, Any]:
         manual_blockers.append("Security hardening checks still have critical/high action items.")
     return {
         "ok": True,
-        "phase": "Mega Phase G - Final Production Launch QA",
+        "version": "1.0",
         "launch_readiness": "ready_for_private_beta" if not manual_blockers else "not_ready_for_public_launch",
         "security_readiness": sec["readiness"],
         "security_score": sec["score"],

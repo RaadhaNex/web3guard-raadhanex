@@ -28,7 +28,7 @@ router = APIRouter(prefix="/scan", tags=["scans"])
 SAMPLE_CONTRACT_DIR = Path(__file__).resolve().parents[1] / "data" / "sample_contracts"
 
 
-# Mega Phase B — Phase 20/21/22
+# Web3Guard — current/21/22
 @router.get("/website-advanced/status")
 def advanced_website_engine_status():
     return advanced_website_status()

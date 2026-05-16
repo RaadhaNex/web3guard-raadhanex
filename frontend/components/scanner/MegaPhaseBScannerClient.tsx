@@ -10,19 +10,19 @@ type Mode = "website-advanced" | "api-deep" | "wallet-risk";
 
 const configs = {
   "website-advanced": {
-    eyebrow: "Mega Phase B • Phase 20",
+    eyebrow: "Web3Guard AI",
     title: "Advanced Website URL Launch Scanner",
     description: "Safe passive website intelligence: Web3 keywords, policy links, visible contract addresses, API hints, social links, scripts, and launch trust gaps.",
     endpoint: "/scan/website-advanced",
   },
   "api-deep": {
-    eyebrow: "Mega Phase B • Phase 21",
+    eyebrow: "Web3Guard AI",
     title: "API Backend Deep Readiness Scanner",
     description: "Safe API readiness review using OpenAPI/code/notes and passive URL checks. No fuzzing, no exploit payloads, no auth bypass.",
     endpoint: "/scan/api-deep",
   },
   "wallet-risk": {
-    eyebrow: "Mega Phase B • Phase 22",
+    eyebrow: "Web3Guard AI",
     title: "Wallet Risk API Integration Scanner",
     description: "Read-only wallet/token/spender risk context. External GoPlus provider is used only when enabled; missing provider never creates fake results.",
     endpoint: "/scan/wallet-risk",

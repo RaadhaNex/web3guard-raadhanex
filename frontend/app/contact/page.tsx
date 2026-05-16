@@ -11,7 +11,7 @@ export default function ContactPage() {
           Create a payment intent on pricing page. If Razorpay is configured, Checkout verification can confirm payment; if using UPI manual fallback, paste the transaction/reference ID here. You can also submit first and pay later.
         </p>
         <div className="mt-6 rounded-2xl border border-cyan/20 bg-cyan/10 p-4 text-sm leading-6 text-cyan-50">
-          Phase 8 keeps trust boundaries clear: paid review starts only after Razorpay backend verification or manual admin payment confirmation, and no certified audit claim is made.
+          keeps trust boundaries clear: paid review starts only after Razorpay backend verification or manual admin payment confirmation, and no certified audit claim is made.
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <Link href="/pricing" className="btn-primary">Create Payment Intent</Link>

@@ -43,7 +43,7 @@ export function FindingsWorkflowClient() {
       await apiPatch(`/findings/${encodeURIComponent(finding.id)}/workflow?user_id=${encodeURIComponent(ctx.userId)}`, {
         scan_id: finding.scan_id,
         status: nextStatus,
-        notes: `Status changed to ${nextStatus} from Phase 10 findings workflow UI.`,
+        notes: `Status changed to ${nextStatus} from findings workflow UI.`,
       }, { headers: ctx.headers });
       setMessage("Finding workflow status saved. This does not auto-change source code.");
       await load();
@@ -58,7 +58,7 @@ export function FindingsWorkflowClient() {
 
   return <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
     <div className="mb-8">
-      <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan">Phase 10 findings workflow</p>
+      <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan">findings workflow</p>
       <h1 className="mt-2 text-4xl font-black">Findings workflow</h1>
       <p className="mt-3 max-w-3xl text-slate-400">Track real saved findings from scan payloads. Status changes are manual/reviewer actions; Web3Guard AI does not automatically edit production code.</p>
     </div>

@@ -28,7 +28,7 @@ from app.models.schemas import (
 )
 
 PHASE7_REAL_ONLY_NOTE = (
-    "Phase 7/7.1 uses local JSONL persistence by default and switches to Supabase only when real Supabase env keys are configured. "
+    "current/7.1 uses local JSONL persistence by default and switches to Supabase only when real Supabase env keys are configured. "
     "No fake users, fake scans, fake reports, fake subscriptions, or fake audit statuses are generated. "
     "When SUPABASE_AUTH_REQUIRED=true, dashboard APIs require a real Supabase session token."
 )
@@ -111,7 +111,7 @@ def db_status() -> dict[str, Any]:
     reports_path = _path(settings.db_saved_reports_file)
     return {
         "ok": True,
-        "phase": "Phase 7.1 - Dashboard + Scan History Auto-Save + Project Detail Foundation",
+        "version": "1.0",
         "storage_mode_requested": settings.storage_mode,
         "storage_mode_active": active_storage_mode(),
         "supabase_configured": supabase_configured(),

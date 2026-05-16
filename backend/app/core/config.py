@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     max_contract_diff_scan_per_hour: int = 30
     max_upgrade_safety_scan_per_hour: int = 30
 
-    # Phase 7: Supabase/Auth/Database foundation.
+    # Supabase/Auth/Database foundation.
     # Default stays local-first so the app remains runnable without cloud setup.
     storage_mode: str = "local"  # local | supabase | auto
     supabase_url: str | None = None
@@ -62,20 +62,20 @@ class Settings(BaseSettings):
     db_scan_history_file: str = "app/data/db/scan_history.jsonl"
     db_saved_reports_file: str = "app/data/db/saved_reports.jsonl"
 
-    # Phase 7.2: Organization/team workspace local-first storage.
+    # Organization/team workspace local-first storage.
     db_organizations_file: str = "app/data/db/organizations.jsonl"
     db_org_members_file: str = "app/data/db/org_members.jsonl"
     db_finding_tasks_file: str = "app/data/db/finding_tasks.jsonl"
     db_workspace_comments_file: str = "app/data/db/workspace_comments.jsonl"
     db_workspace_activity_file: str = "app/data/db/workspace_activity.jsonl"
 
-    # Phase 9: Professional/public report storage.
+    # Professional/public report storage.
     public_reports_file: str = "app/data/db/public_reports.jsonl"
 
-    # Phase 10: SecureScore Pro dashboard + finding workflow persistence.
+    # SecureScore Pro dashboard + finding workflow persistence.
     db_finding_workflow_file: str = "app/data/db/finding_workflow.jsonl"
 
-    # Phase 11: Public GitHub repository scanner.
+    # Public GitHub repository scanner.
     github_api_base: str = "https://api.github.com"
     github_api_token: str | None = None
     github_scan_timeout_seconds: int = 12
@@ -89,7 +89,7 @@ class Settings(BaseSettings):
     max_github_api_files: int = 16
     max_github_frontend_files: int = 16
 
-    # Phase 12: verified contract address scanner via Etherscan API V2-compatible explorer API.
+    # verified contract address scanner via Etherscan API V2-compatible explorer API.
     etherscan_api_key: str | None = None
     etherscan_v2_api_base: str = "https://api.etherscan.io/v2/api"
     explorer_scan_timeout_seconds: int = 15
@@ -97,7 +97,7 @@ class Settings(BaseSettings):
     max_explorer_source_chars: int = 350000
 
 
-    # Phase 13: real static analysis tool runner. Disabled by default so no fake tool output is shown.
+    # real static analysis tool runner. Disabled by default so no fake tool output is shown.
     static_analysis_enabled: bool = False
     slither_enabled: bool = True
     aderyn_enabled: bool = False
@@ -115,7 +115,7 @@ class Settings(BaseSettings):
     max_static_analysis_scan_per_hour: int = 12
 
 
-    # Phase 14: deep analysis layer / isolated audit worker architecture. Disabled by default.
+    # deep analysis layer / isolated audit worker architecture. Disabled by default.
     deep_analysis_enabled: bool = False
     mythril_enabled: bool = False
     manticore_enabled: bool = False
@@ -142,7 +142,7 @@ class Settings(BaseSettings):
     max_total_deep_findings: int = 90
 
 
-    # Mega Phase B — advanced website/API/wallet intelligence.
+    # advanced website/API/wallet intelligence.
     advanced_website_external_domain_warning_threshold: int = 10
     advanced_website_inline_script_warning_threshold: int = 8
     max_advanced_website_scan_per_hour: int = 15
@@ -155,7 +155,7 @@ class Settings(BaseSettings):
     wallet_risk_api_timeout_seconds: int = 10
     max_wallet_risk_api_scan_per_hour: int = 25
 
-    # Mega Phase C — Monitoring Lite + Threat Intelligence Feed.
+    # Monitoring Lite + Threat Intelligence Feed.
     monitoring_enabled: bool = False
     monitoring_rpc_enabled: bool = False
     monitoring_configs_file: str = "app/data/db/monitoring_configs.jsonl"
@@ -179,7 +179,7 @@ class Settings(BaseSettings):
     threat_intel_file: str = "app/data/db/threat_intel.jsonl"
     max_threat_intel_admin_writes_per_hour: int = 30
 
-    # Mega Phase D — Bug Bounty, Public Registry, Developer API/API Keys.
+    # Bug Bounty, Public Registry, Developer API/API Keys.
     bug_bounty_programs_file: str = "app/data/db/bug_bounty_programs.jsonl"
     bug_bounty_submissions_file: str = "app/data/db/bug_bounty_submissions.jsonl"
     public_registry_file: str = "app/data/db/public_registry.jsonl"
@@ -193,7 +193,7 @@ class Settings(BaseSettings):
     registry_badge_base_url: str = "http://localhost:3000/registry"
 
 
-    # Mega Phase E — CI/CD GitHub Action, Learning Center, Admin Super Panel v2.
+    # CI/CD GitHub Action, Learning Center, Admin Super Panel v2.
     learning_progress_file: str = "app/data/db/learning_progress.jsonl"
     admin_feature_flags_file: str = "app/data/db/admin_feature_flags.jsonl"
     admin_audit_log_file: str = "app/data/db/admin_audit_log.jsonl"
@@ -201,7 +201,7 @@ class Settings(BaseSettings):
     cicd_template_enabled: bool = True
     learning_center_enabled: bool = True
 
-    # Mega Phase F — Notifications, Compliance Scanner, Cross-chain Support.
+    # Notifications, Compliance Scanner, Cross-chain Support.
     notifications_enabled: bool = True
     notification_preferences_file: str = "app/data/db/notification_preferences.jsonl"
     notification_events_file: str = "app/data/db/notification_events.jsonl"
@@ -232,7 +232,7 @@ class Settings(BaseSettings):
     cross_chain_move_checklist_enabled: bool = True
     max_cross_chain_scan_per_hour: int = 40
 
-    # Mega Phase G — Platform Security Hardening + Final Production QA.
+    # Platform Security Hardening + Final Production QA.
     security_headers_enabled: bool = True
     hsts_enabled: bool = False
     hsts_max_age: int = 31536000
@@ -242,7 +242,7 @@ class Settings(BaseSettings):
     default_data_retention_days: int = 90
     production_launch_acknowledged: bool = False
 
-    # Mega Phase G — Platform Security Hardening + Final Production Launch QA.
+    # Platform Security Hardening + Final Production Launch QA.
     production_hardening_enabled: bool = True
     security_headers_enabled: bool = True
     strict_transport_security_max_age: int = 31536000

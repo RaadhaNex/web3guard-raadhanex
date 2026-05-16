@@ -25,7 +25,7 @@ def _sum_amount(rows: list[dict[str, Any]]) -> int:
 def admin_super_status() -> dict[str, Any]:
     return {
         "ok": True,
-        "phase": "Mega Phase E - Phase 30 Admin Super Panel v2",
+        "version": "1.0",
         "live": True,
         "real_only_note": MEGA_PHASE_E_REAL_ONLY_NOTE,
         "requires_admin_token": True,

@@ -209,7 +209,7 @@ def securescore_status() -> dict[str, Any]:
     path = _path()
     return {
         "ok": True,
-        "phase": "Phase 10 - SecureScore Pro Dashboard + Findings Workflow",
+        "version": "1.0",
         "workflow_storage_file": str(path),
         "workflow_records": len(_read_jsonl(path)),
         "live_features": [
@@ -222,7 +222,7 @@ def securescore_status() -> dict[str, Any]:
         "manual_or_not_enabled": [
             "Automatic code patching is not enabled",
             "Finding status is changed by user/reviewer action",
-            "AI fixes require Phase 15 AI Fix Assistant and user approval",
+            "AI fixes require Web3Guard AI Fix Assistant and user approval",
         ],
         "real_only_note": PHASE10_REAL_ONLY_NOTE,
     }
@@ -394,7 +394,7 @@ def update_finding_workflow(
             "created_at": now,
             "updated_at": now,
             "fixed_at": now if status == "fixed" else None,
-            "source": "Phase 10 SecureScore workflow",
+            "source": "Web3Guard SecureScore workflow",
         }
         rows.append(record)
     _rewrite_jsonl(rows)

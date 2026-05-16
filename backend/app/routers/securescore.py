@@ -13,7 +13,7 @@ from app.services.securescore import (
     update_finding_workflow,
 )
 
-router = APIRouter(tags=["Phase 10 SecureScore Pro"])
+router = APIRouter(tags=["Web3Guard SecureScore Pro"])
 
 
 class FindingWorkflowUpdate(BaseModel):

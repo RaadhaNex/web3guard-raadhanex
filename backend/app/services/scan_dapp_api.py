@@ -267,7 +267,7 @@ def scan_api_backend(
         metadata["validated_api_base"] = f"{parsed.scheme}://{parsed.netloc}"
         metadata["docs_endpoint_hints"] = ["/docs", "/swagger", "/openapi.json", "/graphql"]
         findings.append(_finding(
-            module="api", idx=idx, severity="info", title="API URL Accepted for Passive Checklist Review", description="The API base URL passed public URL safety validation. Phase 5.6 does not fuzz or probe authenticated APIs.", category="api_url", rule_id="API-URL-SAFE-VALIDATED", confidence="high", source="API URL Safety Validator", business_impact="Safe URL validation reduces abuse risk while keeping the scanner useful for launch readiness.", developer_explanation="The scanner validates public http/https URL and blocks localhost/private/internal network targets.", recommendation="For deeper API scanning, add ownership verification and explicit scope before enabling active checks.", references=["passive API review"],
+            module="api", idx=idx, severity="info", title="API URL Accepted for Passive Checklist Review", description="The API base URL passed public URL safety validation. Web3Guard does not fuzz or probe authenticated APIs.", category="api_url", rule_id="API-URL-SAFE-VALIDATED", confidence="high", source="API URL Safety Validator", business_impact="Safe URL validation reduces abuse risk while keeping the scanner useful for launch readiness.", developer_explanation="The scanner validates public http/https URL and blocks localhost/private/internal network targets.", recommendation="For deeper API scanning, add ownership verification and explicit scope before enabling active checks.", references=["passive API review"],
         ))
         idx += 1
 

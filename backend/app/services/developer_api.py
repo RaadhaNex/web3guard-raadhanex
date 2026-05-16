@@ -13,7 +13,7 @@ from app.services.scan_contract import scan_solidity
 
 def developer_api_status() -> dict[str, Any]:
     return {
-        "phase": "Mega Phase D - Phase 27 Developer API + API Keys",
+        "version": "1.0",
         "enabled": settings.developer_api_enabled,
         "auth": "X-Web3Guard-API-Key header for /api/v1 endpoints",
         "live_capabilities": ["Create hashed API keys", "List/manage key metadata", "Verify keys for API endpoints", "Start rule-engine audit via API"],

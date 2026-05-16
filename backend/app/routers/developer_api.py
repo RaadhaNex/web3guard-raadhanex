@@ -8,7 +8,7 @@ from app.services.rate_limit import enforce_hourly_limit
 from app.services.public_registry import verify_report
 from app.services.threat_intel import list_threat_intel
 
-router = APIRouter(tags=["Mega Phase D - Developer API"])
+router = APIRouter(tags=["Developer API"])
 
 
 @router.get("/developer-api/status")

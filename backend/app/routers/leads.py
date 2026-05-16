@@ -16,7 +16,7 @@ def submit_lead(payload: LeadCreate):
         "lead": lead,
         "next_steps": [
             "If paid package was selected, complete UPI payment and save the transaction/reference ID.",
-            "RAADHANEX admin verifies payment manually in Phase 4.",
+            "RAADHANEX admin verifies payment manually in current.",
             "After verification, lead can move from Paid to In Review to Delivered.",
         ],
         "message": "Lead submitted. RAADHANEX team can follow up after payment/reference confirmation.",

@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from app.core.security import require_admin
 from app.services.security_hardening import data_retention_policy, log_security_event, platform_boundary_matrix, recent_security_events, security_headers_policy, security_status
 
-router = APIRouter(prefix="/security", tags=["Mega Phase G - Security Hardening"])
+router = APIRouter(prefix="/security", tags=["Security Hardening"])
 
 
 class SecurityEventCreate(BaseModel):
@@ -43,7 +43,7 @@ def events():
     return {"ok": True, "events": recent_security_events()}
 
 
-alias_router = APIRouter(prefix="/security-hardening", tags=["Mega Phase G - Security Hardening Alias"])
+alias_router = APIRouter(prefix="/security-hardening", tags=["Security Hardening Alias"])
 
 @alias_router.get("/status")
 def alias_status():

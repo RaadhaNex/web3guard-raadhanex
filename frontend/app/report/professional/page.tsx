@@ -4,7 +4,7 @@ import { ProfessionalReportClient } from "@/components/report/ProfessionalReport
 export default function ProfessionalReportPage() {
   return (
     <main className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-      <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan">Phase 9 professional report system</p>
+      <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan">professional report system</p>
       <h1 className="mt-3 text-4xl font-black sm:text-6xl">Professional PDF / HTML / Public Report Delivery</h1>
       <p className="mt-5 max-w-4xl text-lg leading-8 text-slate-300">
         Generate delivery-ready artifacts from a real combined report object. The system produces server-side PDF bytes, branded HTML, Markdown, JSON, and public/private report records with hash verification. It does not fake certified audit status.

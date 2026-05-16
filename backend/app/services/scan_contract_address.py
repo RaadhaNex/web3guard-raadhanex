@@ -86,7 +86,7 @@ def validate_evm_address(address: str) -> str:
 def explorer_status() -> dict[str, Any]:
     return {
         "ok": True,
-        "phase": "Phase 12 - Contract Address Scanner",
+        "version": "1.0",
         "mode": "verified_source_fetch",
         "etherscan_v2_enabled": bool(settings.etherscan_api_key),
         "api_base": settings.etherscan_v2_api_base,
@@ -102,7 +102,7 @@ def explorer_status() -> dict[str, Any]:
             "No transaction signing",
             "No wallet connection",
             "No bytecode decompilation yet",
-            "No Slither/Aderyn/Mythril execution in Phase 12",
+            "Slither/Aderyn/Mythril not run in address scan mode",
             "No certified audit wording",
         ],
     }

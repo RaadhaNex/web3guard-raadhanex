@@ -38,7 +38,7 @@ def _report_id(project_name: str | None) -> str:
 def contract_diff_status() -> dict[str, Any]:
     return {
         "ok": True,
-        "phase": "Mega Phase A - Phase 18 Contract Diff + Audit History",
+        "version": "1.0",
         "engine_version": ENGINE_VERSION,
         "mode": "read_only_old_vs_new_source_comparison",
         "live_capabilities": [
@@ -49,7 +49,7 @@ def contract_diff_status() -> dict[str, Any]:
         ],
         "not_claimed": [
             "Does not prove semantic equivalence",
-            "Does not run compiler storage layout unless Phase 19/13 tools are configured",
+            "Does not run compiler storage layout unless current/13 tools are configured",
             "Does not auto-apply fixes",
         ],
     }
@@ -176,7 +176,7 @@ def build_contract_diff_report(*, project_name: str | None, old_code: str, new_c
         input_hash=_hash(old_code + "\n---NEW---\n" + new_code),
         engine_version=ENGINE_VERSION,
         scan_metadata={
-            "phase": "Mega Phase A / Phase 18",
+            "version": "1.0",
             "real_only_note": "Diff is generated only from provided old/new Solidity source. It does not auto-apply fixes.",
             "old_score": old_scan.module_score.score,
             "new_score": new_scan.module_score.score,
@@ -192,7 +192,7 @@ def build_contract_diff_report(*, project_name: str | None, old_code: str, new_c
             "next_steps": [
                 "Review all new privileged/risky added lines.",
                 "Run static analysis on the new version.",
-                "If upgradeable, run Phase 19 upgrade safety analysis.",
+                "If upgradeable, run Web3Guard upgrade safety analysis.",
                 "Do not deploy until critical/high introduced findings are resolved or accepted with documented rationale.",
             ],
         },

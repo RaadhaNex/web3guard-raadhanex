@@ -19,7 +19,7 @@ export function PricingSection() {
         <div>
           <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Razorpay + UPI manual fallback</p>
           <h2 className="mt-3 text-3xl font-black sm:text-4xl">Verified payments and subscriptions in one funnel.</h2>
-          <p className="mt-3 max-w-2xl text-slate-400">Phase 8 supports real Razorpay order/signature verification when keys are configured, while preserving UPI manual fallback for users who want to pay by any UPI app.</p>
+          <p className="mt-3 max-w-2xl text-slate-400">supports real Razorpay order/signature verification when keys are configured, while preserving UPI manual fallback for users who want to pay by any UPI app.</p>
         </div>
         <a href="/contact" className="btn-secondary">Submit Review Request</a>
       </div>

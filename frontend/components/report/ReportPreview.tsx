@@ -33,7 +33,7 @@ export function ReportPreview({ report }: Props) {
     <div className="card p-6 print:border-0 print:bg-white print:text-black">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start print:block">
         <div>
-          <p className="text-sm font-black uppercase tracking-[0.28em] text-cyan print:text-black">Phase 5.8 final combined report</p>
+          <p className="text-sm font-black uppercase tracking-[0.28em] text-cyan print:text-black">final combined report</p>
           <h2 className="mt-2 text-2xl font-black text-white print:text-black">{report.project_name}</h2>
           <p className="mono mt-2 break-all text-xs text-slate-400 print:text-black">{report.report_id}</p>
           <p className="mono mt-1 break-all text-[11px] text-slate-500 print:text-black">hash: {report.report_hash}</p>

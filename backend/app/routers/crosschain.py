@@ -4,7 +4,7 @@ from app.models.schemas import CrossChainScanRequest
 from app.services.auth_guard import resolve_user_id
 from app.services.crosschain_support import cross_chain_status, list_cross_chain_scans, run_cross_chain_scan
 
-router = APIRouter(tags=["Mega Phase F - Cross-chain Support"])
+router = APIRouter(tags=["Cross-chain Support"])
 
 
 @router.get("/cross-chain/status")

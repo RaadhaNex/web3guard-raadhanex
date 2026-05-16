@@ -16,7 +16,7 @@ COMPLIANCE_REAL_ONLY_NOTE = (
 def compliance_status() -> dict[str, Any]:
     return {
         "ok": True,
-        "phase": "Mega Phase F - Phase 32 Compliance Scanner",
+        "version": "1.0",
         "jurisdictions": ["general_web3", "india_vda", "mica_eu", "gdpr", "fatf_aml"],
         "output": ["score", "readiness_label", "findings", "policy_gap_checklist", "manual_review_items"],
         "real_only_note": COMPLIANCE_REAL_ONLY_NOTE,

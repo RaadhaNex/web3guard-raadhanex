@@ -11,7 +11,7 @@ from app.services.professional_report import delivery_policy
 from app.services.scan_contract_address import explorer_status
 from app.services.scan_github_repo import github_scanner_status
 
-router = APIRouter(prefix="/final-patch-h", tags=["Mega Final Patch H"])
+router = APIRouter(prefix="/final-patch-h", tags=["Web3Guard AI"])
 
 
 @router.get("/status")
@@ -25,7 +25,7 @@ def final_patch_h_status():
 
     return {
         "ok": True,
-        "phase": "Mega Final Patch H - Critical Real Integration + Cleanup",
+        "version": "1.0",
         "real_only_rule": "Live features must use real provider/tool output. Missing integrations must show Tool Not Installed / Provider Not Configured / Needs API Key / Manual / Not Assessed.",
         "critical_gap_matrix": [
             {

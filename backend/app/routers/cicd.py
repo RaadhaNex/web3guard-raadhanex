@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from app.models.schemas import CiConfigValidateRequest, CiTemplateRequest
 from app.services.cicd import cicd_status, render_template, validate_ci_config
 
-router = APIRouter(tags=["Mega Phase E - CI/CD"])
+router = APIRouter(tags=["CI/CD"])
 
 
 @router.get("/cicd/status")

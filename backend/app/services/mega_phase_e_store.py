@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 MEGA_PHASE_E_REAL_ONLY_NOTE = (
-    "Mega Phase E records only real configuration, learning progress, and admin actions. "
+    " records only real configuration, learning progress, and admin actions. "
     "CI/CD runs, certifications, emails, revenue, system health, and queue metrics are not faked; "
     "they require real GitHub/SMTP/monitoring/provider integrations."
 )

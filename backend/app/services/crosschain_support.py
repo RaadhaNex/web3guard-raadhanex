@@ -29,7 +29,7 @@ SUPPORTED_CHAINS = {
 
 
 def cross_chain_status() -> dict[str, Any]:
-    return {"ok": True, "phase": "Mega Phase F - Phase 33 Cross-chain Support", "supported_chains": SUPPORTED_CHAINS, "evm_enabled": settings.cross_chain_evm_enabled, "solana_checklist_enabled": settings.cross_chain_solana_checklist_enabled, "move_checklist_enabled": settings.cross_chain_move_checklist_enabled, "real_only_note": CROSSCHAIN_REAL_ONLY_NOTE}
+    return {"ok": True, "version": "1.0", "supported_chains": SUPPORTED_CHAINS, "evm_enabled": settings.cross_chain_evm_enabled, "solana_checklist_enabled": settings.cross_chain_solana_checklist_enabled, "move_checklist_enabled": settings.cross_chain_move_checklist_enabled, "real_only_note": CROSSCHAIN_REAL_ONLY_NOTE}
 
 
 def _path() -> Path:

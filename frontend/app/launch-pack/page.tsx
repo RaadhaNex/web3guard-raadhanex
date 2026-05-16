@@ -17,7 +17,7 @@ export default function LaunchPackPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
       <div className="max-w-4xl">
-        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Phase 6.2 • Deploy + launch pack</p>
+        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">• Deploy + launch pack</p>
         <h1 className="mt-3 text-4xl font-black sm:text-5xl">Launch Web3Guard AI without fake promises.</h1>
         <p className="mt-4 text-slate-400">
           This page is the operating checklist for local QA, Render/Vercel deployment, UPI manual payment flow, and the first 30-day outreach plan. Use it before public testing.

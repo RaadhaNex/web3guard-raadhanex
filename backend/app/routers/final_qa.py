@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from app.core.security import require_admin
 from app.services.final_qa import implementation_map, launch_readiness, manual_accounts_needed, record_qa_run
 
-router = APIRouter(prefix="/final-qa", tags=["Mega Phase G - Final Production QA"])
+router = APIRouter(prefix="/final-qa", tags=["Final Production QA"])
 
 
 class QaRunCreate(BaseModel):
@@ -32,7 +32,7 @@ def run_snapshot(payload: QaRunCreate):
     return record_qa_run(payload.actor, payload.note)
 
 
-alias_router = APIRouter(prefix="/production-qa", tags=["Mega Phase G - Final QA Alias"])
+alias_router = APIRouter(prefix="/production-qa", tags=["Final QA Alias"])
 
 @alias_router.get("/status")
 def alias_status():

@@ -16,7 +16,7 @@ export default function ScopeRefundPage() {
       <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Scope / Refund Policy</p>
       <h1 className="mt-3 max-w-4xl text-4xl font-black sm:text-5xl">Clear paid-review boundaries before work starts.</h1>
       <p className="mt-4 max-w-3xl text-slate-400">
-        Phase 5 adds a practical scope policy so RAADHANEX can sell reports honestly, verify UPI payments manually, and avoid fake audit guarantees.
+        adds a practical scope policy so RAADHANEX can sell reports honestly, verify UPI payments manually, and avoid fake audit guarantees.
       </p>
 
       <div className="mt-10 grid gap-5 lg:grid-cols-2">

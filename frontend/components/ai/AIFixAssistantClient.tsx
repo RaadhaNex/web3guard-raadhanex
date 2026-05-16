@@ -89,7 +89,7 @@ export function AIFixAssistantClient() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="max-w-4xl">
-        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Phase 15 · Real AI Fix Assistant</p>
+        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">· Real AI Fix Assistant</p>
         <h1 className="mt-3 text-3xl font-black sm:text-5xl">Safe fix suggestions, not auto-fixes</h1>
         <p className="mt-4 text-slate-400">
           This assistant can generate conservative patch direction, diff/snippet ideas, tests, and validation steps. It never auto-applies production code, never asks for private keys, and uses local fallback if provider keys are missing.

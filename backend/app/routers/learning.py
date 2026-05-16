@@ -4,7 +4,7 @@ from app.models.schemas import LearningProgressCreate
 from app.services.auth_guard import resolve_user_id
 from app.services.learning_center import create_progress, get_lesson, learning_status, list_lessons, list_progress
 
-router = APIRouter(tags=["Mega Phase E - Learning Center"])
+router = APIRouter(tags=["Learning Center"])
 
 
 @router.get("/learning/status")

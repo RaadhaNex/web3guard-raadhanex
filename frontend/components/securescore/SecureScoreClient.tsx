@@ -35,7 +35,7 @@ export function SecureScoreClient() {
     <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan">Phase 10 SecureScore Pro</p>
+          <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan">SecureScore Pro</p>
           <h1 className="mt-2 text-4xl font-black">SecureScore dashboard</h1>
           <p className="mt-3 max-w-3xl text-slate-400">Built from real saved scans only. No fake scan history, fake fixes, fake audit status, or fake score trend is generated.</p>
         </div>

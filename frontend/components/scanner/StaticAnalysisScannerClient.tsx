@@ -42,7 +42,7 @@ contract Phase13Risk {
 
 export function StaticAnalysisScannerClient() {
   const [status, setStatus] = useState<StaticStatus | null>(null);
-  const [projectName, setProjectName] = useState("Phase 13 Static Analysis Project");
+  const [projectName, setProjectName] = useState("Static Analysis Project");
   const [fileName, setFileName] = useState("Contract.sol");
   const [code, setCode] = useState(sampleSolidity);
   const [tools, setTools] = useState<Record<string, boolean>>({ slither: true, aderyn: false, semgrep: true });
@@ -94,7 +94,7 @@ export function StaticAnalysisScannerClient() {
         user_id: userId,
         name: projectName || "Static Analysis Scan",
         project_type: "Static analysis",
-        description: "Created from Phase 13 static-analysis scanner. Only real installed/enabled tool outputs are treated as evidence.",
+        description: "Created from static-analysis scanner. Only real installed/enabled tool outputs are treated as evidence.",
       }, { headers });
       await apiPost("/scan-history", {
         user_id: userId,
@@ -123,7 +123,7 @@ export function StaticAnalysisScannerClient() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="max-w-4xl">
-        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Phase 13 • Real tool runner</p>
+        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">• Real tool runner</p>
         <h1 className="mt-3 text-3xl font-black sm:text-5xl">Slither / Aderyn / Semgrep Static Analysis</h1>
         <p className="mt-4 text-slate-400">
           Runs real external static-analysis tools only when they are installed and enabled on the backend. If a tool is missing or disabled, Web3Guard AI shows a tool-status finding instead of fake vulnerabilities.

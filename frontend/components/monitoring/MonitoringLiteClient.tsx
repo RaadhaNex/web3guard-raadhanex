@@ -82,7 +82,7 @@ export function MonitoringLiteClient() {
 
   return <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
     <div className="max-w-4xl">
-      <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Mega Phase C • Phase 23</p>
+      <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Web3Guard AI</p>
       <h1 className="mt-3 text-3xl font-black sm:text-5xl">Monitoring Lite</h1>
       <p className="mt-4 text-slate-400">Create real monitoring configs, store manual/admin alerts, and optionally run read-only RPC event checks when RPC env is configured. No fake live alerts, no wallet signing, no private keys.</p>
     </div>

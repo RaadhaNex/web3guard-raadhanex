@@ -70,7 +70,7 @@ def deep_analysis_status() -> dict[str, Any]:
         }
     return {
         "ok": True,
-        "phase": "Phase 14 - Deep Analysis Layer",
+        "version": "1.0",
         "engine_version": ENGINE_VERSION,
         "deep_analysis_enabled": settings.deep_analysis_enabled,
         "default_timeout_seconds": settings.deep_analysis_timeout_seconds,
@@ -186,7 +186,7 @@ def _base_finding(idx: int, *, tool: str, severity: str, title: str, description
         business_impact="Deep analysis can uncover execution-path, symbolic, or invariant issues that simple rule checks may miss, but each finding still needs manual triage before launch.",
         developer_explanation="This finding was parsed from a real deep-analysis tool output when the tool was installed and enabled in the worker policy.",
         recommendation="Review the exact tool evidence, confirm true/false positive status, add tests, patch the contract, then rerun the scanner.",
-        references=[tool, "Phase 14 deep analysis"],
+        references=[tool, "Web3Guard deep analysis"],
         paid_review_recommended=severity in {"critical", "high"},
     )
 
@@ -209,7 +209,7 @@ def _tool_status_finding(idx: int, tool: str, reason: str) -> Finding:
         business_impact="This is not a fake vulnerability. It tells the founder which deeper evidence is missing before launch.",
         developer_explanation="Install and enable the tool in an isolated worker to run real deep analysis. Until then, use local rule/static findings only.",
         recommendation=f"Configure {tool}, keep the worker isolated, then rerun the deep analysis scanner.",
-        references=["Phase 14 real-only tool status"],
+        references=["Web3Guard real-only tool status"],
         paid_review_recommended=False,
     )
 
@@ -289,7 +289,7 @@ def _depth_timeout(scan_depth: str) -> int:
 
 def run_deep_analysis(solidity_code: str, project_name: str | None, file_name: str, requested_tools: list[str], scan_depth: str = "quick", ownership_verified: bool = False) -> ScanResponse:
     if len(solidity_code) > settings.max_deep_analysis_code_chars:
-        raise ValueError(f"Solidity input is too large for Phase 14 deep analysis limit ({settings.max_deep_analysis_code_chars} chars)")
+        raise ValueError(f"Solidity input is too large for Web3Guard deep analysis limit ({settings.max_deep_analysis_code_chars} chars)")
     valid_tools = [tool for tool in requested_tools if tool in SUPPORTED_DEEP_TOOLS]
     if not valid_tools:
         valid_tools = list(SUPPORTED_DEEP_TOOLS)

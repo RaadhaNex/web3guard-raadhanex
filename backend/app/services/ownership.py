@@ -292,5 +292,5 @@ def scan_policy() -> dict:
         "consent_text": "I own this project or have authorization to run this preliminary passive/checklist/code-submitted review.",
         "private_network_blocking": True,
         "deep_scan_available": False,
-        "note": "Phase 5.9 adds ownership verification architecture and abuse prevention. MVP remains passive/checklist/code-submitted only.",
+        "note": "Web3Guard adds ownership verification architecture and abuse prevention. MVP remains passive/checklist/code-submitted only.",
     }

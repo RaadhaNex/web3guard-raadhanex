@@ -17,7 +17,7 @@ export function ProductionReadiness() {
           <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Real-only production posture</p>
           <h2 className="mt-3 text-3xl font-black sm:text-4xl">No fake audit claims. No fake payment success.</h2>
           <p className="mt-4 text-sm leading-6 text-slate-400">
-            Phase 6.2 makes the MVP more launchable by polishing the UI, exposing real feature status, and adding a deployment launch pack. Every module is labeled as live, manual, needs API key, or not enabled.
+            makes the MVP more launchable by polishing the UI, exposing real feature status, and adding a deployment launch pack. Every module is labeled as live, manual, needs API key, or not enabled.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link href="/launch-pack" className="btn-primary">Open Launch Pack</Link>

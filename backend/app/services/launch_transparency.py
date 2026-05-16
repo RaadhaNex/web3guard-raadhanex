@@ -151,7 +151,7 @@ def _hash(value: str) -> str:
 def launch_transparency_status() -> dict[str, Any]:
     return {
         "ok": True,
-        "phase": "Mega Phase A - Phase 17 Token/NFT/Launch Transparency",
+        "version": "1.0",
         "engine_version": ENGINE_VERSION,
         "mode": "read_only_source_and_founder_input",
         "live_capabilities": [
@@ -311,7 +311,7 @@ def build_launch_transparency_report(
         input_hash=_hash(combined_input),
         engine_version=ENGINE_VERSION,
         scan_metadata={
-            "phase": "Mega Phase A / Phase 17",
+            "version": "1.0",
             "real_only_note": "Generated only from provided source/text/founder evidence. It does not accuse, certify, or invent facts.",
             "project_type_detected": checklist_key,
             "launch_checklist": checklist,

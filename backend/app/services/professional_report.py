@@ -41,7 +41,7 @@ def _public_reports_path() -> Path:
 def delivery_policy() -> dict[str, Any]:
     return {
         "ok": True,
-        "phase": "Phase 9 - Professional Report System",
+        "version": "1.0",
         "live_formats": ["professional_html", "server_pdf", "markdown", "json", "public_private_record"],
         "manual_limits": [
             "Report quality depends on modules actually assessed.",
@@ -291,7 +291,7 @@ def build_report_artifacts(report: dict[str, Any]) -> dict[str, Any]:
     pdf_bytes = build_pdf_bytes(report)
     return {
         "ok": True,
-        "phase": "Phase 9 - Professional Report System",
+        "version": "1.0",
         "report_id": report.get("report_id"),
         "report_hash": report.get("report_hash"),
         "project_name": report.get("project_name"),

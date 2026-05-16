@@ -81,7 +81,7 @@ def security_hardening_status() -> dict[str, Any]:
     warnings = [c for c in checks if c["status"] == "warning"]
     return {
         "ok": len(blockers) == 0,
-        "phase": "Mega Phase G - Phase 34 Platform Security Hardening",
+        "version": "1.0",
         "production_ready": len(blockers) == 0 and len(warnings) == 0,
         "blocker_count": len(blockers),
         "warning_count": len(warnings),
@@ -129,7 +129,7 @@ def final_qa_status() -> dict[str, Any]:
     account_blockers = [a for a in required_accounts if a["required_for_public_launch"] and not a["configured"]]
     return {
         "ok": env.get("ok") and security.get("ok"),
-        "phase": "Mega Phase G - Phase 35 Final Production Launch QA",
+        "version": "1.0",
         "frontend_route_count": len(ESSENTIAL_FRONTEND_ROUTES),
         "backend_endpoint_count": len(ESSENTIAL_BACKEND_ENDPOINTS) + 12,
         "environment_ok": env.get("ok"),

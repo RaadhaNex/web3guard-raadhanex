@@ -31,7 +31,7 @@ from app.services.database_store import (
     upsert_profile,
 )
 
-router = APIRouter(tags=["Phase 7.1 Database + Dashboard"])
+router = APIRouter(tags=["Web3Guard Database + Dashboard"])
 
 
 @router.get("/db/status")

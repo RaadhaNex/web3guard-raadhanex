@@ -7,8 +7,8 @@ from app.routers import admin, admin_super, ai, bug_bounty, cicd, compliance, cr
 
 app = FastAPI(
     title=settings.app_name,
-    version="1.0.0-megaH-final-patch",
-    description="AI-assisted Web3 launch security review platform with Mega Final Patch H: critical real integration cleanup for optional tools, Supabase Auth, Razorpay, PDF export, RPC monitoring, and real-only launch transparency by RAADHANEX.",
+    version="1.0.0",
+    description="AI-assisted Web3 launch security review platform by RAADHANEX. AI-assisted preliminary Web3 launch security review.",
 )
 
 app.add_middleware(SecurityHeadersMiddleware)
@@ -59,6 +59,6 @@ def root():
         "ok": True,
         "service": settings.app_name,
         "env": settings.app_env,
-        "phase": "Mega Final Patch H - Critical Real Integration + Cleanup",
+        "status": "production-ready",
         "disclaimer": "Preliminary security review only. Not a certified audit.",
     }

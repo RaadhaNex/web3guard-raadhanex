@@ -68,7 +68,7 @@ def payment_status() -> dict[str, Any]:
     webhook_configured = bool(settings.razorpay_webhook_secret)
     return {
         "ok": True,
-        "phase": "Phase 8 - Razorpay + UPI subscription system",
+        "version": "1.0",
         "payment_mode": settings.payment_mode,
         "upi_manual_enabled": True,
         "upi_id_configured": settings.raadhanex_upi_id not in {"", "yourupi@bank", "raadhanex@upi"},

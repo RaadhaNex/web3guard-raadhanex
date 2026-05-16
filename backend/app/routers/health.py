@@ -11,7 +11,7 @@ def health():
         "ok": True,
         "service": settings.app_name,
         "env": settings.app_env,
-        "phase": "Mega Phase G - Security Hardening + Final Production Launch QA",
+        "version": "1.0",
         "python": "3.12 required",
         "frontend_origin": settings.frontend_origin,
         "backend_url": settings.backend_url,

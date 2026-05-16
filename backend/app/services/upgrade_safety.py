@@ -36,7 +36,7 @@ def _report_id(project_name: str | None) -> str:
 def upgrade_safety_status() -> dict[str, Any]:
     return {
         "ok": True,
-        "phase": "Mega Phase A - Phase 19 Upgrade Safety Analyzer",
+        "version": "1.0",
         "engine_version": ENGINE_VERSION,
         "mode": "read_only_proxy_initializer_storage_hints",
         "live_capabilities": [
@@ -207,7 +207,7 @@ def build_upgrade_safety_report(
         input_hash=_hash((previous_code or "") + "\n---CURRENT---\n" + current_code + "\n" + (proxy_admin_notes or "")),
         engine_version=ENGINE_VERSION,
         scan_metadata={
-            "phase": "Mega Phase A / Phase 19",
+            "version": "1.0-current",
             "real_only_note": "Read-only upgrade safety hints only. No deployment, signing, or certified storage proof.",
             "proxy_types_detected": proxy_types,
             "initializer_evidence": {"has_initialize": has_initializer, "has_initializer_modifier": has_initializer_modifier, "has_disable_initializers": has_disable_initializers},

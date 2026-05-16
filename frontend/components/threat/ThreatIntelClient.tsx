@@ -59,7 +59,7 @@ export function ThreatIntelClient() {
 
   return <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
     <div className="max-w-4xl">
-      <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Mega Phase C • Phase 24</p>
+      <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Web3Guard AI</p>
       <h1 className="mt-3 text-3xl font-black sm:text-5xl">Threat Intelligence Feed</h1>
       <p className="mt-4 text-slate-400">MVP threat intel is manual-curated + local knowledge base. It does not claim live/current news unless real feed integrations are enabled and cited.</p>
     </div>

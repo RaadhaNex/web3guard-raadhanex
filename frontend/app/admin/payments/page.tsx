@@ -33,14 +33,14 @@ export default function AdminPaymentsPage() {
 
   async function updatePayment(id: string, status: PaymentStatus) {
     setBusy(id); setError(null);
-    try { await apiPatch(`/admin/payments/${id}`, { status, note: "Updated from Phase 8 admin payments UI" }, { headers: authHeaders }); await load(); }
+    try { await apiPatch(`/admin/payments/${id}`, { status, note: "Updated from admin payments UI" }, { headers: authHeaders }); await load(); }
     catch (err) { setError(err instanceof Error ? err.message : "Payment update failed"); }
     finally { setBusy(null); }
   }
 
   async function updateSubscription(id: string, status: string) {
     setBusy(id); setError(null);
-    try { await apiPatch(`/admin/subscriptions/${id}`, { status, note: "Updated from Phase 8 admin payments UI" }, { headers: authHeaders }); await load(); }
+    try { await apiPatch(`/admin/subscriptions/${id}`, { status, note: "Updated from admin payments UI" }, { headers: authHeaders }); await load(); }
     catch (err) { setError(err instanceof Error ? err.message : "Subscription update failed"); }
     finally { setBusy(null); }
   }

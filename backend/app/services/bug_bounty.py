@@ -18,7 +18,7 @@ SEVERITY_TEMPLATE = {
 
 def bug_bounty_status() -> dict[str, Any]:
     return {
-        "phase": "Mega Phase D - Phase 25 Bug Bounty Readiness + Marketplace MVP",
+        "version": "1.0",
         "enabled": True,
         "live_capabilities": [
             "Create real bounty readiness records",

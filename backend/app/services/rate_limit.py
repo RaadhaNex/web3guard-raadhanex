@@ -11,7 +11,7 @@ _BUCKETS: dict[str, deque[datetime]] = defaultdict(deque)
 def enforce_hourly_limit(key: str, *, limit: int | None = None) -> None:
     """Small in-memory MVP rate limiter.
 
-    This is intentionally simple for Phase 5.5. Production should move this to Redis/Upstash
+    This is intentionally simple for current.5. Production should move this to Redis/Upstash
     so limits work across multiple Render instances.
     """
     max_requests = limit or settings.max_url_scan_per_hour

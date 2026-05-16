@@ -16,7 +16,7 @@ from app.services.bug_bounty import (
 )
 from app.services.rate_limit import enforce_hourly_limit
 
-router = APIRouter(prefix="/bug-bounty", tags=["Mega Phase D - Bug Bounty"])
+router = APIRouter(prefix="/bug-bounty", tags=["Bug Bounty"])
 
 
 @router.get("/status")

@@ -62,7 +62,7 @@ def fix_assistant_status() -> dict[str, Any]:
     provider_configured = bool(settings.ai_enabled and settings.ai_fix_enabled and key and provider in {"openai", "anthropic"})
     return {
         "ok": True,
-        "phase": "Phase 15 - Real AI Fix Assistant",
+        "version": "1.0",
         "ai_enabled": settings.ai_enabled,
         "ai_fix_enabled": settings.ai_fix_enabled,
         "provider": provider,

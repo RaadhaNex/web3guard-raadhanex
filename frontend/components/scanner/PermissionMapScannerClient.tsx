@@ -134,7 +134,7 @@ export function PermissionMapScannerClient() {
         contract_address: contractAddress || null,
         chain,
         project_type: "Permission Map + Centralization Report",
-        description: "Created from Phase 16 permission map scanner. Role holders are not invented; unknowns remain unknown.",
+        description: "Created from permission map scanner. Role holders are not invented; unknowns remain unknown.",
       }, { headers });
       await apiPost("/scan-history", {
         user_id: userId,
@@ -161,7 +161,7 @@ export function PermissionMapScannerClient() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="max-w-4xl">
-        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Phase 16 • Permission map</p>
+        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">• Permission map</p>
         <h1 className="mt-3 text-3xl font-black sm:text-5xl">Contract Permission Map + Centralization Report</h1>
         <p className="mt-4 text-slate-400">
           Map owner, minter, pauser, upgrader, treasury, blacklist/freeze, fee, role-admin, and oracle powers from real Solidity/ABI/manual facts. Unknown role holders stay unknown; no fake governance score or private-key collection.

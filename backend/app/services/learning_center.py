@@ -67,7 +67,7 @@ LESSONS: list[dict[str, Any]] = [
 def learning_status() -> dict[str, Any]:
     return {
         "ok": True,
-        "phase": "Mega Phase E - Phase 29 Learning Center + Hinglish Knowledge Base",
+        "version": "1.0",
         "lesson_count": len(LESSONS),
         "live": True,
         "real_only_note": MEGA_PHASE_E_REAL_ONLY_NOTE,

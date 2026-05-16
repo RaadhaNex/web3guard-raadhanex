@@ -556,6 +556,10 @@ def scan_solidity(solidity_code: str, project_name: str | None = None, contract_
     idx = _event_and_payable_checks(code, findings, idx)
     idx = _gas_and_launch_readiness_checks(code, findings, idx)
     idx = _token_specific_checks(code, findings, idx, contract_type)
+    idx = _defi_and_oracle_checks(code, findings, idx)
+    idx = _access_pattern_checks(code, findings, idx)
+    idx = _integer_and_math_checks(code, findings, idx)
+    idx = _signature_and_permit_checks(code, findings, idx)
 
     score = score_findings(findings)
     digest = sha12(code)
@@ -592,4 +596,222 @@ def available_contract_rules() -> list[dict[str, str]]:
         {"id": "WG-SOL-EVENT-001", "name": "Sensitive function no event", "category": "observability"},
         {"id": "WG-SOL-GAS-001", "name": "Unbounded loop", "category": "gas"},
         {"id": "WG-SOL-TOKEN-001", "name": "ERC20 approve education", "category": "token_standard"},
+        {"id": "WG-SOL-TOKEN-002", "name": "Mint authority disclosure", "category": "centralization"},
+        {"id": "WG-SOL-NFT-001",   "name": "NFT metadata mutability", "category": "nft_metadata"},
+        {"id": "WG-SOL-DEFI-001",  "name": "Flash loan sensitive function", "category": "defi"},
+        {"id": "WG-SOL-DEFI-002",  "name": "Oracle price feed dependency", "category": "defi"},
+        {"id": "WG-SOL-DEFI-003",  "name": "Unlimited approval (max uint)", "category": "defi"},
+        {"id": "WG-SOL-TAX-001",   "name": "Fee-on-transfer / tax token", "category": "token_standard"},
+        {"id": "WG-SOL-ADMIN-003", "name": "Blacklist centralization", "category": "centralization"},
+        {"id": "WG-SOL-ADMIN-004", "name": "Pausable admin power", "category": "centralization"},
+        {"id": "WG-SOL-MATH-001",  "name": "Division before multiplication", "category": "math"},
+        {"id": "WG-SOL-MATH-002",  "name": "Unchecked arithmetic block", "category": "math"},
+        {"id": "WG-SOL-SIG-001",   "name": "Signature/permit replay risk", "category": "signature"},
     ]
+
+
+# ── Extra Real Rules ──────────────────────────────────────────────────────────
+
+def _defi_and_oracle_checks(code: str, findings: list[Finding], idx: int) -> int:
+    """Flash loan sensitivity, oracle dependency, and unlimited approval checks."""
+
+    # Flash loan sensitive patterns
+    if re.search(r"flashLoan|flashloan|FLASH_LOAN|IFlashLoan|executeOperation|onFlashLoan", code, re.IGNORECASE):
+        line, _ = first_match_line(code, r"flashLoan|flashloan|FLASH_LOAN|IFlashLoan|executeOperation|onFlashLoan")
+        _add_unique(findings, _finding(
+            idx,
+            severity="high",
+            title="Flash Loan Sensitive Function Detected",
+            description="The contract contains flash loan callback or integration patterns. Flash loan attacks can manipulate prices, drain pools, or bypass access controls within a single transaction.",
+            line=line,
+            code=line_text(code, line),
+            business="Flash loan attacks are responsible for hundreds of millions in DeFi losses. A vulnerable flash loan integration can drain all protocol funds instantly.",
+            dev="Ensure flash loan callbacks validate the initiator, validate repayment, and are protected against reentrancy. Avoid using spot prices during flash loan callbacks.",
+            fix="Add initiator check, reentrancy guard, and validate all state after the flash loan callback completes. Never use spot reserves as price oracles inside flash loan flows.",
+            confidence="medium",
+            category="defi",
+            rule_id="WG-SOL-DEFI-001",
+            references=["SWC-107", "Flash Loan Attack Patterns", "Checks-Effects-Interactions"],
+        ))
+        idx += 1
+
+    # Oracle price dependency
+    if re.search(r"getPrice|latestRoundData|latestAnswer|priceFeed|AggregatorV3|IOracle|oracle\.", code, re.IGNORECASE):
+        line, _ = first_match_line(code, r"getPrice|latestRoundData|latestAnswer|priceFeed|AggregatorV3|IOracle|oracle\.")
+        _add_unique(findings, _finding(
+            idx,
+            severity="medium",
+            title="Oracle Price Feed Dependency",
+            description="The contract depends on an external price oracle. If the oracle is stale, manipulated, or returns incorrect data, the contract logic may be exploited.",
+            line=line,
+            code=line_text(code, line),
+            business="Oracle manipulation is one of the most common DeFi attack vectors. Stale or manipulated prices can allow attackers to profit at protocol expense.",
+            dev="Always validate oracle freshness (check updatedAt timestamp), handle roundId correctly, and consider using TWAP prices rather than spot prices for critical calculations.",
+            fix="Add staleness check: require(updatedAt >= block.timestamp - MAX_STALENESS). Consider using multiple oracle sources or TWAP. Add circuit breakers for extreme price moves.",
+            confidence="medium",
+            category="defi",
+            rule_id="WG-SOL-DEFI-002",
+            references=["Chainlink Oracle Best Practices", "Oracle Manipulation Attacks"],
+        ))
+        idx += 1
+
+    # Unlimited approval pattern
+    if re.search(r"type\(uint256\)\.max|type\(uint\)\.max|MAX_INT|UINT_MAX|2\*\*256\s*-\s*1", code):
+        line, _ = first_match_line(code, r"type\(uint256\)\.max|type\(uint\)\.max|MAX_INT|UINT_MAX|2\*\*256\s*-\s*1")
+        _add_unique(findings, _finding(
+            idx,
+            severity="medium",
+            title="Unlimited Approval (Max Uint) Usage",
+            description="The contract uses unlimited approval amounts (type(uint256).max). While common in DeFi integrations, this pattern warrants disclosure and careful spender verification.",
+            line=line,
+            code=line_text(code, line),
+            business="Unlimited approvals mean a compromised or malicious spender can drain all user tokens. Users should understand the risk before approving.",
+            dev="Add a warning in the UI when requesting unlimited approvals. Verify spender contract is immutable, audited, and trusted before requesting max approval.",
+            fix="Document all unlimited approval use cases. Add UI warnings. Consider time-limited or amount-limited approvals where possible.",
+            confidence="medium",
+            category="defi",
+            rule_id="WG-SOL-DEFI-003",
+            references=["ERC20 Approval Risk Disclosure", "Permit2 safer alternatives"],
+        ))
+        idx += 1
+
+    return idx
+
+
+def _access_pattern_checks(code: str, findings: list[Finding], idx: int) -> int:
+    """Fee-on-transfer tax, blacklist, selfdestruct improvements."""
+
+    # Hidden tax / fee on transfer
+    if re.search(r"_taxFee|_liquidityFee|taxFee|buyFee|sellFee|transferFee|_fee\s*=|feePercent|_reflectionFee|marketingFee", code, re.IGNORECASE):
+        line, _ = first_match_line(code, r"_taxFee|_liquidityFee|taxFee|buyFee|sellFee|transferFee|_fee\s*=|feePercent|_reflectionFee|marketingFee")
+        _add_unique(findings, _finding(
+            idx,
+            severity="medium",
+            title="Fee-on-Transfer / Tax Token Pattern",
+            description="The contract includes transfer fee or tax logic. Tax tokens require special handling in DeFi integrations and must be clearly disclosed.",
+            line=line,
+            code=line_text(code, line),
+            business="DEX routers and DeFi protocols typically do not support fee-on-transfer tokens without special configuration. Undisclosed fees cause integration failures and user trust issues.",
+            dev="Ensure fees are capped, clearly documented, and emitted in events. DEX integrations require enabling fee-on-transfer support. Max fee cap should be enforced in code.",
+            fix="Add maximum fee cap enforced in constructor/setter. Emit event on fee change. Document fee structure prominently in project materials.",
+            confidence="medium",
+            category="token_standard",
+            rule_id="WG-SOL-TAX-001",
+            references=["Fee-on-Transfer Token ERC20 compatibility", "SWC Tax Token Disclosure"],
+        ))
+        idx += 1
+
+    # Blacklist/whitelist pattern
+    if re.search(r"blacklist|blacklisted|isBlacklisted|addBlacklist|whitelist|isWhitelisted|blocked\[|_blocked\[", code, re.IGNORECASE):
+        line, _ = first_match_line(code, r"blacklist|blacklisted|isBlacklisted|addBlacklist")
+        if line:
+            _add_unique(findings, _finding(
+                idx,
+                severity="medium",
+                title="Blacklist/Whitelist Centralization",
+                description="The contract has blacklisting or whitelisting functionality controlled by an admin. This gives admin significant power over who can use the token.",
+                line=line,
+                code=line_text(code, line),
+                business="Blacklist functionality means admin can freeze any user's funds. This is a centralization risk that may concern exchanges, investors, and regulators.",
+                dev="Blacklist should be governed by multisig/DAO with timelock. Log all blacklist actions with events. Consider limiting scope to compliance-only use.",
+                fix="Protect blacklist changes with multisig/timelock. Emit events for all blacklist actions. Document intended governance process. Consider allowing users to appeal.",
+                confidence="high",
+                category="centralization",
+                rule_id="WG-SOL-ADMIN-003",
+                references=["Centralization Risk Disclosure", "OFAC compliance patterns"],
+            ))
+            idx += 1
+
+    # Pausable without timelock
+    if re.search(r"pause\(\)|_pause\(\)|whenNotPaused|Pausable", code, re.IGNORECASE):
+        line, _ = first_match_line(code, r"pause\(\)|_pause\(\)|whenNotPaused|Pausable")
+        _add_unique(findings, _finding(
+            idx,
+            severity="low",
+            title="Pausable Contract — Admin Power Disclosure",
+            description="The contract inherits or implements pausable functionality. Admin can halt all transfers or operations.",
+            line=line,
+            code=line_text(code, line),
+            business="Pause capability means admin can stop all token transfers or protocol operations instantly. This should be disclosed and protected by governance.",
+            dev="Protect pause with multisig. Add unpausing timelock. Document pause conditions in contract documentation. Consider emitting reason in pause event.",
+            fix="Add governance protection for pause. Emit reason. Document emergency response process.",
+            confidence="medium",
+            category="centralization",
+            rule_id="WG-SOL-ADMIN-004",
+            references=["OpenZeppelin Pausable", "Emergency pause governance best practices"],
+        ))
+        idx += 1
+
+    return idx
+
+
+def _integer_and_math_checks(code: str, findings: list[Finding], idx: int) -> int:
+    """Division precision loss, unchecked arithmetic, dangerous casting."""
+
+    # Division before multiplication (precision loss)
+    if re.search(r"/\s*\w+\s*\*|\/\s*\d+\s*\*", code):
+        line, _ = first_match_line(code, r"/\s*\w+\s*\*|\/\s*\d+\s*\*")
+        if line:
+            _add_unique(findings, _finding(
+                idx,
+                severity="medium",
+                title="Division Before Multiplication — Precision Loss Risk",
+                description="A division operation appears before a multiplication in an expression. In Solidity integer math, this causes precision loss because integer division truncates toward zero.",
+                line=line,
+                code=line_text(code, line),
+                business="Precision loss can cause incorrect fee calculations, reward distributions, or collateral calculations — leading to user fund shortfalls.",
+                dev="Always multiply before dividing in Solidity. Use uint256 scale factors (1e18) to maintain precision. Consider using FixedPoint math libraries for financial calculations.",
+                fix="Reorder to multiply before divide: result = (a * b) / c instead of (a / c) * b. Use mulDiv or PRBMath for precise fixed-point arithmetic.",
+                confidence="low",
+                category="math",
+                rule_id="WG-SOL-MATH-001",
+                references=["Solidity integer arithmetic precision", "PRBMath library"],
+            ))
+            idx += 1
+
+    # Unchecked block usage
+    if re.search(r"\bunchecked\b\s*\{", code):
+        line, _ = first_match_line(code, r"\bunchecked\b\s*\{")
+        _add_unique(findings, _finding(
+            idx,
+            severity="low",
+            title="Unchecked Arithmetic Block Used",
+            description="The contract uses unchecked{} blocks which disable Solidity 0.8.x overflow/underflow protection for gas savings.",
+            line=line,
+            code=line_text(code, line),
+            business="Unchecked blocks can reintroduce integer overflow/underflow vulnerabilities if used incorrectly, potentially causing loss of funds.",
+            dev="Unchecked is safe only for operations guaranteed not to overflow by prior logic (e.g., counter increment after bounds check). Review each unchecked block carefully.",
+            fix="Document why each unchecked block is safe. Add explicit bounds check comments. Avoid unchecked in financial calculation paths unless mathematically proven safe.",
+            confidence="low",
+            category="math",
+            rule_id="WG-SOL-MATH-002",
+            references=["SWC-101 Integer Overflow", "Solidity 0.8.x unchecked blocks"],
+        ))
+        idx += 1
+
+    return idx
+
+
+def _signature_and_permit_checks(code: str, findings: list[Finding], idx: int) -> int:
+    """EIP-712 permit signature replay and deadline checks."""
+
+    if re.search(r"\bpermit\b|EIP712|_hashTypedData|ecrecover|DOMAIN_SEPARATOR|ERC20Permit|EIP2612", code):
+        line, _ = first_match_line(code, r"\bpermit\b|EIP712|_hashTypedData|ecrecover|DOMAIN_SEPARATOR|ERC20Permit|EIP2612")
+        _add_unique(findings, _finding(
+            idx,
+            severity="medium",
+            title="Signature / Permit Functionality — Replay Risk Review",
+            description="The contract uses permit, ecrecover, or EIP-712 signed messages. Improper nonce or deadline handling enables signature replay attacks.",
+            line=line,
+            code=line_text(code, line),
+            business="Signature replay attacks can allow malicious actors to re-use a valid user signature to drain approvals or execute unauthorized transactions.",
+            dev="Ensure all signed messages include: unique nonce per user (auto-incrementing), deadline/expiry, chainId in domain separator, and contract address. Use OpenZeppelin EIP712 implementation.",
+            fix="Use OpenZeppelin's ERC20Permit or EIP712 library. Verify nonces are incremented atomically. Check deadline on-chain: require(block.timestamp <= deadline). Include chainId in all domain separators.",
+            confidence="medium",
+            category="signature",
+            rule_id="WG-SOL-SIG-001",
+            references=["EIP-712 Typed Structured Data Signing", "EIP-2612 permit", "SWC-121 Missing Protection Against Signature Replay"],
+        ))
+        idx += 1
+
+    return idx

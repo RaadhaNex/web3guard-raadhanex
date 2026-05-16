@@ -4,7 +4,7 @@ from app.core.security import require_admin
 from app.models.schemas import AdminFeatureFlagUpdate
 from app.services.admin_super_panel import admin_super_dashboard, admin_super_status, list_audit_logs, list_feature_flags, system_health_snapshot, upsert_feature_flag
 
-router = APIRouter(prefix="/admin/super", tags=["Mega Phase E - Admin Super Panel"], dependencies=[Depends(require_admin)])
+router = APIRouter(prefix="/admin/super", tags=["Admin Super Panel"], dependencies=[Depends(require_admin)])
 
 
 @router.get("/status")

@@ -4,7 +4,7 @@ from app.models.schemas import NotificationPreferenceCreate, NotificationSendReq
 from app.services.auth_guard import resolve_user_id
 from app.services.notification_center import create_preference, list_events, list_preferences, notification_status, send_notification
 
-router = APIRouter(tags=["Mega Phase F - Notifications"])
+router = APIRouter(tags=["Notifications"])
 
 
 @router.get("/notifications/status")

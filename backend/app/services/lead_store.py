@@ -56,7 +56,7 @@ def list_leads() -> list[Lead]:
         if not line.strip():
             continue
         raw = json.loads(line)
-        # Backward compatibility for old Phase 1-3 leads.
+        # Backward compatibility for old current-3 leads.
         raw.setdefault("payment_status", "created")
         raw.setdefault("payment_intent_id", None)
         raw.setdefault("payment_amount_inr", raw.get("package_amount_inr"))

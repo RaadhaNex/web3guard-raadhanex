@@ -113,7 +113,7 @@ def _report_id(project_name: str | None) -> str:
 def permission_map_status() -> dict[str, Any]:
     return {
         "ok": True,
-        "phase": "Phase 16 - Contract Permission Map + Centralization Report",
+        "version": "1.0",
         "engine_version": ENGINE_VERSION,
         "mode": "read_only_static_source_and_abi_analysis",
         "live_capabilities": [
@@ -513,7 +513,7 @@ def build_permission_map(
     findings = _build_findings(capabilities, manual, solidity_code, abi_json)
     score = score_findings(findings)
     metadata = {
-        "phase": "Phase 16",
+        "version": "1.0-current",
         "contract_address": contract_address,
         "chain": chain,
         "permission_map": {"capabilities": capabilities},

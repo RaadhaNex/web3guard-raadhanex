@@ -30,7 +30,7 @@ from app.services.workspace_store import (
     workspace_status,
 )
 
-router = APIRouter(tags=["Phase 7.2 Organization + Team Workspace"])
+router = APIRouter(tags=["Web3Guard Organization + Team Workspace"])
 
 
 @router.get("/workspace/status")

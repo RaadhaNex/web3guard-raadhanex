@@ -4,7 +4,7 @@ from app.models.schemas import ComplianceScanRequest
 from app.services.auth_guard import resolve_user_id
 from app.services.compliance_scanner import compliance_status, list_compliance_scans, run_compliance_scan
 
-router = APIRouter(tags=["Mega Phase F - Compliance Scanner"])
+router = APIRouter(tags=["Compliance Scanner"])
 
 
 @router.get("/compliance/status")

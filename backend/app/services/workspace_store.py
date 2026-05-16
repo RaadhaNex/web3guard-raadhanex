@@ -29,7 +29,7 @@ from app.models.schemas import (
 from app.services.database_store import list_projects, list_reports, list_scans
 
 PHASE72_REAL_ONLY_NOTE = (
-    "Phase 7.2 stores real organization/team workspace records only. "
+    "Web3Guard stores real organization/team workspace records only. "
     "Member invites are manual invite records until email delivery is connected; no fake email invite, fake member activity, or fake collaboration data is generated."
 )
 
@@ -290,7 +290,7 @@ def workspace_overview(user_id: str, org_id: str) -> WorkspaceOverview | None:
         return None
     role = user_role(user_id, org_id)
     members = list_members(user_id, org_id) or []
-    # Phase 7.2 keeps ownership simple: projects/scans/reports are filtered by current user, not copied/faked into orgs.
+    # Web3Guard keeps ownership simple: projects/scans/reports are filtered by current user, not copied/faked into orgs.
     projects = list_projects(user_id, limit=100)
     scans = list_scans(user_id, limit=100)
     reports = list_reports(user_id, limit=100)
@@ -324,7 +324,7 @@ def workspace_overview(user_id: str, org_id: str) -> WorkspaceOverview | None:
 
 def workspace_status() -> dict[str, Any]:
     return {
-        "phase": "7.2",
+        "version": "1.0",
         "storage_mode": "local_first_supabase_ready",
         "tables_ready": ["organizations", "organization_members", "finding_tasks", "workspace_comments", "workspace_activity"],
         "real_only_note": PHASE72_REAL_ONLY_NOTE,

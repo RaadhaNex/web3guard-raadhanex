@@ -65,7 +65,7 @@ export function LaunchTransparencyScannerClient() {
   const detected = (result?.scan_metadata?.detected_controls || []) as Array<Record<string, string>>;
 
   return <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-    <div className="max-w-4xl"><p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Mega Phase A • Phase 17</p><h1 className="mt-3 text-3xl font-black sm:text-5xl">Token / NFT / Launch Transparency Scanner</h1><p className="mt-4 text-slate-400">Detect founder disclosure gaps from real source, website copy, and notes. It never accuses a project of fraud and never certifies safety.</p></div>
+    <div className="max-w-4xl"><p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Web3Guard AI</p><h1 className="mt-3 text-3xl font-black sm:text-5xl">Token / NFT / Launch Transparency Scanner</h1><p className="mt-4 text-slate-400">Detect founder disclosure gaps from real source, website copy, and notes. It never accuses a project of fraud and never certifies safety.</p></div>
     <div className="mt-8 grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="space-y-5">
         <div className="card p-6 space-y-4">

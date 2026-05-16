@@ -28,7 +28,7 @@ export function ReportDetailClient({ reportId }: { reportId: string }) {
       const ctx = await currentDashboardUser();
       const data = await apiPatch<{ report: SavedReportRecord }>(`/saved-reports/${reportId}?user_id=${encodeURIComponent(ctx.userId)}`, { visibility, status }, { headers: ctx.headers });
       setReport(data.report);
-      setMessage("Report status saved. Public registry is not live until Phase 26, so public visibility is only metadata for now.");
+      setMessage("Report status saved. Public registry is not live until public registry may have limited visibility.");
     } catch (err) { setError(err instanceof Error ? err.message : "Could not update report"); }
   }
 

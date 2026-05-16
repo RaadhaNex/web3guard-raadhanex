@@ -74,7 +74,7 @@ export function LocalQaClient() {
   return (
     <div className="space-y-8">
       <section className="card">
-        <div className="badge">Phase 6 Local QA</div>
+        <div className="badge">Local QA</div>
         <h1 className="mt-4 text-3xl font-semibold text-white">Local QA + Stability Console</h1>
         <p className="mt-3 max-w-3xl text-slate-300">
           Use this page after starting both backend and frontend. It does not fake test results: it reads the live backend QA endpoint and shows env/storage warnings clearly.

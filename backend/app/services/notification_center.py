@@ -21,7 +21,7 @@ NOTIFICATIONS_REAL_ONLY_NOTE = (
 def notification_status() -> dict[str, Any]:
     return {
         "ok": True,
-        "phase": "Mega Phase F - Phase 31 Notifications",
+        "version": "1.0",
         "enabled": settings.notifications_enabled,
         "providers": {
             "smtp_email": {"enabled": settings.smtp_enabled, "configured": bool(settings.smtp_host and settings.smtp_from_email)},

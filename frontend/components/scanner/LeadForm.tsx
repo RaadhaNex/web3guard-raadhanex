@@ -47,7 +47,7 @@ export function LeadForm() {
   return (
     <form onSubmit={submitForm} className="card grid gap-4 p-6">
       <div className="rounded-2xl border border-cyan/20 bg-cyan/10 p-4 text-sm text-cyan-50">
-        Phase 8 supports Razorpay verified payments and manual UPI fallback. If you used UPI manual fallback, paste the transaction/reference ID here. If Razorpay verified, paste the payment intent/order ID for admin matching.
+        supports Razorpay verified payments and manual UPI fallback. If you used UPI manual fallback, paste the transaction/reference ID here. If Razorpay verified, paste the payment intent/order ID for admin matching.
       </div>
       <input className="input" name="name" placeholder="Your name" required />
       <input className="input" name="email" type="email" placeholder="Email" required />

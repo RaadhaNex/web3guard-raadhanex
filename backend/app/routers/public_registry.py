@@ -6,7 +6,7 @@ from app.services.auth_guard import resolve_user_id
 from app.services.public_registry import create_publication, get_publication, list_publications, registry_status, update_publication_status, verify_report
 from app.services.rate_limit import enforce_hourly_limit
 
-router = APIRouter(prefix="/registry", tags=["Mega Phase D - Public Registry"])
+router = APIRouter(prefix="/registry", tags=["Public Registry"])
 
 
 @router.get("/status")

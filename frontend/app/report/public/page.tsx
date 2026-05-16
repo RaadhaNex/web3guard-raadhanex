@@ -3,10 +3,10 @@ import Link from "next/link";
 export default function PublicReportRegistryPage() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
-      <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan">Phase 9 public registry foundation</p>
+      <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan">public registry foundation</p>
       <h1 className="mt-3 text-4xl font-black sm:text-6xl">Public Report Registry</h1>
       <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-300">
-        Phase 9 adds backend public/private report records and verification endpoints. Use public report links only with pre-audit readiness wording. Never call these reports certified audits.
+        adds backend public/private report records and verification endpoints. Use public report links only with pre-audit readiness wording. Never call these reports certified audits.
       </p>
       <section className="mt-8 grid gap-4 md:grid-cols-2">
         <div className="card p-6">
