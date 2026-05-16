@@ -9,6 +9,9 @@ app = FastAPI(
     title=settings.app_name,
     version="1.0.0",
     description="AI-assisted Web3 launch security review platform by RAADHANEX. AI-assisted preliminary Web3 launch security review.",
+    docs_url=None if settings.app_env.lower() in {"production", "staging"} else "/docs",
+    redoc_url=None if settings.app_env.lower() in {"production", "staging"} else "/redoc",
+    openapi_url=None if settings.app_env.lower() in {"production", "staging"} else "/openapi.json",
 )
 
 app.add_middleware(SecurityHeadersMiddleware)

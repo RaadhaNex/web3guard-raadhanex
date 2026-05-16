@@ -10,6 +10,7 @@ from app.services.scan_wallet_admin import scan_admin_opsec as run_admin_opsec_s
 from app.services.scan_contract import available_contract_rules, scan_solidity
 from app.core.config import settings
 from app.services.rate_limit import enforce_hourly_limit
+from app.services.auth_guard import resolve_user_id
 from app.services.scan_website import scan_website
 from app.services.unified_url_scan import REALNESS_MATRIX, run_unified_url_scan
 from app.services.scan_github_repo import github_scanner_status, scan_github_repository
@@ -432,9 +433,18 @@ async def unified_url_scan_endpoint(payload: UnifiedUrlScanRequest, request: Req
         raise HTTPException(status_code=400, detail="Authorization confirmation is required")
     if not payload.real_only_acknowledged:
         raise HTTPException(status_code=400, detail="Real-only acknowledgement is required")
+
+    resolved_user_id, auth_context = resolve_user_id(request, payload.user_id)
     client_host = request.client.host if request.client else "unknown"
-    enforce_hourly_limit(f"unified-url:{client_host}", limit=settings.max_url_scan_per_hour)
+    rate_key = f"unified-url:{resolved_user_id}:{client_host}"
+    enforce_hourly_limit(rate_key, limit=settings.max_url_scan_per_hour, label="Unified URL scan")
+
     try:
-        return await run_unified_url_scan(payload)
+        result = await run_unified_url_scan(payload)
+        if isinstance(result, dict):
+            result.setdefault("auth_context", auth_context)
+            result.setdefault("owner_user_id", resolved_user_id)
+            result.setdefault("rate_limit", {"limit_per_hour": settings.max_url_scan_per_hour, "scope": "user+client"})
+        return result
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

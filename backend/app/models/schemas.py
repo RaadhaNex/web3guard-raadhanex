@@ -122,6 +122,7 @@ class ThreatIntelQuery(BaseModel):
     limit: int = Field(default=20, ge=1, le=100)
 
 class UnifiedUrlScanRequest(BaseModel):
+    user_id: str | None = Field(default=None, max_length=120)
     website_url: str = Field(min_length=8, max_length=2048)
     project_name: str | None = Field(default=None, max_length=160)
     project_type: str | None = Field(default=None, max_length=80)

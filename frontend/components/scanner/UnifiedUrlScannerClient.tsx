@@ -63,6 +63,49 @@ function normaliseUrl(value: string) {
   return `https://${clean}`;
 }
 
+function safeJsonStringify(value: unknown) {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+function readableClientError(error: unknown) {
+  if (!error) return "Unknown error. Please check backend logs.";
+
+  if (error instanceof Error) {
+    if (error.message === "[object Object]") {
+      return "Backend returned a structured error object, but the old API client could not format it. Replace frontend/lib/api.ts with the fixed version in this patch, then re-run the scan.";
+    }
+
+    return error.message;
+  }
+
+  if (typeof error === "string") {
+    if (error === "[object Object]") {
+      return "Backend returned a structured error object. Replace frontend/lib/api.ts with the fixed version in this patch.";
+    }
+
+    return error;
+  }
+
+  if (typeof error === "object") {
+    const record = error as Record<string, unknown>;
+
+    if (typeof record.message === "string") return record.message;
+    if (typeof record.error === "string") return record.error;
+    if (typeof record.detail === "string") return record.detail;
+
+    if (record.detail) return readableClientError(record.detail);
+    if (record.msg) return readableClientError(record.msg);
+
+    return safeJsonStringify(error);
+  }
+
+  return String(error);
+}
+
 function getActionFixGuide(title: string, module?: string) {
   const text = `${title} ${module || ""}`.toLowerCase();
 
@@ -177,6 +220,15 @@ function moduleFixGuide(card: UnifiedModuleCard) {
   }
 
   return "Review evidence, fix the listed gaps, then re-run the scan.";
+}
+
+function sortModuleCards(cards: UnifiedModuleCard[]) {
+  return [...cards].sort((a, b) => {
+    const aIndex = moduleOrder.indexOf(a.module);
+    const bIndex = moduleOrder.indexOf(b.module);
+
+    return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+  });
 }
 
 export function UnifiedUrlScannerClient() {
@@ -320,7 +372,9 @@ export function UnifiedUrlScannerClient() {
       setProgress(100);
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unified URL scan failed");
+      setError(readableClientError(err));
+      setProgress(0);
+      setStageIndex(0);
     } finally {
       setTimeout(() => {
         setLoading(false);
@@ -386,17 +440,13 @@ export function UnifiedUrlScannerClient() {
         "Scan saved to your dashboard as a real record. Not assessed modules remain unscored."
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save scan");
+      setError(readableClientError(err));
     } finally {
       setSaveLoading(false);
     }
   }
 
-  const cards = result?.module_cards
-    ? [...result.module_cards].sort(
-        (a, b) => moduleOrder.indexOf(a.module) - moduleOrder.indexOf(b.module)
-      )
-    : [];
+  const cards = result?.module_cards ? sortModuleCards(result.module_cards) : [];
 
   return (
     <main className="min-h-screen bg-[#f7fafc] text-slate-950">
@@ -602,7 +652,7 @@ export function UnifiedUrlScannerClient() {
             ) : null}
 
             {error ? (
-              <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">
+              <p className="mt-4 whitespace-pre-wrap rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">
                 {error}
               </p>
             ) : null}
@@ -729,8 +779,10 @@ export function UnifiedUrlScannerClient() {
                             Evidence
                           </p>
                           <ul className="mt-2 space-y-1 text-xs text-slate-700">
-                            {card.evidence.slice(0, 4).map((item) => (
-                              <li key={item}>• {item}</li>
+                            {card.evidence.slice(0, 4).map((item, index) => (
+                              <li key={`${card.module}-evidence-${index}`}>
+                                • {item}
+                              </li>
                             ))}
                           </ul>
                         </div>
@@ -742,8 +794,10 @@ export function UnifiedUrlScannerClient() {
                             Needed for real score
                           </p>
                           <ul className="mt-2 space-y-1 text-xs text-amber-900">
-                            {card.required_input.map((item) => (
-                              <li key={item}>• {item}</li>
+                            {card.required_input.map((item, index) => (
+                              <li key={`${card.module}-required-${index}`}>
+                                • {item}
+                              </li>
                             ))}
                           </ul>
                         </div>
@@ -840,8 +894,8 @@ export function UnifiedUrlScannerClient() {
                   </h3>
 
                   <ul className="mt-4 space-y-2 text-sm text-slate-700">
-                    {result.blocked_claims.map((claim) => (
-                      <li key={claim}>• {claim}</li>
+                    {result.blocked_claims.map((claim, index) => (
+                      <li key={`blocked-claim-${index}`}>• {claim}</li>
                     ))}
                   </ul>
                 </div>
