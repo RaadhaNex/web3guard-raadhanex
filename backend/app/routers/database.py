@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse, Response
 
 from app.models.schemas import (
     ProjectCreate,
@@ -12,6 +15,11 @@ from app.models.schemas import (
     UserProfileUpsert,
 )
 from app.services.auth_guard import auth_runtime_status, resolve_user_id
+from app.services.dashboard_report_export import (
+    build_professional_report_from_saved,
+    build_saved_report_create_from_scan,
+)
+from app.services.professional_report import build_pdf_bytes, build_professional_html
 from app.services.database_store import (
     PHASE7_REAL_ONLY_NOTE,
     create_project,
@@ -166,3 +174,83 @@ def update_saved_report_record(request: Request, saved_report_id: str, payload: 
     if report is None:
         raise HTTPException(status_code=404, detail="Report not found for this user")
     return {"ok": True, "auth_context": auth_context, "report": report}
+
+
+
+@router.post("/scan-history/{scan_id}/saved-report")
+def create_saved_report_from_scan_record(
+    request: Request,
+    scan_id: str,
+    title: str | None = Query(default=None, max_length=220),
+    user_id: str | None = Query(default=None, max_length=120),
+):
+    """Create a real saved report record from a scan owned by the authenticated user.
+
+    This endpoint never creates a fake report. It only packages an existing
+    saved scan payload for professional export/download.
+    """
+
+    resolved_user_id, auth_context = resolve_user_id(request, user_id)
+    scan = get_scan(resolved_user_id, scan_id)
+    if scan is None:
+        raise HTTPException(status_code=404, detail="Scan not found for this user")
+
+    saved_report_payload = build_saved_report_create_from_scan(scan, title=title)
+    report = save_report(resolved_user_id, saved_report_payload)
+    return {
+        "ok": True,
+        "auth_context": auth_context,
+        "report": report,
+        "real_only_note": "Report was created from an existing saved scan owned by this user. Not a certified audit.",
+    }
+
+
+@router.get("/saved-reports/{saved_report_id}/export/{export_format}")
+def export_saved_report_record(
+    request: Request,
+    saved_report_id: str,
+    export_format: str,
+    user_id: str | None = Query(default=None, max_length=120),
+):
+    """Export an authenticated user's saved report as PDF/HTML/Markdown/JSON.
+
+    Ownership is enforced with the same resolved user id used by the dashboard
+    record endpoints. Unknown or cross-user records return 404.
+    """
+
+    resolved_user_id, _auth_context = resolve_user_id(request, user_id)
+    saved_report = get_report(resolved_user_id, saved_report_id)
+    if saved_report is None:
+        raise HTTPException(status_code=404, detail="Report not found for this user")
+
+    report = build_professional_report_from_saved(saved_report)
+    filename_base = str(report.get("report_id") or saved_report_id).replace("/", "-")
+
+    if export_format == "html":
+        return HTMLResponse(
+            build_professional_html(report),
+            headers={"Content-Disposition": f'attachment; filename="{filename_base}.html"'},
+        )
+
+    if export_format == "pdf":
+        return Response(
+            content=build_pdf_bytes(report),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename_base}.pdf"'},
+        )
+
+    if export_format in {"md", "markdown"}:
+        return Response(
+            content=report.get("markdown_report", ""),
+            media_type="text/markdown; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename_base}.md"'},
+        )
+
+    if export_format == "json":
+        return Response(
+            content=json.dumps(report.get("json_export") or report, ensure_ascii=False, indent=2, default=str),
+            media_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="{filename_base}.json"'},
+        )
+
+    raise HTTPException(status_code=400, detail="export_format must be one of: pdf, html, markdown, md, json")
