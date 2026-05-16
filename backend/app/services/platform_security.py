@@ -81,6 +81,7 @@ def security_hardening_status() -> dict[str, Any]:
     warnings = [c for c in checks if c["status"] == "warning"]
     return {
         "ok": len(blockers) == 0,
+        "phase": "Mega Phase G - Platform Security Hardening + Final Production QA",
         "version": "1.0",
         "production_ready": len(blockers) == 0 and len(warnings) == 0,
         "blocker_count": len(blockers),

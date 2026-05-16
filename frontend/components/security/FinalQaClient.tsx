@@ -62,9 +62,9 @@ type HandoffResponse = {
 
 function statusTone(status: string) {
   const value = status.toLowerCase();
-  if (value === "done") return "border-emerald-300 bg-emerald-50 text-emerald-700";
-  if (value.includes("manual") || value.includes("external")) return "border-amber-300 bg-amber-50 text-amber-800";
-  if (value.includes("pending")) return "border-rose-200 bg-rose-50 text-rose-700";
+  if (value === "done" || value.includes("configured")) return "border-emerald-300 bg-emerald-50 text-emerald-700";
+  if (value.includes("manual") || value.includes("external") || value.includes("not assessed")) return "border-amber-300 bg-amber-50 text-amber-800";
+  if (value.includes("pending") || value.includes("needs api key") || value.includes("provider not configured") || value.includes("tool not installed")) return "border-rose-200 bg-rose-50 text-rose-700";
   return "border-slate-200 bg-slate-50 text-slate-700";
 }
 

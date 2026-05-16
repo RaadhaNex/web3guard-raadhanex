@@ -113,6 +113,7 @@ def _report_id(project_name: str | None) -> str:
 def permission_map_status() -> dict[str, Any]:
     return {
         "ok": True,
+        "phase": "Phase 16 - Contract Permission Map + Centralization Report",
         "version": "1.0",
         "engine_version": ENGINE_VERSION,
         "mode": "read_only_static_source_and_abi_analysis",

@@ -2,6 +2,7 @@
 const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || "https://web3guard-raadhanex-backend.onrender.com").replace(/\/$/, "");
 const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, "");
 const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "";
+const razorpayEnabled = process.env.NEXT_PUBLIC_RAZORPAY_ENABLED === "true" || Boolean(razorpayKey);
 
 const connectSrc = [
   "'self'",
@@ -11,14 +12,15 @@ const connectSrc = [
   supabaseUrl ? `${supabaseUrl}/rest/v1` : "",
   supabaseUrl ? `${supabaseUrl}/storage/v1` : "",
   "https://*.supabase.co",
+  "wss://*.supabase.co",
   "https://api.razorpay.com",
   "https://checkout.razorpay.com",
 ].filter(Boolean).join(" ");
 
 const frameSrc = [
   "'self'",
-  razorpayKey ? "https://api.razorpay.com" : "",
-  razorpayKey ? "https://checkout.razorpay.com" : "",
+  razorpayEnabled ? "https://api.razorpay.com" : "",
+  razorpayEnabled ? "https://checkout.razorpay.com" : "",
 ].filter(Boolean).join(" ");
 
 const contentSecurityPolicy = [

@@ -112,6 +112,7 @@ def threat_intel_status() -> dict[str, Any]:
     user_entries = _read_user_entries()
     return {
         "ok": True,
+        "phase": "Mega Phase C - Phase 24 Threat Intelligence Feed",
         "version": "1.0",
         "enabled": settings.threat_intel_enabled,
         "live_sources_enabled": settings.threat_intel_live_sources_enabled,

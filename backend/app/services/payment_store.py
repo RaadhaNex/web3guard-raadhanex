@@ -48,6 +48,32 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _configured_secret(value: str | None) -> bool:
+    """Return True only for non-placeholder provider secrets/public keys.
+
+    This keeps provider status honest in production: placeholder values are
+    treated as Provider Not Configured rather than partially live.
+    """
+
+    if value is None:
+        return False
+    clean = value.strip()
+    if not clean:
+        return False
+    return clean.lower() not in {
+        "none",
+        "null",
+        "undefined",
+        "placeholder",
+        "change-me",
+        "change_this",
+        "your_key_id",
+        "your_key_secret",
+        "your_webhook_secret",
+        "rzp_test_xxxxx",
+    }
+
+
 def load_packages() -> list[dict]:
     return json.loads(PACKAGES_PATH.read_text(encoding="utf-8"))
 
@@ -60,12 +86,16 @@ def find_package(package_id: str) -> dict:
 
 
 def is_razorpay_configured() -> bool:
-    return bool(settings.razorpay_enabled and settings.razorpay_key_id and settings.razorpay_key_secret)
+    return bool(
+        settings.razorpay_enabled
+        and _configured_secret(settings.razorpay_key_id)
+        and _configured_secret(settings.razorpay_key_secret)
+    )
 
 
 def payment_status() -> dict[str, Any]:
     configured = is_razorpay_configured()
-    webhook_configured = bool(settings.razorpay_webhook_secret)
+    webhook_configured = _configured_secret(settings.razorpay_webhook_secret)
     return {
         "ok": True,
         "version": "1.0",
@@ -298,9 +328,18 @@ def verify_checkout_signature(payload: RazorpayVerifyRequest) -> PaymentIntent:
     message = f"{payload.razorpay_order_id}|{payload.razorpay_payment_id}"
     expected = _signature_digest(message, settings.razorpay_key_secret)
     if not hmac.compare_digest(expected, payload.razorpay_signature):
-        intent.status = "failed"
-        _replace_intent(intent)
-        _append_event({"type": "razorpay_signature_failed", "payment_intent_id": intent.id, "order_id": payload.razorpay_order_id})
+        # Do not mutate the intent to failed on a bad client callback.
+        # Otherwise an attacker who knows an order id could create a denial of
+        # service by submitting a deliberately invalid signature. Razorpay
+        # webhook/payment status or a valid checkout signature is the source of
+        # truth.
+        _append_event({
+            "type": "razorpay_signature_failed",
+            "payment_intent_id": intent.id,
+            "order_id": payload.razorpay_order_id,
+            "mutation": "none",
+            "real_only_note": "Invalid client callback was rejected without changing payment/subscription state.",
+        })
         raise ValueError("Invalid Razorpay payment signature")
     intent.razorpay_payment_id = payload.razorpay_payment_id
     intent.razorpay_signature = payload.razorpay_signature
@@ -317,7 +356,7 @@ def verify_checkout_signature(payload: RazorpayVerifyRequest) -> PaymentIntent:
 
 
 def verify_webhook_signature(raw_body: bytes, signature: str | None) -> bool:
-    if not settings.razorpay_webhook_secret:
+    if not _configured_secret(settings.razorpay_webhook_secret):
         raise ValueError("Razorpay webhook secret is not configured")
     if not signature:
         return False
@@ -325,37 +364,181 @@ def verify_webhook_signature(raw_body: bytes, signature: str | None) -> bool:
     return hmac.compare_digest(expected, signature)
 
 
+def _read_payment_events() -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for line in _events_path().read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            parsed = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            rows.append(parsed)
+    return rows
+
+
+def _webhook_event_id(event: dict[str, Any], raw_body: bytes) -> str:
+    raw_id = event.get("id") or event.get("event_id")
+    if raw_id:
+        return str(raw_id)
+    # Razorpay test tools may omit an event id. Hashing the verified raw body
+    # still gives idempotency for identical retries without trusting parsed JSON.
+    return "sha256:" + hashlib.sha256(raw_body).hexdigest()
+
+
+def _webhook_already_processed(provider_event_id: str) -> bool:
+    return any(
+        row.get("type") == "razorpay_webhook"
+        and row.get("provider_event_id") == provider_event_id
+        and row.get("duplicate") is not True
+        for row in _read_payment_events()
+    )
+
+
+def _extract_razorpay_entity(event: dict[str, Any]) -> tuple[dict[str, Any], str | None, str | None]:
+    payload = event.get("payload") or {}
+    payment_entity = (payload.get("payment") or {}).get("entity") if isinstance(payload, dict) else None
+    order_entity = (payload.get("order") or {}).get("entity") if isinstance(payload, dict) else None
+
+    entity: dict[str, Any] = {}
+    entity_type: str | None = None
+    if isinstance(payment_entity, dict):
+        entity = payment_entity
+        entity_type = "payment"
+    elif isinstance(order_entity, dict):
+        entity = order_entity
+        entity_type = "order"
+
+    order_id = entity.get("order_id") or (entity.get("id") if entity_type == "order" else None)
+    payment_id = entity.get("id") if entity_type == "payment" else entity.get("payment_id")
+    return entity, order_id, payment_id
+
+
+def _int_or_none(value: Any) -> int | None:
+    try:
+        if value is None:
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _razorpay_payment_matches_intent(event_name: str, entity: dict[str, Any], intent: PaymentIntent) -> tuple[bool, list[str]]:
+    """Validate signed Razorpay event content against the stored order.
+
+    The webhook signature proves the payload came from Razorpay. These checks
+    prevent accidental activation from a different amount/currency/status.
+    """
+
+    issues: list[str] = []
+    currency = str(entity.get("currency") or intent.currency or "INR").upper()
+    amount = _int_or_none(entity.get("amount"))
+    amount_paid = _int_or_none(entity.get("amount_paid"))
+    paid_amount = amount if amount is not None else amount_paid
+    status = str(entity.get("status") or "").lower()
+    captured = entity.get("captured")
+
+    if currency != intent.currency.upper():
+        issues.append(f"currency_mismatch:{currency}!={intent.currency.upper()}")
+
+    if paid_amount is not None and paid_amount != intent.amount_paise:
+        issues.append(f"amount_mismatch:{paid_amount}!={intent.amount_paise}")
+
+    if event_name == "payment.captured":
+        if status and status != "captured":
+            issues.append(f"payment_status_not_captured:{status}")
+        if captured is False:
+            issues.append("payment_captured_false")
+    elif event_name == "order.paid":
+        if status and status != "paid":
+            issues.append(f"order_status_not_paid:{status}")
+        if amount_paid is not None and amount_paid != intent.amount_paise:
+            issues.append(f"amount_paid_mismatch:{amount_paid}!={intent.amount_paise}")
+    else:
+        issues.append(f"unsupported_event:{event_name}")
+
+    return not issues, issues
+
+
 def handle_razorpay_webhook(raw_body: bytes, signature: str | None) -> dict[str, Any]:
     if not verify_webhook_signature(raw_body, signature):
         raise ValueError("Invalid Razorpay webhook signature")
-    event = json.loads(raw_body.decode("utf-8"))
-    event_name = event.get("event", "unknown")
-    entity = (event.get("payload") or {}).get("payment", {}).get("entity") or (event.get("payload") or {}).get("order", {}).get("entity") or {}
-    order_id = entity.get("order_id") or entity.get("id")
-    payment_id = entity.get("id") if entity.get("entity") == "payment" or event_name.startswith("payment.") else entity.get("payment_id")
+
+    try:
+        event = json.loads(raw_body.decode("utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError("Invalid Razorpay webhook JSON payload") from exc
+    if not isinstance(event, dict):
+        raise ValueError("Invalid Razorpay webhook payload shape")
+
+    provider_event_id = _webhook_event_id(event, raw_body)
+    if _webhook_already_processed(provider_event_id):
+        _append_event({
+            "type": "razorpay_webhook_duplicate",
+            "provider_event_id": provider_event_id,
+            "duplicate": True,
+            "mutation": "none",
+        })
+        return {"ok": True, "duplicate": True, "provider_event_id": provider_event_id, "payment_intent": None}
+
+    event_name = str(event.get("event") or "unknown")
+    entity, order_id, payment_id = _extract_razorpay_entity(event)
     updated_intent: PaymentIntent | None = None
+    validation_issues: list[str] = []
+    mutation = "none"
+
     if order_id:
         try:
             intent = get_payment_by_razorpay_order(order_id)
             if event_name in {"payment.captured", "order.paid"}:
-                intent.status = "webhook_verified"
-                intent.webhook_verified_at = _now()
-                intent.manual_verification_required = False
-                if payment_id:
-                    intent.razorpay_payment_id = payment_id
-                updated_intent = _replace_intent(intent)
-                subscription = maybe_create_or_activate_subscription(updated_intent, source=f"webhook:{event_name}")
-                if subscription:
-                    updated_intent.subscription_id = subscription.id
-                    updated_intent = _replace_intent(updated_intent)
+                valid_payment, validation_issues = _razorpay_payment_matches_intent(event_name, entity, intent)
+                if valid_payment:
+                    intent.status = "webhook_verified"
+                    intent.webhook_verified_at = _now()
+                    intent.manual_verification_required = False
+                    if payment_id:
+                        intent.razorpay_payment_id = payment_id
+                    updated_intent = _replace_intent(intent)
+                    subscription = maybe_create_or_activate_subscription(updated_intent, source=f"webhook:{event_name}")
+                    if subscription:
+                        updated_intent.subscription_id = subscription.id
+                        updated_intent = _replace_intent(updated_intent)
+                    mutation = "payment_verified"
+                else:
+                    mutation = "blocked_validation_mismatch"
             elif event_name in {"payment.failed"}:
-                intent.status = "failed"
-                updated_intent = _replace_intent(intent)
+                # Never downgrade an already verified payment from a later/duplicate
+                # failed event. Store the event for audit only.
+                if intent.status not in {"verified", "webhook_verified"}:
+                    intent.status = "failed"
+                    updated_intent = _replace_intent(intent)
+                    mutation = "payment_failed"
+                else:
+                    mutation = "verified_payment_not_downgraded"
         except KeyError:
-            pass
-    _append_event({"type": "razorpay_webhook", "event": event_name, "order_id": order_id, "payment_id": payment_id, "intent_updated": updated_intent.id if updated_intent else None})
-    return {"ok": True, "event": event_name, "order_id": order_id, "payment_intent": updated_intent}
+            mutation = "no_matching_payment_intent"
 
+    _append_event({
+        "type": "razorpay_webhook",
+        "provider_event_id": provider_event_id,
+        "event": event_name,
+        "order_id": order_id,
+        "payment_id": payment_id,
+        "intent_updated": updated_intent.id if updated_intent else None,
+        "mutation": mutation,
+        "validation_issues": validation_issues,
+        "real_only_note": "Signed Razorpay webhook processed. Payment state changes only when order, amount, currency and status match the stored intent.",
+    })
+    return {
+        "ok": True,
+        "event": event_name,
+        "provider_event_id": provider_event_id,
+        "order_id": order_id,
+        "payment_intent": updated_intent,
+        "mutation": mutation,
+        "validation_issues": validation_issues,
+    }
 
 def list_payment_events(limit: int = 100) -> list[dict[str, Any]]:
     rows = []

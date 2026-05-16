@@ -38,6 +38,22 @@ def _status(done: bool, partial: bool = False) -> str:
     return "pending"
 
 
+def _provider_term(*, configured: bool, enabled: bool = False, needs_key: bool = False, manual: bool = False, tool_missing: bool = False, not_assessed: bool = False) -> str:
+    if configured:
+        return "Configured"
+    if tool_missing:
+        return "Tool Not Installed"
+    if needs_key:
+        return "Needs API Key"
+    if manual:
+        return "Manual"
+    if not_assessed:
+        return "Not Assessed"
+    if enabled:
+        return "Provider Not Configured"
+    return "Provider Not Configured"
+
+
 def external_provider_status() -> dict[str, Any]:
     payments = payment_status()
     return {
@@ -46,55 +62,55 @@ def external_provider_status() -> dict[str, Any]:
         "providers": [
             {
                 "provider": "Supabase Auth + Database",
-                "status": _status(_configured(settings.supabase_url) and _configured(settings.supabase_anon_key) and _configured(settings.supabase_service_role_key)),
+                "status": _provider_term(configured=_configured(settings.supabase_url) and _configured(settings.supabase_anon_key) and _configured(settings.supabase_service_role_key), needs_key=True),
                 "required_env": ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_AUTH_REQUIRED", "SUPABASE_JWT_VERIFY_ENABLED"],
                 "verify": "Signup, confirm email, login, create project, save scan, create report. Supabase rows should belong to the logged-in user.",
             },
             {
                 "provider": "Razorpay Test/Live",
-                "status": _status(bool(payments.get("razorpay_configured") and payments.get("razorpay_webhook_configured")), partial=bool(payments.get("razorpay_enabled"))),
+                "status": _provider_term(configured=bool(payments.get("razorpay_configured") and payments.get("razorpay_webhook_configured")), enabled=bool(payments.get("razorpay_enabled")), needs_key=True),
                 "required_env": ["RAZORPAY_ENABLED", "PAYMENT_MODE", "RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"],
-                "verify": "Create Razorpay order in test mode, complete checkout, verify backend signature, receive webhook, then confirm payment_intents/subscriptions update only after verification.",
+                "verify": "Create Razorpay order in test mode, complete checkout, verify backend signature, receive webhook, then confirm payment_intents/subscriptions update only after order, amount, currency and status match. Duplicate webhooks must be idempotent.",
             },
             {
                 "provider": "Manual UPI",
-                "status": _status(_configured(settings.raadhanex_upi_id), partial=True),
+                "status": _provider_term(configured=_configured(settings.raadhanex_upi_id), manual=True),
                 "required_env": ["RAADHANEX_UPI_ID", "RAADHANEX_UPI_NAME", "NEXT_PUBLIC_UPI_ID", "NEXT_PUBLIC_UPI_NAME"],
                 "verify": "UPI link opens with correct receiver. Admin verification requires a reference ID and audit note before activation.",
             },
             {
                 "provider": "AI Fix Assistant",
-                "status": _status(bool(settings.ai_enabled and (settings.openai_api_key or settings.anthropic_api_key))),
+                "status": _provider_term(configured=bool(settings.ai_enabled and settings.ai_provider in {"openai", "anthropic"} and (settings.openai_api_key or settings.anthropic_api_key)), enabled=bool(settings.ai_enabled), needs_key=True),
                 "required_env": ["AI_ENABLED", "AI_PROVIDER", "OPENAI_API_KEY or ANTHROPIC_API_KEY", "AI_SEND_CODE", "AI_FIX_ENABLED", "AI_FIX_SEND_CODE"],
                 "verify": "Without keys, UI must say Provider Not Configured. With keys, AI output must not claim certified audit and must respect code-sharing limits.",
             },
             {
                 "provider": "Static Analysis Tools",
-                "status": _status(bool(settings.static_analysis_enabled and (settings.slither_binary or settings.aderyn_binary or settings.semgrep_binary)), partial=bool(settings.static_analysis_enabled)),
+                "status": _provider_term(configured=bool(settings.static_analysis_enabled and (settings.slither_binary or settings.aderyn_binary or settings.semgrep_binary)), enabled=bool(settings.static_analysis_enabled), tool_missing=bool(settings.static_analysis_enabled and not (settings.slither_binary or settings.aderyn_binary or settings.semgrep_binary)), not_assessed=not settings.static_analysis_enabled),
                 "required_env": ["STATIC_ANALYSIS_ENABLED", "SLITHER_BINARY", "ADERYN_BINARY", "SEMGREP_BINARY"],
                 "verify": "If binaries are missing, output must say Tool Not Installed. If installed, tool output must be parsed from real execution.",
             },
             {
                 "provider": "Deep Analysis Worker",
-                "status": _status(bool(settings.deep_analysis_enabled and not settings.mythril_worker_required)),
+                "status": _provider_term(configured=bool(settings.deep_analysis_enabled and not settings.mythril_worker_required), enabled=bool(settings.deep_analysis_enabled), manual=settings.mythril_worker_required, not_assessed=not settings.deep_analysis_enabled),
                 "required_env": ["DEEP_ANALYSIS_ENABLED", "MYTHRIL_WORKER_REQUIRED", "MYTHRIL_ALLOW_LOCAL_EXECUTION", "MYTHRIL_DOCKER_ENABLED"],
                 "verify": "Mythril/deep tools should remain Worker Required unless isolated worker/Docker is intentionally configured. No fake deep-analysis result.",
             },
             {
                 "provider": "Etherscan V2",
-                "status": _status(_configured(settings.etherscan_api_key)),
+                "status": _provider_term(configured=_configured(settings.etherscan_api_key), needs_key=True),
                 "required_env": ["ETHERSCAN_API_KEY", "ETHERSCAN_V2_API_BASE"],
                 "verify": "Scan a verified testnet contract and an unverified/invalid address. Missing key must show Needs API Key.",
             },
             {
                 "provider": "GitHub Repo Scanner",
-                "status": _status(_configured(settings.github_api_token), partial=True),
+                "status": "Configured" if _configured(settings.github_api_token) else "Manual",
                 "required_env": ["GITHUB_API_TOKEN optional", "GITHUB_API_BASE"],
                 "verify": "Public repos should scan without token within public rate limits. Token increases rate limits but must never be exposed to frontend.",
             },
             {
                 "provider": "Monitoring RPC",
-                "status": _status(bool(settings.monitoring_enabled and (settings.ethereum_rpc_url or settings.polygon_rpc_url or settings.base_rpc_url))),
+                "status": _provider_term(configured=bool(settings.monitoring_enabled and (settings.ethereum_rpc_url or settings.polygon_rpc_url or settings.base_rpc_url)), enabled=bool(settings.monitoring_enabled), needs_key=True, manual=not settings.monitoring_enabled),
                 "required_env": ["MONITORING_ENABLED", "ETHEREUM_RPC_URL", "POLYGON_RPC_URL", "BASE_RPC_URL"],
                 "verify": "Monitoring remains disabled/manual until RPC URLs are configured. Missing RPC must not create fake alerts.",
             },
@@ -115,10 +131,10 @@ def remaining_work_items() -> list[dict[str, str]]:
             status="pending_external_config" if not settings.razorpay_enabled else "manual_verify",
             priority="high",
             owner="founder/devops",
-            what_is_done="Backend supports real order creation, checkout signature verification, webhook endpoint, and manual UPI fallback.",
+            what_is_done="Backend supports real order creation, checkout signature verification, webhook endpoint, amount/currency/status validation, idempotent webhook handling, and manual UPI fallback.",
             remaining_work="Add Razorpay test keys + webhook secret in Render, add public key in Vercel, configure webhook URL in Razorpay dashboard.",
             how_to_complete="Set RAZORPAY_ENABLED=true, PAYMENT_MODE=razorpay_or_upi_manual, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET. Webhook URL: /payments/webhook/razorpay.",
-            verify="Use Razorpay test mode. Payment must become verified only after backend signature/webhook verification.",
+            verify="Use Razorpay test mode. Payment must become verified only after backend signature/webhook verification and matching order/amount/currency/status. Duplicate webhook retries must not double-activate.",
         ),
         CompletionItem(
             area="Supabase SMTP Branding",

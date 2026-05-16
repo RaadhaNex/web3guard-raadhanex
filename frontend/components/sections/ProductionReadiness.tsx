@@ -2,11 +2,36 @@ import Link from "next/link";
 import { StatusPill } from "@/components/ui/StatusPill";
 
 const rows = [
-  ["Unified URL launch scan", "Live", "Real website passive scan + optional Solidity/API inputs; missing modules remain Not assessed."],
-  ["UPI package funnel", "Manual", "UPI deep link works, but admin must verify settlement before delivery."],
-  ["AI explanations", "Needs API key", "Fallback explanations are local; real AI is backend-only and opt-in."],
-  ["Razorpay subscription", "Not enabled", "No fake payment success; scheduled for real payment phase."],
-  ["GitHub / Explorer / Slither", "Not enabled", "No fake score; will be added as real integrations in later MVP phases."],
+  [
+    "Login-gated scanner + dashboard",
+    "Live",
+    "Scanner flow requires auth, shows progress/readable API errors, and can save scans/reports for authenticated dashboard users.",
+  ],
+  [
+    "Razorpay Checkout + webhook",
+    "Needs API Key",
+    "Backend supports real order creation, checkout signature verification, webhook verification, idempotency, and UPI manual fallback. Keys + webhook URL must be configured externally.",
+  ],
+  [
+    "Supabase Auth + SMTP",
+    "Manual",
+    "Auth is wired. Final branded SMTP, Site URL, and Redirect URLs are completed inside Supabase settings for the production/custom domain.",
+  ],
+  [
+    "OpenAI / Claude AI provider",
+    "Needs API Key",
+    "Local safe guidance remains available. Real provider output starts only after backend keys and AI privacy/code-send flags are configured.",
+  ],
+  [
+    "Slither / Aderyn / Mythril tools",
+    "Manual",
+    "Static/deep tools run only from real installed binaries or an isolated worker. Missing tools show Tool Not Installed / Provider Not Configured instead of fake findings.",
+  ],
+  [
+    "Etherscan + GitHub optional providers",
+    "Needs API Key",
+    "Etherscan requires a backend key for verified-source scans. GitHub can scan public repos without a token, but a backend token improves public API limits.",
+  ],
 ];
 
 export function ProductionReadiness() {
@@ -14,13 +39,13 @@ export function ProductionReadiness() {
     <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
       <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="card p-6 sm:p-8">
-          <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Real-only production posture</p>
-          <h2 className="mt-3 text-3xl font-black sm:text-4xl">No fake audit claims. No fake payment success.</h2>
+          <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Final real-only launch posture</p>
+          <h2 className="mt-3 text-3xl font-black sm:text-4xl">Code is live-ready. External providers still need real verification.</h2>
           <p className="mt-4 text-sm leading-6 text-slate-400">
-            makes the MVP more launchable by polishing the UI, exposing real feature status, and adding a deployment launch pack. Every module is labeled as live, manual, needs API key, or not enabled.
+            The scanner, auth gates, saved reports, and hardening UI are code-wired. Final launch depends on external provider setup: Razorpay webhook, Supabase SMTP/domain redirects, AI provider key, Etherscan key, and optional tool workers.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Link href="/launch-pack" className="btn-primary">Open Launch Pack</Link>
+            <Link href="/final-qa" className="btn-primary">Open Final QA</Link>
             <Link href="/feature-status" className="btn-secondary">Feature Status</Link>
           </div>
         </div>

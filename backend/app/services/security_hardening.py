@@ -181,6 +181,7 @@ def security_status() -> dict[str, Any]:
         readiness = "ready_for_controlled_launch"
     return {
         "ok": True,
+        "phase": "Mega Phase G - Platform Security Hardening + Final Production QA",
         "version": "1.0",
         "readiness": readiness,
         "score": max(0, round(100 - len(critical_failed) * 25 - len(high_failed) * 15 - (len(failed) - len(critical_failed) - len(high_failed)) * 5)),

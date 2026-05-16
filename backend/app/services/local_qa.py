@@ -264,6 +264,7 @@ def validate_environment() -> dict[str, Any]:
     warnings = sum(1 for check in checks if check["status"] == "warning")
     return {
         "ok": failed == 0,
+        "phase": "Phase 10 - Consolidated Production Readiness",
         "version": "1.0",
         "environment": settings.app_env,
         "frontend_origin": settings.frontend_origin,
