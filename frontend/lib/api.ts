@@ -1,55 +1,160 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const API_BASE = (
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"
+).replace(/\/$/, "");
 
-export async function apiPost<T>(path: string, payload: unknown, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
-    body: JSON.stringify(payload),
-    ...init,
+type ApiOptions = {
+  headers?: HeadersInit;
+};
+
+function buildApiUrl(path: string) {
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return path;
+  }
+
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+
+  return `${API_BASE}${cleanPath}`;
+}
+
+function readableErrorDetail(value: unknown): string {
+  if (!value) return "Unknown API error";
+
+  if (typeof value === "string") return value;
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => readableErrorDetail(item))
+      .filter(Boolean)
+      .join(" | ");
+  }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+
+    if (typeof record.message === "string") return record.message;
+    if (typeof record.error === "string") return record.error;
+    if (typeof record.detail === "string") return record.detail;
+    if (typeof record.msg === "string") return record.msg;
+
+    if (record.detail) {
+      return readableErrorDetail(record.detail);
+    }
+
+    const loc = Array.isArray(record.loc) ? record.loc.join(".") : "";
+    const msg = typeof record.msg === "string" ? record.msg : "";
+    const type = typeof record.type === "string" ? record.type : "";
+
+    if (loc || msg || type) {
+      return [loc, msg, type].filter(Boolean).join(": ");
+    }
+
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  }
+
+  return String(value);
+}
+
+async function readResponse(response: Response) {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return response.json();
+  }
+
+  return response.text();
+}
+
+function mergeHeaders(
+  baseHeaders: Record<string, string>,
+  extraHeaders?: HeadersInit
+): HeadersInit {
+  if (!extraHeaders) return baseHeaders;
+
+  if (extraHeaders instanceof Headers) {
+    const merged = new Headers(baseHeaders);
+    extraHeaders.forEach((value, key) => merged.set(key, value));
+    return merged;
+  }
+
+  if (Array.isArray(extraHeaders)) {
+    return [...Object.entries(baseHeaders), ...extraHeaders];
+  }
+
+  return {
+    ...baseHeaders,
+    ...extraHeaders,
+  };
+}
+
+async function requestApi<T>(
+  method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
+  path: string,
+  body?: unknown,
+  options: ApiOptions = {}
+): Promise<T> {
+  const headers =
+    body === undefined
+      ? mergeHeaders({}, options.headers)
+      : mergeHeaders({ "Content-Type": "application/json" }, options.headers);
+
+  const response = await fetch(buildApiUrl(path), {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const data = await response.json().catch(() => ({}));
+
+  const data = await readResponse(response);
+
   if (!response.ok) {
-    throw new Error(data.detail || "Request failed");
+    const message = readableErrorDetail(data);
+
+    throw new Error(
+      `API ${response.status} ${response.statusText}: ${message}`
+    );
   }
+
   return data as T;
 }
 
-export async function apiPatch<T>(path: string, payload: unknown, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
-    body: JSON.stringify(payload),
-    ...init,
+export function apiGet<T>(path: string, options?: ApiOptions) {
+  return requestApi<T>("GET", path, undefined, options);
+}
+
+export function apiPost<T>(path: string, body?: unknown, options?: ApiOptions) {
+  return requestApi<T>("POST", path, body, options);
+}
+
+export function apiPatch<T>(path: string, body?: unknown, options?: ApiOptions) {
+  return requestApi<T>("PATCH", path, body, options);
+}
+
+export function apiPut<T>(path: string, body?: unknown, options?: ApiOptions) {
+  return requestApi<T>("PUT", path, body, options);
+}
+
+export function apiDelete<T>(path: string, options?: ApiOptions) {
+  return requestApi<T>("DELETE", path, undefined, options);
+}
+
+export async function apiGetText(path: string, options: ApiOptions = {}) {
+  const response = await fetch(buildApiUrl(path), {
+    method: "GET",
+    headers: mergeHeaders({}, options.headers),
   });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.detail || "Request failed");
-  }
-  return data as T;
-}
 
-export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, { cache: "no-store", ...init });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.detail || "Request failed");
-  }
-  return data as T;
-}
+  const text = await response.text();
 
-export async function apiGetText(path: string, init?: RequestInit): Promise<string> {
-  const response = await fetch(`${API_BASE}${path}`, { cache: "no-store", ...init });
-  const data = await response.text();
   if (!response.ok) {
-    throw new Error(data || "Request failed");
+    throw new Error(
+      `API ${response.status} ${response.statusText}: ${
+        text || "Request failed"
+      }`
+    );
   }
-  return data;
-}
 
-export function buildUpiLink(amount: number, packageName: string, reference = "preview"): string | null {
-  if (amount <= 0) return null;
-  const pa = encodeURIComponent(process.env.NEXT_PUBLIC_UPI_ID || "raadhanex@upi");
-  const pn = encodeURIComponent(process.env.NEXT_PUBLIC_UPI_NAME || "RAADHANEX");
-  const tn = encodeURIComponent(`Web3Guard AI ${packageName} ${reference}`);
-  return `upi://pay?pa=${pa}&pn=${pn}&am=${amount}&cu=INR&tn=${tn}`;
+  return text;
 }
