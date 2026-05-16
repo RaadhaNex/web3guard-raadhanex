@@ -2,7 +2,15 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from app.core.security import require_admin
-from app.services.security_hardening import data_retention_policy, log_security_event, platform_boundary_matrix, recent_security_events, security_headers_policy, security_status
+from app.services.finding_guidance import build_action_plan, list_fix_guidance
+from app.services.security_hardening import (
+    data_retention_policy,
+    log_security_event,
+    platform_boundary_matrix,
+    recent_security_events,
+    security_headers_policy,
+    security_status,
+)
 
 router = APIRouter(prefix="/security", tags=["Security Hardening"])
 
@@ -33,6 +41,18 @@ def boundaries():
     return platform_boundary_matrix()
 
 
+@router.get("/fix-guidance")
+def fix_guidance():
+    """Actionable hardening guidance without exploit automation or fake audit claims."""
+    return list_fix_guidance()
+
+
+@router.get("/action-plan")
+def action_plan():
+    """Prioritized real-only plan for production hardening."""
+    return build_action_plan()
+
+
 @router.post("/events", dependencies=[Depends(require_admin)])
 def create_event(payload: SecurityEventCreate):
     return {"ok": True, "event": log_security_event(payload.event_type, payload.actor, payload.note)}
@@ -45,18 +65,32 @@ def events():
 
 alias_router = APIRouter(prefix="/security-hardening", tags=["Security Hardening Alias"])
 
+
 @alias_router.get("/status")
 def alias_status():
     return security_status()
+
 
 @alias_router.get("/headers-policy")
 def alias_headers_policy():
     return security_headers_policy()
 
+
 @alias_router.get("/data-retention")
 def alias_data_retention():
     return data_retention_policy()
 
+
 @alias_router.get("/boundaries")
 def alias_boundaries():
     return platform_boundary_matrix()
+
+
+@alias_router.get("/fix-guidance")
+def alias_fix_guidance():
+    return list_fix_guidance()
+
+
+@alias_router.get("/action-plan")
+def alias_action_plan():
+    return build_action_plan()
