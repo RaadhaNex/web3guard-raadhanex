@@ -922,106 +922,113 @@ export function UnifiedUrlScannerClient() {
   ) || [];
 
   return (
-    <main className="min-h-screen bg-[#070707] text-zinc-100">
+    <main className="min-h-screen bg-slate-50 text-slate-950">
       {fieldPrompt ? (
-        <div className="fixed right-4 top-24 z-50 max-w-md rounded-2xl border border-red-500/40 bg-[#160909] p-4 text-sm font-bold text-red-100 shadow-2xl">
+        <div className="fixed right-4 top-24 z-50 w-[calc(100%-2rem)] max-w-md rounded-2xl border border-red-200 bg-white p-4 text-sm font-semibold text-red-700 shadow-xl">
           <div className="flex items-start justify-between gap-3">
             <span>{fieldPrompt}</span>
-            <button type="button" className="text-red-200/70 hover:text-red-100" onClick={() => setFieldPrompt(null)}>×</button>
+            <button type="button" className="text-red-400 transition hover:text-red-700" onClick={() => setFieldPrompt(null)}>×</button>
           </div>
         </div>
       ) : null}
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <section className="overflow-hidden rounded-[1.5rem] border border-zinc-800 bg-[#101010] shadow-2xl">
-          <div className="border-b border-zinc-800 px-5 py-4 sm:px-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-yellow-300">Real-only passive scanner</p>
-                <h1 className="mt-2 text-2xl font-black tracking-tight text-white sm:text-4xl">URL Scan Workspace</h1>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
-                  Scan once, reopen from history, attach it to a project, and export PDF/HTML/Markdown/JSON from the same screen.
-                </p>
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-3xl">
+              <div className="inline-flex rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-green-700">
+                Real-only URL scanner
               </div>
+              <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">Scan, fix, export</h1>
+              <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+                Select an old project or create a new one, run a passive scan, view real bugs with fix hints, and export PDF/HTML/Markdown/JSON on the same page.
+              </p>
+            </div>
 
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCodeEditorOpen((value) => !value)}
-                  className="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-4 py-2 text-sm font-black text-yellow-200 transition hover:bg-yellow-400/20"
-                >
-                  {codeEditorOpen ? "Close Code Editor" : "Code Editor"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void loadWorkspaceQuickData()}
-                  disabled={!isLoggedIn || historyLoading}
-                  className="rounded-full border border-green-400/30 bg-green-400/10 px-4 py-2 text-sm font-black text-green-200 transition hover:bg-green-400/20 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {historyLoading ? "Refreshing..." : "Refresh history"}
-                </button>
-              </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setCodeEditorOpen((value) => !value)}
+                className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-900 transition hover:border-yellow-400 hover:bg-yellow-50"
+              >
+                {codeEditorOpen ? "Close editor" : "Code editor"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void loadWorkspaceQuickData()}
+                disabled={!isLoggedIn || historyLoading}
+                className="rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-bold text-green-700 transition hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {historyLoading ? "Refreshing..." : "Refresh history"}
+              </button>
+              {!authLoading && !isLoggedIn ? (
+                <Link href="/auth/login" className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 transition hover:bg-red-100">
+                  Login required
+                </Link>
+              ) : null}
             </div>
           </div>
 
-          <div className="grid gap-3 px-5 py-4 text-xs font-bold sm:grid-cols-4 sm:px-6">
-            <div className="rounded-2xl border border-green-400/20 bg-green-400/10 p-3 text-green-200">Evidence-based results only</div>
-            <div className="rounded-2xl border border-red-400/20 bg-red-400/10 p-3 text-red-100">No exploit automation</div>
-            <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-3 text-yellow-100">Not a certified audit</div>
-            {authLoading ? (
-              <div className="rounded-2xl border border-zinc-700 bg-zinc-900 p-3 text-zinc-300">Checking login...</div>
-            ) : isLoggedIn ? (
-              <div className="rounded-2xl border border-green-400/20 bg-green-400/10 p-3 text-green-200">Logged in session detected</div>
-            ) : (
-              <Link href="/auth/login" className="rounded-2xl border border-red-400/30 bg-red-500/10 p-3 text-red-100">Login required</Link>
-            )}
+          <div className="mt-5 grid gap-3 text-sm sm:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="font-black text-slate-950">Evidence only</p>
+              <p className="mt-1 text-xs leading-5 text-slate-600">Missing modules stay Not assessed, never fake-scored.</p>
+            </div>
+            <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
+              <p className="font-black text-yellow-900">Passive checks</p>
+              <p className="mt-1 text-xs leading-5 text-yellow-800">No exploit automation, wallet signing, or secrets collection.</p>
+            </div>
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+              <p className="font-black text-red-800">Not a certified audit</p>
+              <p className="mt-1 text-xs leading-5 text-red-700">Use it for launch readiness and pre-audit cleanup.</p>
+            </div>
           </div>
         </section>
 
         {codeEditorOpen ? (
-          <section className="mt-5 rounded-[1.5rem] border border-zinc-800 bg-[#0c0c0c] p-5 shadow-xl">
+          <section className="mt-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-yellow-300">VS Code style editor</p>
-                <h2 className="mt-1 text-xl font-black text-white">Paste/edit Solidity source</h2>
-                <p className="mt-1 text-sm text-zinc-400">No execution. This only feeds passive rule-based scanning when you run the scan.</p>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-yellow-700">Code editor</p>
+                <h2 className="mt-1 text-2xl font-black text-slate-950">Paste Solidity source</h2>
+                <p className="mt-1 text-sm text-slate-600">This editor does not execute code. It only sends source to the passive rule-based scanner.</p>
               </div>
               <button
                 type="button"
                 onClick={copyCodeToClipboard}
-                className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-black text-zinc-100 transition hover:border-yellow-400/50"
+                className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-900 transition hover:bg-slate-50"
               >
                 Copy code
               </button>
             </div>
             <textarea
-              className="mt-4 min-h-[300px] w-full rounded-2xl border border-zinc-800 bg-black p-4 font-mono text-xs leading-5 text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-yellow-400/60"
+              className="mt-4 min-h-[320px] w-full rounded-2xl border border-slate-300 bg-slate-950 p-4 font-mono text-xs leading-5 text-slate-100 outline-none placeholder:text-slate-500 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100"
               value={solidityCode}
               onChange={(event) => setSolidityCode(event.target.value)}
-              placeholder="Paste Solidity source here. Example: contract, library, or interface code for real rule-based scanning."
+              placeholder="Paste Solidity source here for real rule-based scanning."
             />
           </section>
         ) : null}
 
-        <section className="mt-5 rounded-[1.5rem] border border-zinc-800 bg-[#101010] p-5 shadow-xl sm:p-6">
+        <section className="mt-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-zinc-500">Setup</p>
-              <h2 className="mt-1 text-2xl font-black text-white">Project, history & required inputs</h2>
-              <p className="mt-2 text-sm text-zinc-400">Fields marked <span className="font-black text-red-300">*</span> are required before scan.</p>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Setup</p>
+              <h2 className="mt-1 text-2xl font-black text-slate-950">Project details</h2>
+              <p className="mt-2 text-sm text-slate-600">Fields marked <span className="font-black text-red-600">*</span> are required.</p>
             </div>
             {selectedHistory ? (
-              <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-3 text-xs font-bold text-yellow-100">
+              <div className="rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-xs font-bold text-yellow-900">
                 Last selected: {formatDateTime(selectedHistory.created_at)}
               </div>
             ) : null}
           </div>
 
           <div className="mt-5 grid gap-4 lg:grid-cols-3">
-            <label className="block text-sm font-bold text-zinc-200">
+            <label className="block text-sm font-bold text-slate-800">
               Scan history
               <select
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black/60 px-4 py-3 text-zinc-100 outline-none focus:border-yellow-400/60"
+                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-black focus:ring-4 focus:ring-slate-100"
                 value={selectedHistoryId}
                 onChange={(event) => applyHistory(event.target.value)}
                 disabled={!isLoggedIn || historyLoading}
@@ -1033,13 +1040,13 @@ export function UnifiedUrlScannerClient() {
                   </option>
                 ))}
               </select>
-              <span className="mt-1 block text-xs font-medium text-zinc-500">Reopen/export old scan without scanning the same URL again.</span>
+              <span className="mt-1 block text-xs font-medium text-slate-500">Reuse old URL/result with last scan date and time.</span>
             </label>
 
-            <label className="block text-sm font-bold text-zinc-200">
+            <label className="block text-sm font-bold text-slate-800">
               Project mode
               <select
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black/60 px-4 py-3 text-zinc-100 outline-none focus:border-yellow-400/60"
+                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-black focus:ring-4 focus:ring-slate-100"
                 value={projectMode}
                 onChange={(event) => {
                   const value = event.target.value as ProjectMode;
@@ -1052,10 +1059,10 @@ export function UnifiedUrlScannerClient() {
               </select>
             </label>
 
-            <label className="block text-sm font-bold text-zinc-200">
-              Existing project {projectMode === "existing" ? <span className="text-red-300">*</span> : null}
+            <label className="block text-sm font-bold text-slate-800">
+              Existing project {projectMode === "existing" ? <span className="text-red-600">*</span> : null}
               <select
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black/60 px-4 py-3 text-zinc-100 outline-none focus:border-yellow-400/60"
+                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-black focus:ring-4 focus:ring-slate-100 disabled:bg-slate-100 disabled:text-slate-400"
                 value={selectedProjectId}
                 onChange={(event) => applyProject(event.target.value)}
                 disabled={projectMode !== "existing" || !isLoggedIn || !projects.length}
@@ -1067,43 +1074,40 @@ export function UnifiedUrlScannerClient() {
                   </option>
                 ))}
               </select>
-              {!projects.length && isLoggedIn ? (
-                <span className="mt-1 block text-xs font-medium text-zinc-500">No saved projects yet. Choose new project.</span>
-              ) : null}
             </label>
           </div>
 
           {historyError ? (
-            <p className="mt-4 rounded-2xl border border-yellow-400/30 bg-yellow-400/10 p-3 text-sm font-semibold text-yellow-100">
+            <p className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 p-3 text-sm font-semibold text-yellow-900">
               Could not load history/projects: {historyError}
             </p>
           ) : null}
 
-          <div className="mt-5 grid gap-4 lg:grid-cols-4">
-            <label className="block text-sm font-bold text-zinc-200 lg:col-span-2">
-              Website / dApp URL <span className="text-red-300">*</span>
+          <div className="mt-5 grid gap-4 lg:grid-cols-12">
+            <label className="block text-sm font-bold text-slate-800 lg:col-span-5">
+              Website / dApp URL <span className="text-red-600">*</span>
               <input
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black/60 px-4 py-3 text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-yellow-400/60"
+                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-black focus:ring-4 focus:ring-slate-100"
                 value={websiteUrl}
                 onChange={(event) => setWebsiteUrl(event.target.value)}
                 placeholder="https://yourproject.com"
               />
             </label>
 
-            <label className="block text-sm font-bold text-zinc-200">
-              Project name <span className="text-red-300">*</span>
+            <label className="block text-sm font-bold text-slate-800 lg:col-span-3">
+              Project name <span className="text-red-600">*</span>
               <input
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black/60 px-4 py-3 text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-yellow-400/60"
+                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-black focus:ring-4 focus:ring-slate-100"
                 value={projectName}
                 onChange={(event) => setProjectName(event.target.value)}
                 placeholder="My Web3 Project"
               />
             </label>
 
-            <label className="block text-sm font-bold text-zinc-200">
-              Project type <span className="text-red-300">*</span>
+            <label className="block text-sm font-bold text-slate-800 lg:col-span-4">
+              Project type <span className="text-red-600">*</span>
               <select
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black/60 px-4 py-3 text-zinc-100 outline-none focus:border-yellow-400/60"
+                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-black focus:ring-4 focus:ring-slate-100"
                 value={projectType}
                 onChange={(event) => setProjectType(event.target.value)}
               >
@@ -1112,25 +1116,23 @@ export function UnifiedUrlScannerClient() {
                 ))}
               </select>
             </label>
-          </div>
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-4">
             {projectType === "Other" ? (
-              <label className="block text-sm font-bold text-zinc-200">
-                Custom project type <span className="text-red-300">*</span>
+              <label className="block text-sm font-bold text-slate-800 lg:col-span-3">
+                Custom project type <span className="text-red-600">*</span>
                 <input
-                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black/60 px-4 py-3 text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-yellow-400/60"
+                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-black focus:ring-4 focus:ring-slate-100"
                   value={customProjectType}
                   onChange={(event) => setCustomProjectType(event.target.value)}
-                  placeholder="Example: RWA, DePIN, L2 infra"
+                  placeholder="Example: RWA, DePIN"
                 />
               </label>
             ) : null}
 
-            <label className="block text-sm font-bold text-zinc-200">
+            <label className="block text-sm font-bold text-slate-800 lg:col-span-3">
               Chain
               <select
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black/60 px-4 py-3 text-zinc-100 outline-none focus:border-yellow-400/60"
+                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-black focus:ring-4 focus:ring-slate-100"
                 value={chain}
                 onChange={(event) => setChain(event.target.value)}
               >
@@ -1141,41 +1143,41 @@ export function UnifiedUrlScannerClient() {
             </label>
 
             {chain === "Other" ? (
-              <label className="block text-sm font-bold text-zinc-200">
+              <label className="block text-sm font-bold text-slate-800 lg:col-span-3">
                 Custom chain
                 <input
-                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black/60 px-4 py-3 text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-yellow-400/60"
+                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-black focus:ring-4 focus:ring-slate-100"
                   value={customChain}
                   onChange={(event) => setCustomChain(event.target.value)}
-                  placeholder="Example: Aptos, Sui, Starknet"
+                  placeholder="Example: Sui, Aptos"
                 />
               </label>
             ) : null}
 
-            <label className="block text-sm font-bold text-zinc-200">
+            <label className="block text-sm font-bold text-slate-800 lg:col-span-3">
               Contract address optional
               <input
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black/60 px-4 py-3 text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-yellow-400/60"
+                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-black focus:ring-4 focus:ring-slate-100"
                 value={contractAddress}
                 onChange={(event) => setContractAddress(event.target.value)}
                 placeholder="0x..."
               />
             </label>
 
-            <label className="block text-sm font-bold text-zinc-200">
+            <label className="block text-sm font-bold text-slate-800 lg:col-span-3">
               API base URL optional
               <input
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black/60 px-4 py-3 text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-yellow-400/60"
+                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-black focus:ring-4 focus:ring-slate-100"
                 value={apiBaseUrl}
                 onChange={(event) => setApiBaseUrl(event.target.value)}
                 placeholder="https://api.yourproject.com"
               />
             </label>
 
-            <label className="block text-sm font-bold text-zinc-200">
+            <label className="block text-sm font-bold text-slate-800 lg:col-span-3">
               GitHub repo optional
               <input
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black/60 px-4 py-3 text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-yellow-400/60"
+                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-black focus:ring-4 focus:ring-slate-100"
                 value={githubRepoUrl}
                 onChange={(event) => setGithubRepoUrl(event.target.value)}
                 placeholder="https://github.com/team/project"
@@ -1183,159 +1185,168 @@ export function UnifiedUrlScannerClient() {
             </label>
           </div>
 
-          <div className="mt-5 grid gap-3 rounded-3xl border border-yellow-400/20 bg-yellow-400/10 p-4 text-sm text-yellow-50 md:grid-cols-2">
-            <label className="flex gap-3">
+          <div className="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 md:grid-cols-2">
+            <label className="flex gap-3 font-medium">
               <input
                 type="checkbox"
                 checked={authorized}
                 onChange={(event) => setAuthorized(event.target.checked)}
               />
-              <span>I own this project or have authorization to run passive checks. <span className="font-black text-red-300">*</span></span>
+              <span>I own this project or have authorization to run passive checks. <span className="font-black text-red-600">*</span></span>
             </label>
 
-            <label className="flex gap-3">
+            <label className="flex gap-3 font-medium">
               <input
                 type="checkbox"
                 checked={realOnly}
                 onChange={(event) => setRealOnly(event.target.checked)}
               />
-              <span>I understand missing modules will be marked Not assessed. <span className="font-black text-red-300">*</span></span>
+              <span>I understand missing modules will be marked Not assessed. <span className="font-black text-red-600">*</span></span>
             </label>
           </div>
 
           {missingRequiredFields.length ? (
-            <p className="mt-4 rounded-2xl border border-red-400/30 bg-red-500/10 p-3 text-sm font-semibold text-red-100">
+            <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">
               Required pending: {missingRequiredFields.join(", ")}
             </p>
           ) : null}
 
           {loading ? (
-            <div className="mt-5 rounded-3xl border border-green-400/20 bg-green-400/10 p-4">
+            <div className="mt-5 rounded-2xl border border-green-200 bg-green-50 p-4">
               <div className="flex items-center justify-between gap-4">
-                <p className="text-sm font-black text-green-100">{currentStage}</p>
-                <p className="text-sm font-bold text-green-200">{progress}%</p>
+                <p className="text-sm font-black text-green-800">{currentStage}</p>
+                <p className="text-sm font-bold text-green-700">{progress}%</p>
               </div>
-              <div className="mt-3 h-3 overflow-hidden rounded-full bg-black">
-                <div className="h-full rounded-full bg-green-400 transition-all duration-500" style={{ width: `${progress}%` }} />
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-green-100">
+                <div className="h-full rounded-full bg-green-600 transition-all duration-500" style={{ width: `${progress}%` }} />
               </div>
-              <p className="mt-3 text-xs leading-5 text-green-100/80">Progress is estimated while backend checks real evidence.</p>
             </div>
           ) : null}
 
           {error ? (
-            <p className="mt-4 whitespace-pre-wrap rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm font-semibold text-red-100">
+            <p className="mt-4 whitespace-pre-wrap rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
               {error}
             </p>
           ) : null}
 
-          <button
-            className="mt-5 w-full rounded-2xl bg-gradient-to-r from-red-500 via-yellow-400 to-green-400 px-5 py-4 text-base font-black text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={runScan}
-            disabled={!canRunScan}
-          >
-            {loading ? "Scanning..." : "Run URL Scan"}
-          </button>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <button
+              className="rounded-2xl bg-slate-950 px-6 py-4 text-sm font-black text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={runScan}
+              disabled={!canRunScan}
+            >
+              {loading ? "Scanning..." : "Run URL Scan"}
+            </button>
+            <p className="text-xs leading-5 text-slate-500">Scan will not run until every required <span className="font-black text-red-600">*</span> field is completed.</p>
+          </div>
         </section>
 
         <section className="mt-6 space-y-5">
           {!result ? (
-            <div className="rounded-[1.5rem] border border-zinc-800 bg-[#101010] p-6 shadow-xl">
-              <p className="text-xl font-black text-white">Result will appear here</p>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
-                Fill required fields, run scan, then direct export options and fix guidance will appear below. No dashboard round-trip needed.
+            <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-slate-400">No result yet</p>
+              <h2 className="mt-3 text-2xl font-black text-slate-950">Run a scan or select history</h2>
+              <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                Results, bug hints, missing evidence, and export buttons will appear here directly after the scan.
               </p>
-              <div className="mt-5 grid gap-3 md:grid-cols-5">
-                {["Website headers", "API evidence", "GitHub repo", "Solidity source", "Wallet/Admin checklist"].map((item) => (
-                  <div key={item} className="rounded-2xl border border-zinc-800 bg-black/40 p-4 text-sm font-semibold text-zinc-300">{item}</div>
-                ))}
-              </div>
             </div>
           ) : (
             <>
-              <div className="rounded-[1.5rem] border border-zinc-800 bg-[#101010] p-6 shadow-xl">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-bold text-zinc-500">Partial assessed-surface score</p>
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                <div className="grid gap-5 lg:grid-cols-[240px_1fr]">
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Assessed score</p>
                     <p className={`mt-2 text-6xl font-black ${scoreTone(result.available_score)}`}>{result.available_score ?? "N/A"}</p>
-                    <p className="mt-2 text-sm font-semibold text-zinc-300">{result.risk_label || "Not assessed"}</p>
+                    <p className="mt-2 text-sm font-bold text-slate-700">{result.risk_label || "Not assessed"}</p>
+                    <div className="mt-4 grid gap-2 text-xs font-bold">
+                      <span className="rounded-full border border-green-200 bg-green-50 px-3 py-2 text-green-700">{result.live_module_count} live/limited module(s)</span>
+                      <span className="rounded-full border border-yellow-200 bg-yellow-50 px-3 py-2 text-yellow-800">{result.priority_actions?.length || 0} action(s)</span>
+                    </div>
                   </div>
-                  <div className="grid gap-2 text-sm font-bold text-zinc-200 sm:text-right">
-                    <span className="rounded-2xl border border-green-400/20 bg-green-400/10 px-4 py-3 text-green-100">{result.live_module_count} live/limited module(s)</span>
-                    <span className="rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-3 text-yellow-100">{result.priority_actions?.length || 0} action(s)</span>
+
+                  <div>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h2 className="text-2xl font-black text-slate-950">Scan report</h2>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">Export is generated from this real scan result. Missing modules remain Not assessed.</p>
+                      </div>
+                      <button type="button" disabled={saveLoading} onClick={saveUnifiedScanToDashboard} className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-900 transition hover:bg-slate-50 disabled:opacity-50">
+                        {saveLoading ? "Saving..." : projectMode === "existing" && selectedProjectId ? "Save under project" : "Save + create project"}
+                      </button>
+                    </div>
+
+                    <div className="mt-5 flex flex-wrap gap-3">
+                      <button type="button" className="rounded-full bg-red-600 px-5 py-3 text-sm font-black text-white transition hover:bg-red-700" onClick={() => exportCurrentReport("pdf")}>Download PDF</button>
+                      <button type="button" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-900 transition hover:bg-slate-50" onClick={() => exportCurrentReport("html")}>HTML</button>
+                      <button type="button" className="rounded-full border border-green-200 bg-green-50 px-5 py-3 text-sm font-black text-green-700 transition hover:bg-green-100" onClick={() => exportCurrentReport("markdown")}>Markdown</button>
+                      <button type="button" className="rounded-full border border-yellow-200 bg-yellow-50 px-5 py-3 text-sm font-black text-yellow-900 transition hover:bg-yellow-100" onClick={() => exportCurrentReport("json")}>JSON</button>
+                    </div>
+
+                    {saveMessage ? <p className="mt-4 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-700">{saveMessage}</p> : null}
+                    {exportStatus ? <p className="mt-4 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-700">{exportStatus}</p> : null}
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      <p className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">{result.realness_rule}</p>
+                      <p className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">{result.safe_public_summary}</p>
+                    </div>
                   </div>
                 </div>
-
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <button type="button" disabled={saveLoading} onClick={saveUnifiedScanToDashboard} className="rounded-full border border-zinc-700 bg-black px-5 py-3 text-sm font-black text-zinc-100 transition hover:border-green-400/50 disabled:opacity-50">
-                    {saveLoading ? "Saving..." : projectMode === "existing" && selectedProjectId ? "Save under selected project" : "Save + create project"}
-                  </button>
-                  <button type="button" className="rounded-full bg-red-500 px-5 py-3 text-sm font-black text-white transition hover:bg-red-400" onClick={() => exportCurrentReport("pdf")}>Download PDF</button>
-                  <button type="button" className="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-5 py-3 text-sm font-black text-yellow-100 transition hover:bg-yellow-400/20" onClick={() => exportCurrentReport("html")}>HTML</button>
-                  <button type="button" className="rounded-full border border-green-400/30 bg-green-400/10 px-5 py-3 text-sm font-black text-green-100 transition hover:bg-green-400/20" onClick={() => exportCurrentReport("markdown")}>Markdown</button>
-                  <button type="button" className="rounded-full border border-zinc-700 bg-black px-5 py-3 text-sm font-black text-zinc-100 transition hover:border-yellow-400/50" onClick={() => exportCurrentReport("json")}>JSON</button>
-                </div>
-
-                {saveMessage ? <p className="mt-4 rounded-2xl border border-green-400/20 bg-green-400/10 p-4 text-sm font-semibold text-green-100">{saveMessage}</p> : null}
-                {exportStatus ? <p className="mt-4 rounded-2xl border border-green-400/20 bg-green-400/10 p-4 text-sm font-semibold text-green-100">{exportStatus}</p> : null}
-
-                <p className="mt-4 rounded-2xl border border-zinc-800 bg-black/40 p-3 text-sm text-zinc-300">{result.realness_rule}</p>
-                <p className="mt-3 text-xs leading-5 text-yellow-100/80">{result.safe_public_summary}</p>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {cards.map((card) => (
-                  <div key={card.module} className="rounded-[1.3rem] border border-zinc-800 bg-[#101010] p-5 shadow-xl">
+                  <div key={card.module} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <h3 className="font-black text-white">{card.label}</h3>
+                      <h3 className="font-black text-slate-950">{card.label}</h3>
                       <span className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(card.status)}`}>{card.status}</span>
                     </div>
-                    <p className="mt-3 text-sm text-zinc-400">Score: <span className="font-black text-white">{card.score ?? "Not assessed"}</span></p>
+                    <p className="mt-3 text-sm text-slate-600">Score: <span className="font-black text-slate-950">{card.score ?? "Not assessed"}</span></p>
 
                     {!!card.evidence?.length ? (
                       <div className="mt-4">
-                        <p className="text-xs font-black uppercase tracking-wide text-zinc-500">Evidence</p>
-                        <ul className="mt-2 space-y-1 text-xs text-zinc-300">
+                        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Evidence</p>
+                        <ul className="mt-2 space-y-1 text-xs text-slate-600">
                           {card.evidence.slice(0, 4).map((item, index) => <li key={`${card.module}-evidence-${index}`}>• {item}</li>)}
                         </ul>
                       </div>
                     ) : null}
 
                     {!!card.required_input?.length ? (
-                      <div className="mt-4 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-3">
-                        <p className="text-xs font-black uppercase tracking-wide text-yellow-100">Needed for real score</p>
-                        <ul className="mt-2 space-y-1 text-xs text-yellow-50/90">
+                      <div className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 p-3">
+                        <p className="text-xs font-black uppercase tracking-wide text-yellow-900">Needed for real score</p>
+                        <ul className="mt-2 space-y-1 text-xs text-yellow-900/90">
                           {card.required_input.map((item, index) => <li key={`${card.module}-required-${index}`}>• {item}</li>)}
                         </ul>
                       </div>
                     ) : null}
 
-                    <div className="mt-4 rounded-2xl border border-zinc-800 bg-black/40 p-3">
-                      <p className="text-xs font-black uppercase tracking-wide text-zinc-500">Fix direction</p>
-                      <p className="mt-2 text-xs leading-5 text-zinc-300">{moduleFixGuide(card)}</p>
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-500">Fix direction</p>
+                      <p className="mt-2 text-xs leading-5 text-slate-600">{moduleFixGuide(card)}</p>
                     </div>
                   </div>
                 ))}
               </div>
 
               {!!result.priority_actions?.length ? (
-                <div className="rounded-[1.5rem] border border-zinc-800 bg-[#101010] p-6 shadow-xl">
-                  <h3 className="text-xl font-black text-white">Bugs / findings with fix guidance</h3>
-                  <p className="mt-2 text-sm leading-6 text-zinc-400">Real assessed findings only. Each item includes where to fix, why it matters, how to fix, and how to verify.</p>
+                <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                  <h3 className="text-2xl font-black text-slate-950">Bugs / findings with fix guidance</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">Real assessed findings only. Each item includes where to fix, why it matters, how to fix, and how to verify.</p>
                   <div className="mt-4 space-y-3">
                     {result.priority_actions.slice(0, 12).map((item) => {
                       const guide = getActionFixGuide(item.title, item.module);
                       return (
-                        <div key={`${item.step}-${item.title}`} className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
+                        <div key={`${item.step}-${item.title}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                           <div className="flex flex-wrap items-center gap-3">
                             <SeverityBadge severity={item.severity} />
-                            <p className="font-black text-white">{item.title}</p>
+                            <p className="font-black text-slate-950">{item.title}</p>
                           </div>
-                          <p className="mt-2 text-sm text-zinc-300">{item.recommended_action}</p>
+                          <p className="mt-2 text-sm text-slate-700">{item.recommended_action}</p>
                           <div className="mt-4 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
-                            <div className="rounded-xl border border-zinc-800 bg-[#101010] p-3"><p className="font-black text-zinc-500">Where to fix</p><p className="mt-1 text-zinc-200">{guide.file}</p></div>
-                            <div className="rounded-xl border border-zinc-800 bg-[#101010] p-3"><p className="font-black text-zinc-500">Why it matters</p><p className="mt-1 text-zinc-200">{guide.why}</p></div>
-                            <div className="rounded-xl border border-zinc-800 bg-[#101010] p-3"><p className="font-black text-zinc-500">How to fix</p><p className="mt-1 text-zinc-200">{guide.fix}</p></div>
-                            <div className="rounded-xl border border-zinc-800 bg-[#101010] p-3"><p className="font-black text-zinc-500">Verify</p><p className="mt-1 text-zinc-200">{guide.verify}</p></div>
+                            <div className="rounded-xl border border-slate-200 bg-white p-3"><p className="font-black text-slate-500">Where to fix</p><p className="mt-1 text-slate-800">{guide.file}</p></div>
+                            <div className="rounded-xl border border-slate-200 bg-white p-3"><p className="font-black text-slate-500">Why it matters</p><p className="mt-1 text-slate-800">{guide.why}</p></div>
+                            <div className="rounded-xl border border-slate-200 bg-white p-3"><p className="font-black text-slate-500">How to fix</p><p className="mt-1 text-slate-800">{guide.fix}</p></div>
+                            <div className="rounded-xl border border-slate-200 bg-white p-3"><p className="font-black text-slate-500">Verify</p><p className="mt-1 text-slate-800">{guide.verify}</p></div>
                           </div>
                         </div>
                       );
@@ -1344,31 +1355,33 @@ export function UnifiedUrlScannerClient() {
                 </div>
               ) : null}
 
-              <div className="rounded-[1.5rem] border border-zinc-800 bg-[#101010] p-6 shadow-xl">
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.22em] text-yellow-300">Evidence required</p>
-                    <h3 className="mt-2 text-xl font-black text-white">What to add for a deeper report</h3>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-yellow-700">Evidence required</p>
+                    <h3 className="mt-2 text-2xl font-black text-slate-950">What to add for a deeper report</h3>
                   </div>
-                  <div className="rounded-2xl border border-zinc-800 bg-black/40 px-4 py-3 text-sm font-black text-zinc-200">{requiredInputs.length} missing evidence item(s)</div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">{requiredInputs.length} missing evidence item(s)</div>
                 </div>
                 {requiredInputs.length ? (
-                  <ul className="mt-5 grid gap-2 text-sm text-zinc-300 md:grid-cols-2">
+                  <ul className="mt-5 grid gap-2 text-sm text-slate-700 md:grid-cols-2">
                     {requiredInputs.map((input, index) => (
-                      <li key={`required-${index}`} className="rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-3 text-yellow-50"><strong>{input.label}:</strong> {input.item}</li>
+                      <li key={`required-${index}`} className="rounded-2xl border border-yellow-200 bg-yellow-50 p-3 text-yellow-900"><strong>{input.label}:</strong> {input.item}</li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-5 rounded-2xl border border-green-400/20 bg-green-400/10 p-4 text-sm font-semibold text-green-100">No missing evidence was listed by the current scan result.</p>
+                  <p className="mt-5 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-700">No missing evidence was listed by the current scan result.</p>
                 )}
               </div>
 
-              <div className="rounded-[1.5rem] border border-zinc-800 bg-[#101010] p-6 shadow-xl">
-                <h3 className="text-xl font-black text-white">Blocked fake claims</h3>
-                <ul className="mt-4 space-y-2 text-sm text-zinc-300">
-                  {(result.blocked_claims || []).map((claim, index) => <li key={`blocked-claim-${index}`}>• {claim}</li>)}
-                </ul>
-              </div>
+              {!!result.blocked_claims?.length ? (
+                <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                  <h3 className="text-2xl font-black text-slate-950">Blocked fake claims</h3>
+                  <ul className="mt-4 space-y-2 text-sm text-slate-700">
+                    {(result.blocked_claims || []).map((claim, index) => <li key={`blocked-claim-${index}`}>• {claim}</li>)}
+                  </ul>
+                </div>
+              ) : null}
             </>
           )}
         </section>
