@@ -1,72 +1,62 @@
-"use client";
+import Link from "next/link";
 
-import { useEffect, useState } from "react";
-import { apiGet } from "@/lib/api";
-import type { PaymentGatewayStatus, PaymentIntent, SubscriptionRecord } from "@/lib/types";
+const pendingItems = [
+  "UPI QR / UTR submission flow",
+  "Admin manual verification panel",
+  "Razorpay test checkout + webhook verification",
+  "Payment audit log review",
+  "Subscription activation only after verified payment",
+];
 
 export default function BillingPage() {
-  const [gateway, setGateway] = useState<PaymentGatewayStatus | null>(null);
-  const [paymentId, setPaymentId] = useState("");
-  const [payment, setPayment] = useState<PaymentIntent | null>(null);
-  const [subscriptions, setSubscriptions] = useState<SubscriptionRecord[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    apiGet<PaymentGatewayStatus>("/payments/status").then(setGateway).catch((err) => setError(err.message));
-    apiGet<{ subscriptions: SubscriptionRecord[] }>("/subscriptions").then((data) => setSubscriptions(data.subscriptions || [])).catch(() => undefined);
-  }, []);
-
-  async function checkPayment() {
-    setError(null);
-    setPayment(null);
-    try {
-      const data = await apiGet<{ payment_intent: PaymentIntent }>(`/payments/${encodeURIComponent(paymentId)}`);
-      setPayment(data.payment_intent);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Payment lookup failed");
-    }
-  }
-
   return (
-    <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-      <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Billing</p>
-      <h1 className="mt-3 text-4xl font-black sm:text-5xl">Real payment status, no fake subscription activation.</h1>
-      <p className="mt-4 max-w-3xl text-slate-400">Razorpay payments are verified only by backend signature or webhook checks. UPI fallback remains manual and needs admin verification.</p>
+    <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
+      <p className="text-sm font-bold uppercase tracking-[0.3em] text-amber-700">Billing deferred</p>
+      <h1 className="mt-3 text-4xl font-black text-slate-950 sm:text-5xl">Payments are pending until the final payment phase.</h1>
+      <p className="mt-4 max-w-3xl text-slate-600">
+        Web3Guard AI currently keeps paid access honest: no frontend-only paid status, no fake subscription activation, and no unverified payment success. Free scanner and report export remain available.
+      </p>
 
-      {gateway && (
-        <div className="mt-8 grid gap-4 md:grid-cols-4">
-          <div className="card p-5"><p className="text-sm text-slate-400">Mode</p><p className="mt-2 font-black">{gateway.payment_mode}</p></div>
-          <div className="card p-5"><p className="text-sm text-slate-400">Razorpay</p><p className="mt-2 font-black">{gateway.razorpay_configured ? "Configured" : "Not configured"}</p></div>
-          <div className="card p-5"><p className="text-sm text-slate-400">Webhook</p><p className="mt-2 font-black">{gateway.razorpay_webhook_configured ? "Configured" : "Missing"}</p></div>
-          <div className="card p-5"><p className="text-sm text-slate-400">UPI fallback</p><p className="mt-2 font-black">{gateway.upi_manual_enabled ? "Available" : "Disabled"}</p></div>
+      <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
+          <p className="text-sm font-bold text-emerald-700">Live now</p>
+          <p className="mt-2 text-2xl font-black text-emerald-950">Free scan</p>
+          <p className="mt-2 text-sm leading-6 text-emerald-900">URL scan, saved reports, and direct PDF/HTML/Markdown/JSON export.</p>
         </div>
-      )}
-
-      <div className="card mt-8 grid gap-3 p-5 md:grid-cols-[1fr_auto]">
-        <input className="input" value={paymentId} onChange={(e) => setPaymentId(e.target.value)} placeholder="Payment intent ID, e.g. pay_xxxxx" />
-        <button className="btn-primary" onClick={checkPayment}>Check Status</button>
+        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5">
+          <p className="text-sm font-bold text-amber-700">Pending</p>
+          <p className="mt-2 text-2xl font-black text-amber-950">UPI manual</p>
+          <p className="mt-2 text-sm leading-6 text-amber-900">Will require UTR/reference submission and admin verification before access activation.</p>
+        </div>
+        <div className="rounded-3xl border border-slate-200 bg-white p-5">
+          <p className="text-sm font-bold text-slate-500">Later</p>
+          <p className="mt-2 text-2xl font-black text-slate-950">Razorpay</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">Will be enabled only after test checkout, signature verification, and webhook audit pass.</p>
+        </div>
       </div>
-      {error && <p className="mt-4 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-red-100">{error}</p>}
-      {payment && (
-        <div className="card mt-6 p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><p className="text-xl font-black">{payment.package_name}</p><p className="text-sm text-slate-400">{payment.id}</p></div>
-            <span className="rounded-full border border-cyan/30 bg-cyan/10 px-3 py-1 text-sm font-bold text-cyan">{payment.status}</span>
-          </div>
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
-            <p className="rounded-2xl bg-white/[0.03] p-4">Amount<br/><b>₹{payment.amount_inr.toLocaleString("en-IN")}</b></p>
-            <p className="rounded-2xl bg-white/[0.03] p-4">Provider<br/><b>{payment.provider}</b></p>
-            <p className="rounded-2xl bg-white/[0.03] p-4">Subscription<br/><b>{payment.subscription_id || "Not activated"}</b></p>
-          </div>
-        </div>
-      )}
 
-      <div className="card mt-8 overflow-x-auto">
-        <div className="p-5"><h2 className="text-2xl font-black">Subscription records</h2><p className="mt-1 text-sm text-slate-400">Only real records created after verified/admin-approved payments are shown.</p></div>
-        <table className="w-full min-w-[850px] text-left text-sm">
-          <thead className="bg-white/[0.04]"><tr><th className="p-4">Plan</th><th className="p-4">Status</th><th className="p-4">Amount</th><th className="p-4">Provider</th><th className="p-4">Period</th></tr></thead>
-          <tbody>{subscriptions.map((sub) => <tr key={sub.id} className="border-t border-white/10"><td className="p-4 font-bold">{sub.plan_name}<br/><span className="text-xs font-normal text-slate-500">{sub.id}</span></td><td className="p-4">{sub.status}</td><td className="p-4">₹{sub.amount_inr.toLocaleString("en-IN")}</td><td className="p-4">{sub.provider}</td><td className="p-4 text-slate-400">{sub.current_period_start || "—"}<br/>{sub.current_period_end || "—"}</td></tr>)}</tbody>
-        </table>
+      <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-2xl font-black text-slate-950">Final payment phase checklist</h2>
+        <ul className="mt-5 grid gap-3 md:grid-cols-2">
+          {pendingItems.map((item) => (
+            <li key={item} className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm font-semibold text-slate-700">
+              {item}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="mt-8 rounded-3xl border border-red-200 bg-red-50 p-6 text-red-900">
+        <h2 className="text-xl font-black">Blocked until payment phase</h2>
+        <p className="mt-2 text-sm leading-6">
+          Do not display “Paid”, “Subscription active”, “Payment successful”, or “Premium unlocked” unless payment is verified by admin or a real payment provider webhook/signature.
+        </p>
+      </div>
+
+      <div className="mt-8 flex flex-wrap gap-3">
+        <Link href="/scanner/unified-url" className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white hover:bg-slate-800">Run free scan</Link>
+        <Link href="/pricing" className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-800 hover:bg-slate-50">View planning prices</Link>
+        <Link href="/launch-readiness" className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-800 hover:bg-slate-50">Launch readiness</Link>
       </div>
     </div>
   );

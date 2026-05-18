@@ -110,10 +110,13 @@ export function AuthSessionButton() {
             Saved Reports
           </Link>
           <Link href="/billing" className="block rounded-2xl px-4 py-3 text-sm font-bold text-slate-800 hover:bg-slate-50">
-            Billing
+            Billing / Payment Pending
           </Link>
           <Link href="/feature-status" className="block rounded-2xl px-4 py-3 text-sm font-bold text-slate-800 hover:bg-slate-50">
             Feature Status
+          </Link>
+          <Link href="/launch-readiness" className="block rounded-2xl px-4 py-3 text-sm font-bold text-slate-800 hover:bg-slate-50">
+            Launch Readiness
           </Link>
           <button
             type="button"
