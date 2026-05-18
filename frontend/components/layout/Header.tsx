@@ -123,7 +123,6 @@ export function Header() {
 
         <div className="hidden shrink-0 items-center gap-2 sm:flex">
           <AuthSessionButton />
-          <Link href="/scanner/unified-url" className="btn-primary whitespace-nowrap">Start Scan</Link>
         </div>
       </div>
 

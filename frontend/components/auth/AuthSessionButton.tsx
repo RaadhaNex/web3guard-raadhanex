@@ -93,23 +93,38 @@ export function AuthSessionButton() {
 
   if (status === "signed-in") {
     return (
-      <div className="flex items-center gap-2">
-        <Link
-          href="/dashboard"
-          className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
-        >
-          Dashboard
-        </Link>
+      <details className="group relative">
+        <summary className="list-none rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-800 shadow-sm transition hover:bg-slate-50">
+          Settings
+          <span aria-hidden="true" className="ml-1 inline-block transition group-open:rotate-180">⌄</span>
+        </summary>
 
-        <button
-          type="button"
-          onClick={handleLogout}
-          disabled={loadingLogout}
-          className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loadingLogout ? "Logging out..." : "Logout"}
-        </button>
-      </div>
+        <div className="absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-3xl border border-slate-200 bg-white p-2 shadow-xl">
+          <Link href="/dashboard" className="block rounded-2xl px-4 py-3 text-sm font-bold text-slate-800 hover:bg-slate-50">
+            Profile / Account
+          </Link>
+          <Link href="/settings/language" className="block rounded-2xl px-4 py-3 text-sm font-bold text-slate-800 hover:bg-slate-50">
+            Language & Preferences
+          </Link>
+          <Link href="/dashboard/reports" className="block rounded-2xl px-4 py-3 text-sm font-bold text-slate-800 hover:bg-slate-50">
+            Saved Reports
+          </Link>
+          <Link href="/billing" className="block rounded-2xl px-4 py-3 text-sm font-bold text-slate-800 hover:bg-slate-50">
+            Billing
+          </Link>
+          <Link href="/feature-status" className="block rounded-2xl px-4 py-3 text-sm font-bold text-slate-800 hover:bg-slate-50">
+            Feature Status
+          </Link>
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loadingLogout}
+            className="mt-1 w-full rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-left text-sm font-black text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loadingLogout ? "Logging out..." : "Logout"}
+          </button>
+        </div>
+      </details>
     );
   }
 

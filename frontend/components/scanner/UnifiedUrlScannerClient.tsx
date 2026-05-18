@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { API_BASE, apiPost } from "@/lib/api";
+import { API_BASE, apiGet, apiPost } from "@/lib/api";
 import { getCurrentUserId, getSessionToken } from "@/lib/supabase";
-import type { UnifiedModuleCard, UnifiedUrlScanResponse } from "@/lib/types";
+import type { ProjectRecord, ScanHistoryRecord, UnifiedModuleCard, UnifiedUrlScanResponse } from "@/lib/types";
 import { SeverityBadge } from "@/components/ui/SeverityBadge";
 
 const moduleOrder = [
@@ -409,11 +409,78 @@ function sortModuleCards(cards: UnifiedModuleCard[]) {
   });
 }
 
+
+const projectTypeOptions = [
+  "Website / dApp Frontend",
+  "Smart Contract",
+  "DeFi Protocol",
+  "NFT / Marketplace",
+  "DAO / Governance",
+  "Wallet / Account Abstraction",
+  "Token Launch",
+  "GameFi",
+  "Bridge / Cross-chain",
+  "AI x Web3",
+  "API / SaaS Backend",
+  "Full Web3 Startup",
+  "Other",
+];
+
+const chainOptions = [
+  "Web only",
+  "Ethereum",
+  "Polygon",
+  "BSC",
+  "Arbitrum",
+  "Optimism",
+  "Base",
+  "Avalanche",
+  "Solana",
+  "Multi-chain",
+  "Other",
+];
+
+type ProjectMode = "new" | "existing";
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "Not available";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function getHistoryPayload(scan: ScanHistoryRecord) {
+  return (scan.payload || {}) as Partial<UnifiedUrlScanResponse> & Record<string, unknown>;
+}
+
+function getHistoryWebsite(scan: ScanHistoryRecord) {
+  const payload = getHistoryPayload(scan);
+  const website = typeof payload.website_url === "string" ? payload.website_url : "";
+  return website || "No URL stored";
+}
+
+function looksLikeUnifiedResult(payload: Record<string, unknown>): payload is UnifiedUrlScanResponse {
+  return Boolean(
+    typeof payload.website_url === "string" &&
+      typeof payload.report_id === "string" &&
+      Array.isArray(payload.module_cards)
+  );
+}
+
 export function UnifiedUrlScannerClient() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [projectName, setProjectName] = useState("");
-  const [projectType, setProjectType] = useState("Website / dApp Frontend");
+  const [projectMode, setProjectMode] = useState<ProjectMode>("new");
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [projectType, setProjectType] = useState(projectTypeOptions[0]);
+  const [customProjectType, setCustomProjectType] = useState("");
   const [chain, setChain] = useState("Web only");
+  const [customChain, setCustomChain] = useState("");
   const [contractAddress, setContractAddress] = useState("");
   const [apiBaseUrl, setApiBaseUrl] = useState("");
   const [githubRepoUrl, setGithubRepoUrl] = useState("");
@@ -423,6 +490,12 @@ export function UnifiedUrlScannerClient() {
 
   const [authLoading, setAuthLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  const [projects, setProjects] = useState<ProjectRecord[]>([]);
+  const [scanHistory, setScanHistory] = useState<ScanHistoryRecord[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [selectedHistoryId, setSelectedHistoryId] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -436,6 +509,18 @@ export function UnifiedUrlScannerClient() {
   const [exportStatus, setExportStatus] = useState<string | null>(null);
 
   const currentStage = scanStages[Math.min(stageIndex, scanStages.length - 1)];
+  const selectedProject = projects.find((project) => project.id === selectedProjectId) || null;
+  const selectedHistory = scanHistory.find((scan) => scan.id === selectedHistoryId) || null;
+
+  const resolvedProjectType = useMemo(() => {
+    if (projectType === "Other") return customProjectType.trim() || "Other";
+    return projectType.trim() || projectTypeOptions[0];
+  }, [customProjectType, projectType]);
+
+  const resolvedChain = useMemo(() => {
+    if (chain === "Other") return customChain.trim() || "Other";
+    return chain.trim() || "Web only";
+  }, [chain, customChain]);
 
   const canRunScan = useMemo(() => {
     return (
@@ -446,6 +531,119 @@ export function UnifiedUrlScannerClient() {
       !loading
     );
   }, [authorized, isLoggedIn, loading, realOnly, websiteUrl]);
+
+  function setKnownProjectType(value?: string | null) {
+    if (!value) return;
+
+    if (projectTypeOptions.includes(value)) {
+      setProjectType(value);
+      setCustomProjectType("");
+      return;
+    }
+
+    setProjectType("Other");
+    setCustomProjectType(value);
+  }
+
+  function setKnownChain(value?: string | null) {
+    if (!value) return;
+
+    if (chainOptions.includes(value)) {
+      setChain(value);
+      setCustomChain("");
+      return;
+    }
+
+    setChain("Other");
+    setCustomChain(value);
+  }
+
+  async function loadWorkspaceQuickData() {
+    if (!isLoggedIn) return;
+
+    setHistoryLoading(true);
+    setHistoryError(null);
+
+    try {
+      const userId = await getCurrentUserId();
+      const token = await getSessionToken();
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+      const queryUser = encodeURIComponent(userId);
+
+      const [projectData, scanData] = await Promise.all([
+        apiGet<{ projects: ProjectRecord[] }>(`/projects?user_id=${queryUser}&limit=100`, { headers }),
+        apiGet<{ scans: ScanHistoryRecord[] }>(`/scan-history?user_id=${queryUser}&limit=30`, { headers }),
+      ]);
+
+      setProjects(projectData.projects || []);
+      setScanHistory(
+        (scanData.scans || []).filter((scan) =>
+          scan.module === "unified_url" || looksLikeUnifiedResult(getHistoryPayload(scan) as Record<string, unknown>)
+        )
+      );
+    } catch (err) {
+      setHistoryError(readableClientError(err));
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  function applyProject(projectId: string) {
+    setSelectedProjectId(projectId);
+    setProjectMode(projectId ? "existing" : "new");
+
+    const project = projects.find((item) => item.id === projectId);
+    if (!project) return;
+
+    setProjectName(project.name || "");
+    setWebsiteUrl(project.website_url || "");
+    setKnownChain(project.chain);
+    setKnownProjectType(project.project_type);
+    setContractAddress(project.contract_address || "");
+    setGithubRepoUrl(project.github_repo_url || "");
+    setSaveMessage("Existing project loaded. Run a fresh scan or choose a saved scan history item.");
+  }
+
+  function startNewProject() {
+    setProjectMode("new");
+    setSelectedProjectId("");
+    setProjectName("");
+    setSaveMessage(null);
+  }
+
+  function applyHistory(scanId: string) {
+    setSelectedHistoryId(scanId);
+    setError(null);
+    setExportStatus(null);
+
+    const scan = scanHistory.find((item) => item.id === scanId);
+    if (!scan) return;
+
+    const payload = getHistoryPayload(scan) as Record<string, unknown>;
+    const historyWebsite = typeof payload.website_url === "string" ? payload.website_url : "";
+    const historyProjectName =
+      scan.project_name || (typeof payload.project_name === "string" ? payload.project_name : "");
+    const historyProjectType = typeof payload.project_type === "string" ? payload.project_type : null;
+    const historyChain = typeof payload.chain === "string" ? payload.chain : null;
+
+    if (historyWebsite) setWebsiteUrl(historyWebsite);
+    if (historyProjectName) setProjectName(historyProjectName);
+    setKnownProjectType(historyProjectType);
+    setKnownChain(historyChain);
+
+    if (scan.project_id) {
+      setSelectedProjectId(scan.project_id);
+      setProjectMode("existing");
+    }
+
+    if (looksLikeUnifiedResult(payload)) {
+      setResult(payload);
+      setSaveMessage(`Loaded saved scan from ${formatDateTime(scan.created_at)}. You can export it or re-run a fresh scan.`);
+      return;
+    }
+
+    setSaveMessage(`Loaded history inputs from ${formatDateTime(scan.created_at)}. Run scan to generate a fresh result.`);
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -476,6 +674,11 @@ export function UnifiedUrlScannerClient() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    void loadWorkspaceQuickData();
+  }, [isLoggedIn]);
 
   useEffect(() => {
     if (!loading) return;
@@ -537,8 +740,8 @@ export function UnifiedUrlScannerClient() {
           user_id: userId,
           website_url: cleanWebsiteUrl,
           project_name: projectName.trim() || cleanWebsiteUrl,
-          project_type: projectType.trim() || "Website / dApp Frontend",
-          chain: chain.trim() || "Web only",
+          project_type: resolvedProjectType,
+          chain: resolvedChain,
           contract_address: contractAddress.trim() || null,
           api_base_url: apiBaseUrl.trim() || null,
           github_repo_url: githubRepoUrl.trim() || null,
@@ -574,22 +777,29 @@ export function UnifiedUrlScannerClient() {
       const userId = await getCurrentUserId();
       const token = await getSessionToken();
       const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+      let projectId = projectMode === "existing" ? selectedProjectId : "";
 
-      const projectResponse = await apiPost<{ project: { id: string } }>(
-        "/projects",
-        {
-          user_id: userId,
-          name: projectName.trim() || result.project_name || "Unified URL Scan",
-          website_url: websiteUrl,
-          chain,
-          contract_address: contractAddress || null,
-          github_repo_url: githubRepoUrl || null,
-          project_type: projectType,
-          description:
-            "Created from unified URL launch scanner. Only actually assessed modules were scored.",
-        },
-        { headers }
-      );
+      if (!projectId) {
+        const projectResponse = await apiPost<{ project: { id: string } }>(
+          "/projects",
+          {
+            user_id: userId,
+            name: projectName.trim() || result.project_name || "Unified URL Scan",
+            website_url: websiteUrl,
+            chain: resolvedChain,
+            contract_address: contractAddress || null,
+            github_repo_url: githubRepoUrl || null,
+            project_type: resolvedProjectType,
+            description:
+              "Created from unified URL launch scanner. Only actually assessed modules were scored.",
+          },
+          { headers }
+        );
+
+        projectId = projectResponse.project.id;
+        setSelectedProjectId(projectId);
+        setProjectMode("existing");
+      }
 
       const criticalHigh =
         result.priority_actions?.filter(
@@ -600,7 +810,7 @@ export function UnifiedUrlScannerClient() {
         "/scan-history",
         {
           user_id: userId,
-          project_id: projectResponse.project.id,
+          project_id: projectId,
           module: "unified_url",
           project_name: projectName.trim() || result.project_name,
           score: result.available_score ?? null,
@@ -618,15 +828,17 @@ export function UnifiedUrlScannerClient() {
       );
 
       setSaveMessage(
-        "Scan saved to your dashboard as a real record. Not assessed modules remain unscored."
+        projectMode === "existing"
+          ? "Scan saved under the selected project. It will now appear in History with date/time."
+          : "Scan saved to dashboard and a new project was created. It will now appear in History."
       );
+      await loadWorkspaceQuickData();
     } catch (err) {
       setError(readableClientError(err));
     } finally {
       setSaveLoading(false);
     }
   }
-
 
   async function exportCurrentReport(format: "pdf" | "html" | "markdown" | "json") {
     if (!result) return;
@@ -664,136 +876,165 @@ export function UnifiedUrlScannerClient() {
   }
 
   const cards = result?.module_cards ? sortModuleCards(result.module_cards) : [];
+  const requiredInputs = result?.module_cards.flatMap((card) =>
+    (card.required_input || []).map((item) => ({ label: card.label, item }))
+  ) || [];
 
   return (
     <main className="min-h-screen bg-[#f7fafc] text-slate-950">
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <section className="relative rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-          <div className="mb-5 flex justify-end">
-            <button
-              type="button"
-              onClick={() => setCodeEditorOpen((value) => !value)}
-              className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-black text-slate-900 transition hover:bg-white"
-            >
-              {codeEditorOpen ? "Close Code Editor" : "Code Editor"}
-            </button>
-          </div>
-
-          {codeEditorOpen ? (
-            <div className="mb-6 rounded-[1.6rem] border border-slate-200 bg-slate-950 p-4 text-white shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">VS Code style editor</p>
-                  <h2 className="mt-1 text-xl font-black">Paste/edit Solidity before scan</h2>
-                  <p className="mt-1 text-sm text-slate-400">This does not execute code. It only sends pasted source to the passive rule scanner when you run the scan.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={copyCodeToClipboard}
-                  className="rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-white transition hover:bg-white/15"
-                >
-                  Copy code
-                </button>
-              </div>
-              <textarea
-                className="mt-4 min-h-[320px] w-full rounded-2xl border border-white/10 bg-black/40 p-4 font-mono text-xs leading-5 text-slate-100 outline-none focus:border-cyan-300"
-                value={solidityCode}
-                onChange={(event) => setSolidityCode(event.target.value)}
-                placeholder="Paste Solidity source here. Example: contract, library, or interface code for real rule-based scanning."
-              />
-            </div>
-          ) : null}
-
-          <div className="grid gap-8 lg:grid-cols-[1fr_0.75fr] lg:items-center">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.32em] text-cyan-500">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <section className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-4xl">
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-600">
                 Real-only launch scanner
               </p>
-
-              <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-tight text-slate-950 sm:text-6xl">
-                Unified Website URL Launch Scanner
+              <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">
+                URL scan, history, project mapping & direct exports
               </h1>
-
-              <p className="mt-5 max-w-3xl text-base leading-7 text-slate-600">
-                Login required. This scanner runs passive evidence-based checks
-                only. Missing contract, wallet, admin, and source inputs are
-                shown as <strong>Not assessed</strong>, never fake-scored.
-              </p>
-
-              <div className="mt-6 flex flex-wrap gap-3">
-                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">
-                  Evidence-based
-                </span>
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700">
-                  No exploit automation
-                </span>
-                <span className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700">
-                  Not a certified audit
-                </span>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm font-bold text-slate-500">
-                Session status
-              </p>
-
-              {authLoading ? (
-                <p className="mt-2 text-2xl font-black text-slate-800">
-                  Checking login...
-                </p>
-              ) : isLoggedIn ? (
-                <p className="mt-2 text-2xl font-black text-emerald-600">
-                  Logged in
-                </p>
-              ) : (
-                <>
-                  <p className="mt-2 text-2xl font-black text-rose-600">
-                    Login required
-                  </p>
-                  <Link
-                    href="/auth/login"
-                    className="mt-4 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white"
-                  >
-                    Login to scan
-                  </Link>
-                </>
-              )}
-
-              <p className="mt-4 text-sm leading-6 text-slate-600">
-                Scan records can be saved only to the authenticated user’s
-                dashboard.
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+                Passive checks only. Missing contract, wallet, admin, API, and repo evidence remains <strong>Not assessed</strong> instead of fake-scored.
               </p>
             </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setCodeEditorOpen((value) => !value)}
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-black text-slate-900 transition hover:bg-white"
+              >
+                {codeEditorOpen ? "Close Code Editor" : "Code Editor"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void loadWorkspaceQuickData()}
+                disabled={!isLoggedIn || historyLoading}
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-black text-slate-900 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {historyLoading ? "Refreshing..." : "Refresh history"}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold">
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-emerald-700">Evidence-based</span>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700">No exploit automation</span>
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-700">Not a certified audit</span>
+            {authLoading ? (
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-600">Checking login...</span>
+            ) : isLoggedIn ? (
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-emerald-700">Authenticated</span>
+            ) : (
+              <Link href="/auth/login" className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-rose-700">Login required</Link>
+            )}
           </div>
         </section>
 
-        <section className="mt-8 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block text-sm font-bold text-slate-800">
-                Project name
-                <input
-                  className="input mt-2"
-                  value={projectName}
-                  onChange={(event) => setProjectName(event.target.value)}
-                  placeholder="Example: My Web3 Launch"
-                />
-              </label>
-
-              <label className="block text-sm font-bold text-slate-800">
-                Project type
-                <input
-                  className="input mt-2"
-                  value={projectType}
-                  onChange={(event) => setProjectType(event.target.value)}
-                  placeholder="Website / dApp Frontend"
-                />
-              </label>
+        {codeEditorOpen ? (
+          <section className="mt-6 rounded-[1.75rem] border border-slate-200 bg-slate-950 p-4 text-white shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">VS Code style editor</p>
+                <h2 className="mt-1 text-xl font-black">Paste/edit Solidity before scan</h2>
+                <p className="mt-1 text-sm text-slate-400">This does not execute code. It only sends pasted source to the passive rule scanner when you run the scan.</p>
+              </div>
+              <button
+                type="button"
+                onClick={copyCodeToClipboard}
+                className="rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-white transition hover:bg-white/15"
+              >
+                Copy code
+              </button>
             </div>
+            <textarea
+              className="mt-4 min-h-[320px] w-full rounded-2xl border border-white/10 bg-black/40 p-4 font-mono text-xs leading-5 text-slate-100 outline-none focus:border-cyan-300"
+              value={solidityCode}
+              onChange={(event) => setSolidityCode(event.target.value)}
+              placeholder="Paste Solidity source here. Example: contract, library, or interface code for real rule-based scanning."
+            />
+          </section>
+        ) : null}
 
-            <label className="mt-4 block text-sm font-bold text-slate-800">
-              Website / dApp URL <span className="text-rose-500">*</span>
+        <section className="mt-6 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-500">Scan setup</p>
+              <h2 className="mt-2 text-2xl font-black text-slate-950">Choose history, existing project, or create new</h2>
+            </div>
+            {selectedHistory ? (
+              <div className="rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-xs font-bold text-cyan-800">
+                Last selected: {formatDateTime(selectedHistory.created_at)}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-3">
+            <label className="block text-sm font-bold text-slate-800">
+              Scan history
+              <select
+                className="input mt-2"
+                value={selectedHistoryId}
+                onChange={(event) => applyHistory(event.target.value)}
+                disabled={!isLoggedIn || historyLoading}
+              >
+                <option value="">Select previous saved scan</option>
+                {scanHistory.map((scan) => (
+                  <option key={scan.id} value={scan.id}>
+                    {scan.project_name || getHistoryWebsite(scan)} · {formatDateTime(scan.created_at)}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-xs font-medium text-slate-500">
+                Saved scans can be reopened/exported without scanning the same URL again.
+              </span>
+            </label>
+
+            <label className="block text-sm font-bold text-slate-800">
+              Project mode
+              <select
+                className="input mt-2"
+                value={projectMode}
+                onChange={(event) => {
+                  const value = event.target.value as ProjectMode;
+                  if (value === "new") startNewProject();
+                  else setProjectMode("existing");
+                }}
+              >
+                <option value="new">Create new project</option>
+                <option value="existing">Use existing project</option>
+              </select>
+            </label>
+
+            <label className="block text-sm font-bold text-slate-800">
+              Existing project
+              <select
+                className="input mt-2"
+                value={selectedProjectId}
+                onChange={(event) => applyProject(event.target.value)}
+                disabled={projectMode !== "existing" || !isLoggedIn || !projects.length}
+              >
+                <option value="">Select project</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name} · {formatDateTime(project.updated_at || project.created_at)}
+                  </option>
+                ))}
+              </select>
+              {!projects.length && isLoggedIn ? (
+                <span className="mt-1 block text-xs font-medium text-slate-500">No saved projects yet. Choose new project.</span>
+              ) : null}
+            </label>
+          </div>
+
+          {historyError ? (
+            <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
+              Could not load history/projects: {historyError}
+            </p>
+          ) : null}
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-4">
+            <label className="block text-sm font-bold text-slate-800 lg:col-span-2">
+              Website / dApp URL
               <input
                 className="input mt-2"
                 value={websiteUrl}
@@ -802,29 +1043,79 @@ export function UnifiedUrlScannerClient() {
               />
             </label>
 
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-bold text-slate-800">
+              Project name
+              <input
+                className="input mt-2"
+                value={projectName}
+                onChange={(event) => setProjectName(event.target.value)}
+                placeholder="My Web3 Project"
+              />
+            </label>
+
+            <label className="block text-sm font-bold text-slate-800">
+              Project type
+              <select
+                className="input mt-2"
+                value={projectType}
+                onChange={(event) => setProjectType(event.target.value)}
+              >
+                {projectTypeOptions.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-4">
+            {projectType === "Other" ? (
               <label className="block text-sm font-bold text-slate-800">
-                Chain
+                Custom project type
                 <input
                   className="input mt-2"
-                  value={chain}
-                  onChange={(event) => setChain(event.target.value)}
-                  placeholder="Web only / Ethereum / Polygon"
+                  value={customProjectType}
+                  onChange={(event) => setCustomProjectType(event.target.value)}
+                  placeholder="Example: RWA, DePIN, L2 infra"
                 />
               </label>
+            ) : null}
 
+            <label className="block text-sm font-bold text-slate-800">
+              Chain
+              <select
+                className="input mt-2"
+                value={chain}
+                onChange={(event) => setChain(event.target.value)}
+              >
+                {chainOptions.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+
+            {chain === "Other" ? (
               <label className="block text-sm font-bold text-slate-800">
-                Contract address optional
+                Custom chain
                 <input
                   className="input mt-2"
-                  value={contractAddress}
-                  onChange={(event) => setContractAddress(event.target.value)}
-                  placeholder="0x..."
+                  value={customChain}
+                  onChange={(event) => setCustomChain(event.target.value)}
+                  placeholder="Example: Aptos, Sui, Starknet"
                 />
               </label>
-            </div>
+            ) : null}
 
-            <label className="mt-4 block text-sm font-bold text-slate-800">
+            <label className="block text-sm font-bold text-slate-800">
+              Contract address optional
+              <input
+                className="input mt-2"
+                value={contractAddress}
+                onChange={(event) => setContractAddress(event.target.value)}
+                placeholder="0x..."
+              />
+            </label>
+
+            <label className="block text-sm font-bold text-slate-800">
               API base URL optional
               <input
                 className="input mt-2"
@@ -834,8 +1125,8 @@ export function UnifiedUrlScannerClient() {
               />
             </label>
 
-            <label className="mt-4 block text-sm font-bold text-slate-800">
-              GitHub repo URL optional
+            <label className="block text-sm font-bold text-slate-800">
+              GitHub repo optional
               <input
                 className="input mt-2"
                 value={githubRepoUrl}
@@ -843,384 +1134,240 @@ export function UnifiedUrlScannerClient() {
                 placeholder="https://github.com/team/project"
               />
             </label>
-
-            <label className="mt-4 block text-sm font-bold text-slate-800">
-              Solidity source optional for real contract score
-              <textarea
-                className="textarea mono mt-2 min-h-[150px]"
-                value={solidityCode}
-                onChange={(event) => setSolidityCode(event.target.value)}
-                placeholder="Paste Solidity source here if you want the contract module scored."
-              />
-            </label>
-
-            <div className="mt-5 space-y-3 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              <label className="flex gap-3">
-                <input
-                  type="checkbox"
-                  checked={authorized}
-                  onChange={(event) => setAuthorized(event.target.checked)}
-                />
-                <span>
-                  I own this project or have authorization to run passive checks.
-                </span>
-              </label>
-
-              <label className="flex gap-3">
-                <input
-                  type="checkbox"
-                  checked={realOnly}
-                  onChange={(event) => setRealOnly(event.target.checked)}
-                />
-                <span>
-                  I understand missing modules will be marked Not assessed.
-                </span>
-              </label>
-            </div>
-
-            {loading ? (
-              <div className="mt-5 rounded-3xl border border-cyan-200 bg-cyan-50 p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-sm font-black text-cyan-900">
-                    {currentStage}
-                  </p>
-                  <p className="text-sm font-bold text-cyan-700">
-                    {progress}%
-                  </p>
-                </div>
-
-                <div className="mt-3 h-3 overflow-hidden rounded-full bg-white">
-                  <div
-                    className="h-full rounded-full bg-cyan-400 transition-all duration-500"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-
-                <p className="mt-3 text-xs leading-5 text-cyan-800">
-                  Progress is estimated while the backend performs real passive
-                  checks. Results are shown only after the API returns evidence.
-                </p>
-              </div>
-            ) : null}
-
-            {error ? (
-              <p className="mt-4 whitespace-pre-wrap rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">
-                {error}
-              </p>
-            ) : null}
-
-            <button
-              className="mt-5 w-full rounded-2xl bg-cyan-400 px-5 py-4 text-base font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={runScan}
-              disabled={!canRunScan}
-            >
-              {loading ? "Scanning..." : "Run Unified URL Scan"}
-            </button>
-
-            {!isLoggedIn && !authLoading ? (
-              <p className="mt-3 text-center text-sm text-slate-500">
-                Login is required before running a scan.
-              </p>
-            ) : null}
           </div>
 
-          <div className="space-y-5">
-            {!result ? (
-              <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                <p className="text-xl font-black text-slate-950">
-                  What this scanner will do
-                </p>
+          <div className="mt-5 grid gap-3 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 md:grid-cols-2">
+            <label className="flex gap-3">
+              <input
+                type="checkbox"
+                checked={authorized}
+                onChange={(event) => setAuthorized(event.target.checked)}
+              />
+              <span>I own this project or have authorization to run passive checks.</span>
+            </label>
 
-                <div className="mt-5 grid gap-3">
-                  {[
-                    "Check website reachability, HTTPS, and headers",
-                    "Validate API URL if provided",
-                    "Read public GitHub repository metadata if provided",
-                    "Score Solidity source only if source is pasted",
-                    "Mark missing wallet/admin/contract context as Not assessed",
-                  ].map((item) => (
-                    <div
-                      key={item}
-                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-700"
-                    >
-                      {item}
-                    </div>
-                  ))}
-                </div>
+            <label className="flex gap-3">
+              <input
+                type="checkbox"
+                checked={realOnly}
+                onChange={(event) => setRealOnly(event.target.checked)}
+              />
+              <span>I understand missing modules will be marked Not assessed.</span>
+            </label>
+          </div>
+
+          {loading ? (
+            <div className="mt-5 rounded-3xl border border-cyan-200 bg-cyan-50 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-sm font-black text-cyan-900">{currentStage}</p>
+                <p className="text-sm font-bold text-cyan-700">{progress}%</p>
               </div>
-            ) : null}
+              <div className="mt-3 h-3 overflow-hidden rounded-full bg-white">
+                <div className="h-full rounded-full bg-cyan-400 transition-all duration-500" style={{ width: `${progress}%` }} />
+              </div>
+              <p className="mt-3 text-xs leading-5 text-cyan-800">
+                Progress is estimated while the backend performs real passive checks. Results are shown only after the API returns evidence.
+              </p>
+            </div>
+          ) : null}
 
-            {result ? (
-              <>
-                <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-bold text-slate-500">
-                        Available partial score
-                      </p>
-                      <p
-                        className={`mt-2 text-6xl font-black ${scoreTone(
-                          result.available_score
-                        )}`}
-                      >
-                        {result.available_score ?? "N/A"}
-                      </p>
-                      <p className="mt-2 text-sm font-semibold text-slate-600">
-                        {result.risk_label || "Not assessed"}
-                      </p>
-                    </div>
+          {error ? (
+            <p className="mt-4 whitespace-pre-wrap rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">
+              {error}
+            </p>
+          ) : null}
 
-                    <div className="rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-black text-cyan-700">
-                      {result.live_module_count} live/limited module(s)
-                    </div>
+          <button
+            className="mt-5 w-full rounded-2xl bg-cyan-400 px-5 py-4 text-base font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={runScan}
+            disabled={!canRunScan}
+          >
+            {loading ? "Scanning..." : "Run URL Scan"}
+          </button>
+
+          {!isLoggedIn && !authLoading ? (
+            <p className="mt-3 text-center text-sm text-slate-500">Login is required before running a scan.</p>
+          ) : null}
+        </section>
+
+        <section className="mt-8 space-y-5">
+          {!result ? (
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-xl font-black text-slate-950">Ready when you are</p>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                Fill the horizontal setup form above, choose a previous scan from history, or run a fresh scan. Results, bugs, fix hints, and exports will appear here under the form.
+              </p>
+              <div className="mt-5 grid gap-3 md:grid-cols-5">
+                {[
+                  "Website headers",
+                  "API evidence",
+                  "GitHub repo",
+                  "Solidity source",
+                  "Wallet/Admin checklist",
+                ].map((item) => (
+                  <div key={item} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-700">
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-bold text-slate-500">Available partial score</p>
+                    <p className={`mt-2 text-6xl font-black ${scoreTone(result.available_score)}`}>
+                      {result.available_score ?? "N/A"}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-slate-600">{result.risk_label || "Not assessed"}</p>
                   </div>
 
+                  <div className="grid gap-2 text-sm font-bold text-slate-700 sm:text-right">
+                    <span className="rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-cyan-700">
+                      {result.live_module_count} live/limited module(s)
+                    </span>
+                    <span className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      {result.priority_actions?.length || 0} action(s)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-5 flex flex-wrap gap-3">
                   <button
                     type="button"
                     disabled={saveLoading}
                     onClick={saveUnifiedScanToDashboard}
-                    className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-black text-slate-900 transition hover:bg-white disabled:opacity-50"
+                    className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-black text-slate-900 transition hover:bg-white disabled:opacity-50"
                   >
-                    {saveLoading ? "Saving..." : "Save to Dashboard"}
+                    {saveLoading ? "Saving..." : projectMode === "existing" && selectedProjectId ? "Save under selected project" : "Save + create project"}
                   </button>
-
-                  {saveMessage ? (
-                    <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">
-                      {saveMessage}
-                    </p>
-                  ) : null}
-
-                  <p className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                    {result.realness_rule}
-                  </p>
-
-                  <p className="mt-3 text-xs leading-5 text-amber-700">
-                    {result.safe_public_summary}
-                  </p>
+                  <button type="button" className="btn-primary" onClick={() => exportCurrentReport("pdf")}>Download PDF</button>
+                  <button type="button" className="btn-secondary" onClick={() => exportCurrentReport("html")}>HTML</button>
+                  <button type="button" className="btn-secondary" onClick={() => exportCurrentReport("markdown")}>Markdown</button>
+                  <button type="button" className="btn-secondary" onClick={() => exportCurrentReport("json")}>JSON</button>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {cards.map((card) => (
-                    <div
-                      key={card.module}
-                      className="rounded-[1.6rem] border border-slate-200 bg-white p-5 shadow-sm"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <h3 className="font-black text-slate-950">
-                          {card.label}
-                        </h3>
-                        <span
-                          className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(
-                            card.status
-                          )}`}
-                        >
-                          {card.status}
-                        </span>
-                      </div>
-
-                      <p className="mt-3 text-sm text-slate-600">
-                        Score:{" "}
-                        <span className="font-black text-slate-950">
-                          {card.score ?? "Not assessed"}
-                        </span>
-                      </p>
-
-                      {!!card.evidence?.length ? (
-                        <div className="mt-4">
-                          <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                            Evidence
-                          </p>
-                          <ul className="mt-2 space-y-1 text-xs text-slate-700">
-                            {card.evidence.slice(0, 4).map((item, index) => (
-                              <li key={`${card.module}-evidence-${index}`}>
-                                • {item}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null}
-
-                      {!!card.required_input?.length ? (
-                        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3">
-                          <p className="text-xs font-black uppercase tracking-wide text-amber-800">
-                            Needed for real score
-                          </p>
-                          <ul className="mt-2 space-y-1 text-xs text-amber-900">
-                            {card.required_input.map((item, index) => (
-                              <li key={`${card.module}-required-${index}`}>
-                                • {item}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null}
-
-                      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                        <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                          Fix direction
-                        </p>
-                        <p className="mt-2 text-xs leading-5 text-slate-700">
-                          {moduleFixGuide(card)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {!!result.priority_actions?.length ? (
-                  <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                    <h3 className="text-xl font-black text-slate-950">
-                      Priority fixes with guidance
-                    </h3>
-
-                    <div className="mt-4 space-y-3">
-                      {result.priority_actions.slice(0, 8).map((item) => {
-                        const guide = getActionFixGuide(
-                          item.title,
-                          item.module
-                        );
-
-                        return (
-                          <div
-                            key={`${item.step}-${item.title}`}
-                            className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                          >
-                            <div className="flex flex-wrap items-center gap-3">
-                              <SeverityBadge severity={item.severity} />
-                              <p className="font-black text-slate-950">
-                                {item.title}
-                              </p>
-                            </div>
-
-                            <p className="mt-2 text-sm text-slate-700">
-                              {item.recommended_action}
-                            </p>
-
-                            <div className="mt-4 grid gap-3 text-xs sm:grid-cols-2">
-                              <div className="rounded-xl bg-white p-3">
-                                <p className="font-black text-slate-500">
-                                  Where to fix
-                                </p>
-                                <p className="mt-1 text-slate-800">
-                                  {guide.file}
-                                </p>
-                              </div>
-
-                              <div className="rounded-xl bg-white p-3">
-                                <p className="font-black text-slate-500">
-                                  Why it matters
-                                </p>
-                                <p className="mt-1 text-slate-800">
-                                  {guide.why}
-                                </p>
-                              </div>
-
-                              <div className="rounded-xl bg-white p-3">
-                                <p className="font-black text-slate-500">
-                                  How to fix
-                                </p>
-                                <p className="mt-1 text-slate-800">
-                                  {guide.fix}
-                                </p>
-                              </div>
-
-                              <div className="rounded-xl bg-white p-3">
-                                <p className="font-black text-slate-500">
-                                  Verify
-                                </p>
-                                <p className="mt-1 text-slate-800">
-                                  {guide.verify}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                {saveMessage ? (
+                  <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">{saveMessage}</p>
+                ) : null}
+                {exportStatus ? (
+                  <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">{exportStatus}</p>
                 ) : null}
 
+                <p className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">{result.realness_rule}</p>
+                <p className="mt-3 text-xs leading-5 text-amber-700">{result.safe_public_summary}</p>
+              </div>
 
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {cards.map((card) => (
+                  <div key={card.module} className="rounded-[1.6rem] border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <h3 className="font-black text-slate-950">{card.label}</h3>
+                      <span className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(card.status)}`}>{card.status}</span>
+                    </div>
+                    <p className="mt-3 text-sm text-slate-600">
+                      Score: <span className="font-black text-slate-950">{card.score ?? "Not assessed"}</span>
+                    </p>
+
+                    {!!card.evidence?.length ? (
+                      <div className="mt-4">
+                        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Evidence</p>
+                        <ul className="mt-2 space-y-1 text-xs text-slate-700">
+                          {card.evidence.slice(0, 4).map((item, index) => (
+                            <li key={`${card.module}-evidence-${index}`}>• {item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+
+                    {!!card.required_input?.length ? (
+                      <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+                        <p className="text-xs font-black uppercase tracking-wide text-amber-800">Needed for real score</p>
+                        <ul className="mt-2 space-y-1 text-xs text-amber-900">
+                          {card.required_input.map((item, index) => (
+                            <li key={`${card.module}-required-${index}`}>• {item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-500">Fix direction</p>
+                      <p className="mt-2 text-xs leading-5 text-slate-700">{moduleFixGuide(card)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {!!result.priority_actions?.length ? (
                 <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-600">Report & exports</p>
-                      <h3 className="mt-2 text-xl font-black text-slate-950">Current scan report</h3>
-                      <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-                        Export directly from this scan result. You do not need to go to Dashboard first.
-                        PDF/HTML/Markdown/JSON use the same real evidence; missing modules stay Not assessed.
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-800">
-                      {result.priority_actions?.length || 0} real issue(s) / action(s)
-                    </div>
-                  </div>
+                  <h3 className="text-xl font-black text-slate-950">Bugs / findings with fix guidance</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    These are the real assessed findings from this scan. Each item includes where to fix, why it matters, how to fix, and how to verify.
+                  </p>
 
-                  {!!result.priority_actions?.length ? (
-                    <div className="mt-5 space-y-3">
-                      {result.priority_actions.slice(0, 8).map((item) => {
-                        const guide = getActionFixGuide(item.title, item.module);
-                        return (
-                          <div key={`report-bug-${item.step}-${item.title}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                            <div className="flex flex-wrap items-center gap-3">
-                              <SeverityBadge severity={item.severity} />
-                              <p className="font-black text-slate-950">{item.title}</p>
-                            </div>
-                            <p className="mt-2 text-sm text-slate-700">{item.recommended_action}</p>
-                            <div className="mt-3 grid gap-3 text-xs sm:grid-cols-2">
-                              <div className="rounded-xl bg-white p-3"><span className="font-black text-slate-500">Where:</span> {guide.file}</div>
-                              <div className="rounded-xl bg-white p-3"><span className="font-black text-slate-500">Fix:</span> {guide.fix}</div>
-                              <div className="rounded-xl bg-white p-3 sm:col-span-2"><span className="font-black text-slate-500">Verify:</span> {guide.verify}</div>
-                            </div>
+                  <div className="mt-4 space-y-3">
+                    {result.priority_actions.slice(0, 12).map((item) => {
+                      const guide = getActionFixGuide(item.title, item.module);
+
+                      return (
+                        <div key={`${item.step}-${item.title}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <SeverityBadge severity={item.severity} />
+                            <p className="font-black text-slate-950">{item.title}</p>
                           </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">
-                      No real assessed-module bugs were detected in this scan result. Complete Not assessed modules before making a full launch claim.
-                    </p>
-                  )}
+                          <p className="mt-2 text-sm text-slate-700">{item.recommended_action}</p>
 
-                  <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                    <p className="text-sm font-black text-amber-900">Evidence required for deeper report</p>
-                    <ul className="mt-2 grid gap-1 text-xs text-amber-900 sm:grid-cols-2">
-                      {result.module_cards.flatMap((card) =>
-                        (card.required_input || []).map((item, index) => (
-                          <li key={`export-required-${card.module}-${index}`}>• {card.label}: {item}</li>
-                        ))
-                      )}
-                    </ul>
+                          <div className="mt-4 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                            <div className="rounded-xl bg-white p-3"><p className="font-black text-slate-500">Where to fix</p><p className="mt-1 text-slate-800">{guide.file}</p></div>
+                            <div className="rounded-xl bg-white p-3"><p className="font-black text-slate-500">Why it matters</p><p className="mt-1 text-slate-800">{guide.why}</p></div>
+                            <div className="rounded-xl bg-white p-3"><p className="font-black text-slate-500">How to fix</p><p className="mt-1 text-slate-800">{guide.fix}</p></div>
+                            <div className="rounded-xl bg-white p-3"><p className="font-black text-slate-500">Verify</p><p className="mt-1 text-slate-800">{guide.verify}</p></div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
+                </div>
+              ) : null}
 
-                  <div className="mt-5 flex flex-wrap gap-3">
-                    <button type="button" className="btn-primary" onClick={() => exportCurrentReport("pdf")}>Download PDF</button>
-                    <button type="button" className="btn-secondary" onClick={() => exportCurrentReport("html")}>Download HTML</button>
-                    <button type="button" className="btn-secondary" onClick={() => exportCurrentReport("markdown")}>Download Markdown</button>
-                    <button type="button" className="btn-secondary" onClick={() => exportCurrentReport("json")}>Download JSON</button>
+              <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-600">Evidence required</p>
+                    <h3 className="mt-2 text-xl font-black text-slate-950">What to add for a deeper report</h3>
                   </div>
-
-                  {exportStatus ? (
-                    <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">
-                      {exportStatus}
-                    </p>
-                  ) : null}
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-800">
+                    {requiredInputs.length} missing evidence item(s)
+                  </div>
                 </div>
 
-                <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                  <h3 className="text-xl font-black text-slate-950">
-                    Blocked fake claims
-                  </h3>
-
-                  <ul className="mt-4 space-y-2 text-sm text-slate-700">
-                    {result.blocked_claims.map((claim, index) => (
-                      <li key={`blocked-claim-${index}`}>• {claim}</li>
+                {requiredInputs.length ? (
+                  <ul className="mt-5 grid gap-2 text-sm text-slate-700 md:grid-cols-2">
+                    {requiredInputs.map((input, index) => (
+                      <li key={`required-${index}`} className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-amber-900">
+                        <strong>{input.label}:</strong> {input.item}
+                      </li>
                     ))}
                   </ul>
-                </div>
-              </>
-            ) : null}
-          </div>
+                ) : (
+                  <p className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">
+                    No missing evidence was listed by the current scan result.
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                <h3 className="text-xl font-black text-slate-950">Blocked fake claims</h3>
+                <ul className="mt-4 space-y-2 text-sm text-slate-700">
+                  {result.blocked_claims.map((claim, index) => (
+                    <li key={`blocked-claim-${index}`}>• {claim}</li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
         </section>
       </div>
     </main>
