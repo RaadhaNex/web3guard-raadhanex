@@ -250,7 +250,6 @@ button:disabled, .btn-primary[aria-disabled="true"] { opacity: .55; cursor: not-
 
 /* Light-mode readability bridge for older Tailwind-coded pages. */
 @media (prefers-color-scheme: light) {
-  .text-white { color: #0f172a !important; }
   .text-slate-50, .text-slate-100, .text-slate-200, .text-slate-300 { color: #1e293b !important; }
   .text-slate-400, .text-slate-500 { color: #64748b !important; }
   .text-amber-50, .text-amber-100, .text-amber-200 { color: #92400e !important; }
@@ -260,6 +259,17 @@ button:disabled, .btn-primary[aria-disabled="true"] { opacity: .55; cursor: not-
   .bg-black\/20, .bg-black\/30 { background-color: rgba(255,255,255,.55) !important; }
   .bg-white\/\[0\.03\], .bg-white\/\[0\.04\], .bg-white\/5 { background-color: rgba(15,23,42,.035) !important; }
   .border-white\/10, .border-white\/5 { border-color: rgba(15,23,42,.12) !important; }
+}
+
+/* v3.6 contrast fix: keep dark/colored action button text readable in light mode.
+   Earlier global .text-white override made white button text dark on dark buttons. */
+.w3g-action-dark,
+.w3g-action-danger,
+.w3g-action-success {
+  color: #ffffff !important;
+}
+.w3g-action-dark:disabled {
+  color: #64748b !important;
 }
 
 /* Severity badges */

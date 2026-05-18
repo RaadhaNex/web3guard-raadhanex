@@ -1231,11 +1231,11 @@ export function UnifiedUrlScannerClient() {
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <button
-              className="rounded-2xl bg-slate-950 px-6 py-4 text-sm font-black text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w3g-action-dark rounded-2xl border border-slate-950 bg-slate-950 px-6 py-4 text-sm font-black text-white shadow-sm transition hover:bg-slate-800 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500 disabled:shadow-none disabled:opacity-100"
               onClick={runScan}
               disabled={!canRunScan}
             >
-              {loading ? "Scanning..." : "Run URL Scan"}
+              {loading ? "Scanning..." : missingRequiredFields.length ? "Fill required fields" : "Run URL Scan"}
             </button>
             <p className="text-xs leading-5 text-slate-500">Scan will not run until every required <span className="font-black text-red-600">*</span> field is completed.</p>
           </div>
@@ -1276,7 +1276,7 @@ export function UnifiedUrlScannerClient() {
                     </div>
 
                     <div className="mt-5 flex flex-wrap gap-3">
-                      <button type="button" className="rounded-full bg-red-600 px-5 py-3 text-sm font-black text-white transition hover:bg-red-700" onClick={() => exportCurrentReport("pdf")}>Download PDF</button>
+                      <button type="button" className="w3g-action-danger rounded-full bg-red-600 px-5 py-3 text-sm font-black text-white transition hover:bg-red-700" onClick={() => exportCurrentReport("pdf")}>Download PDF</button>
                       <button type="button" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-900 transition hover:bg-slate-50" onClick={() => exportCurrentReport("html")}>HTML</button>
                       <button type="button" className="rounded-full border border-green-200 bg-green-50 px-5 py-3 text-sm font-black text-green-700 transition hover:bg-green-100" onClick={() => exportCurrentReport("markdown")}>Markdown</button>
                       <button type="button" className="rounded-full border border-yellow-200 bg-yellow-50 px-5 py-3 text-sm font-black text-yellow-900 transition hover:bg-yellow-100" onClick={() => exportCurrentReport("json")}>JSON</button>
