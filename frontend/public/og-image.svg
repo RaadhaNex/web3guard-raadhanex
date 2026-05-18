@@ -1,0 +1,69 @@
+<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#05070d"/>
+      <stop offset="100%" style="stop-color:#0b1120"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#22d3ee"/>
+      <stop offset="100%" style="stop-color:#60a5fa"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <!-- Grid lines subtle -->
+  <g stroke="rgba(255,255,255,0.04)" stroke-width="1">
+    <line x1="0" y1="88" x2="1200" y2="88"/>
+    <line x1="0" y1="176" x2="1200" y2="176"/>
+    <line x1="0" y1="264" x2="1200" y2="264"/>
+    <line x1="0" y1="352" x2="1200" y2="352"/>
+    <line x1="0" y1="440" x2="1200" y2="440"/>
+    <line x1="0" y1="528" x2="1200" y2="528"/>
+    <line x1="88" y1="0" x2="88" y2="630"/>
+    <line x1="264" y1="0" x2="264" y2="630"/>
+    <line x1="440" y1="0" x2="440" y2="630"/>
+    <line x1="616" y1="0" x2="616" y2="630"/>
+    <line x1="792" y1="0" x2="792" y2="630"/>
+    <line x1="968" y1="0" x2="968" y2="630"/>
+    <line x1="1144" y1="0" x2="1144" y2="630"/>
+  </g>
+  <!-- Glow top left -->
+  <ellipse cx="200" cy="120" rx="320" ry="200" fill="rgba(34,211,238,0.07)"/>
+  <!-- Logo badge -->
+  <rect x="80" y="80" width="72" height="72" rx="16" fill="rgba(34,211,238,0.1)" stroke="rgba(34,211,238,0.3)" stroke-width="1.5"/>
+  <text x="116" y="126" font-family="system-ui,sans-serif" font-size="24" font-weight="900" fill="#22d3ee" text-anchor="middle">W3</text>
+  <!-- Product name -->
+  <text x="176" y="108" font-family="system-ui,sans-serif" font-size="32" font-weight="800" fill="#f1f5f9">Web3Guard AI</text>
+  <text x="176" y="140" font-family="system-ui,sans-serif" font-size="18" font-weight="400" fill="#64748b">by RAADHANEX</text>
+  <!-- Main headline -->
+  <text x="80" y="260" font-family="system-ui,sans-serif" font-size="56" font-weight="900" fill="#f8fafc">AI-assisted Web3 launch</text>
+  <text x="80" y="330" font-family="system-ui,sans-serif" font-size="56" font-weight="900">
+    <tspan fill="url(#accent)">security review</tspan>
+    <tspan fill="#f8fafc"> before</tspan>
+  </text>
+  <text x="80" y="400" font-family="system-ui,sans-serif" font-size="56" font-weight="900" fill="#f8fafc">expensive audits.</text>
+  <!-- Sub text -->
+  <text x="80" y="470" font-family="system-ui,sans-serif" font-size="22" fill="#94a3b8">Smart contracts · Websites · dApps · APIs · Wallet flows · Admin OpSec</text>
+  <!-- Pills -->
+  <rect x="80" y="510" width="130" height="36" rx="18" fill="rgba(34,211,238,0.1)" stroke="rgba(34,211,238,0.3)" stroke-width="1"/>
+  <text x="145" y="533" font-family="system-ui,sans-serif" font-size="14" font-weight="600" fill="#22d3ee" text-anchor="middle">From ₹999</text>
+  <rect x="228" y="510" width="120" height="36" rx="18" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+  <text x="288" y="533" font-family="system-ui,sans-serif" font-size="14" font-weight="600" fill="#cbd5e1" text-anchor="middle">Hindi support</text>
+  <rect x="366" y="510" width="110" height="36" rx="18" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+  <text x="421" y="533" font-family="system-ui,sans-serif" font-size="14" font-weight="600" fill="#cbd5e1" text-anchor="middle">UPI accepted</text>
+  <rect x="494" y="510" width="130" height="36" rx="18" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+  <text x="559" y="533" font-family="system-ui,sans-serif" font-size="14" font-weight="600" fill="#cbd5e1" text-anchor="middle">37 security rules</text>
+  <!-- URL -->
+  <text x="1120" y="590" font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#475569" text-anchor="end">web3guard-raadhanex.vercel.app</text>
+  <!-- Score card -->
+  <rect x="860" y="200" width="260" height="320" rx="20" fill="rgba(15,23,42,0.9)" stroke="rgba(34,211,238,0.25)" stroke-width="1.5"/>
+  <text x="980" y="250" font-family="system-ui,sans-serif" font-size="14" fill="#64748b" text-anchor="middle">SAMPLE SCAN OUTPUT</text>
+  <text x="980" y="330" font-family="system-ui,sans-serif" font-size="80" font-weight="900" fill="#f8fafc" text-anchor="middle">76</text>
+  <text x="980" y="370" font-family="system-ui,sans-serif" font-size="14" font-weight="600" fill="#f59e0b" text-anchor="middle">Medium Risk</text>
+  <rect x="895" y="395" width="80" height="26" rx="13" fill="rgba(239,68,68,0.12)" stroke="rgba(239,68,68,0.3)" stroke-width="1"/>
+  <text x="935" y="413" font-family="system-ui,sans-serif" font-size="12" font-weight="700" fill="#fca5a5" text-anchor="middle">2 Critical</text>
+  <rect x="985" y="395" width="70" height="26" rx="13" fill="rgba(249,115,22,0.12)" stroke="rgba(249,115,22,0.3)" stroke-width="1"/>
+  <text x="1020" y="413" font-family="system-ui,sans-serif" font-size="12" font-weight="700" fill="#fdba74" text-anchor="middle">3 High</text>
+  <rect x="895" y="432" width="165" height="26" rx="13" fill="rgba(245,158,11,0.12)" stroke="rgba(245,158,11,0.3)" stroke-width="1"/>
+  <text x="977" y="450" font-family="system-ui,sans-serif" font-size="12" font-weight="700" fill="#fde68a" text-anchor="middle">Fix before launch</text>
+</svg>

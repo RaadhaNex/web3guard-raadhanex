@@ -154,6 +154,30 @@ def _fallback_fix(payload: AIFixAssistantRequest, status: str = "fallback", prov
     elif "random" in title_lower:
         strategy = "Do not use block.timestamp/blockhash as secure randomness. Use a commit-reveal design or a verified randomness provider where appropriate."
         snippet = "// Avoid: uint256(blockhash(block.number - 1)) or block.timestamp for winner selection.\n// Use commit-reveal or a VRF-style integration after threat modeling."
+    elif "random" in title_lower or "blockhash" in title_lower or "timestamp" in title_lower:
+        strategy = "Do not use block.timestamp or blockhash as randomness. Use commit-reveal scheme or a VRF provider."
+        snippet = "// ❌ AVOID:\n// uint256 rand = uint256(blockhash(block.number-1)) % n;\n// ✅ COMMIT-REVEAL:\n// bytes32 commitment;\n// function commit(bytes32 h) external { commitment = h; }\n// function reveal(uint256 secret) external {\n//   require(keccak256(abi.encodePacked(secret)) == commitment);\n// }"
+        tests.insert(0, "Test that outcome cannot be predicted by viewing pending transaction.")
+    elif "zero address" in title_lower or "zero-address" in title_lower:
+        strategy = "Add address(0) check at the start of every function accepting an address parameter."
+        snippet = "// ✅ Add at start of function:\nrequire(newOwner != address(0), \"zero address\");\nrequire(token != address(0), \"zero token\");"
+        tests.insert(0, "Test passing address(0) reverts with the correct error message.")
+    elif "transfer" in title_lower and "deprecated" in title_lower or "send" in title_lower and "deprecated" in title_lower:
+        strategy = "Replace .transfer()/.send() with low-level .call{value:}('') and check the return value."
+        snippet = "// ❌ OLD:\n// payable(recipient).transfer(amount);\n// ✅ NEW:\n(bool ok, ) = payable(recipient).call{value: amount}(\'\');\nrequire(ok, \"transfer failed\");"
+        tests.insert(0, "Test transfer to a contract receiver with logic (e.g., a multisig) succeeds.")
+    elif "front-run" in title_lower or "slippage" in title_lower or "deadline" in title_lower:
+        strategy = "Add deadline and slippage parameters to trade/mint/bid functions."
+        snippet = "// ✅ Add to function signature:\nfunction buy(uint256 maxPrice, uint256 deadline) external {\n  require(block.timestamp <= deadline, \"expired\");\n  require(currentPrice <= maxPrice, \"slippage\");\n}"
+        tests.insert(0, "Test that transaction reverts when block.timestamp exceeds deadline.")
+    elif "locked ether" in title_lower or "payable" in title_lower and "withdraw" in title_lower:
+        strategy = "Add an owner-restricted ETH rescue function."
+        snippet = "// ✅ Add rescue function:\nfunction rescueETH() external onlyOwner {\n  (bool ok,) = msg.sender.call{value: address(this).balance}(\'\');\n  require(ok);\n}"
+        tests.insert(0, "Test non-owner cannot call rescueETH. Test owner can recover ETH.")
+    elif "loop" in title_lower or "dos" in title_lower or "unbounded" in title_lower:
+        strategy = "Replace push distribution with pull-over-push (claimable mapping per user)."
+        snippet = "// ❌ AVOID: for(uint i=0; i<users.length; i++) distribute(users[i]);\n// ✅ USE PULL:\nmapping(address => uint256) public pending;\nfunction claim() external {\n  uint256 amt = pending[msg.sender];\n  pending[msg.sender] = 0;\n  payable(msg.sender).transfer(amt);\n}"
+        tests.insert(0, "Test gas usage does not grow unbounded as users array grows.")
     elif "delegatecall" in title_lower or "upgrade" in title_lower or "proxy" in title_lower:
         strategy = "Review proxy admin controls, initializer protection, storage layout, and upgrade authorization before deployment."
         snippet = "// Ensure initializer can run only once and upgrade functions are restricted to a multisig/timelock role."

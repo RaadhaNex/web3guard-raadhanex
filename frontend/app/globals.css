@@ -139,7 +139,7 @@ body {
   .btn-primary, .btn-secondary { width: 100%; }
 }
 
-/* Phase 6.2 UI/UX polish */
+/* UI utilities */
 .shadow-soft { box-shadow: 0 14px 45px rgba(34, 211, 238, 0.12); }
 .section-label { font-size: .78rem; font-weight: 800; letter-spacing: .28em; text-transform: uppercase; color: var(--cyan); }
 .surface-panel {
@@ -163,7 +163,7 @@ button:disabled, .btn-primary[aria-disabled="true"] { opacity: .55; cursor: not-
   .surface-panel { background: linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.025)); }
 }
 
-/* Mega Final Patch H.2 — cumulative H + H.1 cleanup */
+/* Header & nav system */
 .site-header {
   border-color: var(--line);
   background: var(--header-bg);
@@ -261,3 +261,11 @@ button:disabled, .btn-primary[aria-disabled="true"] { opacity: .55; cursor: not-
   .bg-white\/\[0\.03\], .bg-white\/\[0\.04\], .bg-white\/5 { background-color: rgba(15,23,42,.035) !important; }
   .border-white\/10, .border-white\/5 { border-color: rgba(15,23,42,.12) !important; }
 }
+
+/* Severity badges */
+.sev-critical { border: 1px solid rgba(239,68,68,0.35); background: rgba(239,68,68,0.12); color: #fca5a5; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; display:inline-block; }
+.sev-high     { border: 1px solid rgba(249,115,22,0.35); background: rgba(249,115,22,0.12); color: #fdba74; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; display:inline-block; }
+.sev-medium   { border: 1px solid rgba(245,158,11,0.35); background: rgba(245,158,11,0.12); color: #fde68a; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; display:inline-block; }
+.sev-low      { border: 1px solid rgba(96,165,250,0.35);  background: rgba(96,165,250,0.12);  color: #93c5fd; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; display:inline-block; }
+.sev-info     { border: 1px solid rgba(148,163,184,0.25); background: rgba(148,163,184,0.08); color: #94a3b8; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; display:inline-block; }
+.sev-safe     { border: 1px solid rgba(34,197,94,0.35);   background: rgba(34,197,94,0.10);   color: #86efac; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; display:inline-block; }

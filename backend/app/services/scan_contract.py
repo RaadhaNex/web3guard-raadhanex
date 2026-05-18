@@ -560,6 +560,13 @@ def scan_solidity(solidity_code: str, project_name: str | None = None, contract_
     idx = _access_pattern_checks(code, findings, idx)
     idx = _integer_and_math_checks(code, findings, idx)
     idx = _signature_and_permit_checks(code, findings, idx)
+    idx = _randomness_and_dos_checks(code, findings, idx)
+    idx = _zero_address_and_deprecated_checks(code, findings, idx)
+    idx = _frontrunning_and_locked_ether(code, findings, idx)
+    idx = _equality_and_shadowing_checks(code, findings, idx)
+    idx = _rug_pull_pattern_checks(code, findings, idx)
+    idx = _gas_and_storage_checks(code, findings, idx)
+    idx = _compliance_and_disclosure_checks(code, findings, idx)
 
     score = score_findings(findings)
     digest = sha12(code)
@@ -588,7 +595,6 @@ def available_contract_rules() -> list[dict[str, str]]:
         {"id": "WG-SOL-REENT-002", "name": "Value transfer without reentrancy guard", "category": "reentrancy"},
         {"id": "WG-SOL-CALL-001", "name": "Delegatecall usage", "category": "low_level_call"},
         {"id": "WG-SOL-CALL-003", "name": "Unchecked low-level call", "category": "low_level_call"},
-        {"id": "WG-SOL-RAND-001", "name": "Weak randomness/time dependency", "category": "randomness"},
         {"id": "WG-SOL-ADMIN-001", "name": "Owner/admin centralization", "category": "centralization"},
         {"id": "WG-SOL-ADMIN-002", "name": "Hardcoded privileged address", "category": "centralization"},
         {"id": "WG-SOL-UPGRADE-001", "name": "Upgradeable proxy review", "category": "upgradeability"},
@@ -607,10 +613,23 @@ def available_contract_rules() -> list[dict[str, str]]:
         {"id": "WG-SOL-MATH-001",  "name": "Division before multiplication", "category": "math"},
         {"id": "WG-SOL-MATH-002",  "name": "Unchecked arithmetic block", "category": "math"},
         {"id": "WG-SOL-SIG-001",   "name": "Signature/permit replay risk", "category": "signature"},
+        {"id": "WG-SOL-RAND-001", "name": "Weak randomness (block.timestamp/blockhash)", "category": "randomness"},
+        {"id": "WG-SOL-DOS-001",  "name": "Unbounded loop — DoS risk", "category": "dos"},
+        {"id": "WG-SOL-ZERO-001", "name": "Missing zero-address check", "category": "validation"},
+        {"id": "WG-SOL-DEPR-001", "name": "Deprecated .transfer()/.send()", "category": "compatibility"},
+        {"id": "WG-SOL-FRONT-001","name": "Front-running — missing deadline/slippage", "category": "mev"},
+        {"id": "WG-SOL-LOCK-001", "name": "Locked ether — no withdrawal function", "category": "funds"},
+        {"id": "WG-SOL-EQ-001",   "name": "Dangerous equality on contract balance", "category": "logic"},
+        {"id": "WG-SOL-SHADOW-001","name": "State variable shadowing", "category": "logic"},
+        {"id": "WG-SOL-RUG-001",    "name": "Owner drain / emergency sweep", "category": "rug_pull"},
+        {"id": "WG-SOL-RUG-002",    "name": "Mint without supply cap", "category": "rug_pull"},
+        {"id": "WG-SOL-GAS-003",    "name": "Storage read in loop", "category": "gas"},
+        {"id": "WG-SOL-GAS-004",    "name": "String mapping key inefficiency", "category": "gas"},
+        {"id": "WG-SOL-COMP-001",   "name": "No KYC/compliance hook disclosure", "category": "compliance"},
     ]
 
 
-# ── Extra Real Rules ──────────────────────────────────────────────────────────
+# ── 7 Additional Real Rules (WG-SOL-DEFI through WG-SOL-SIG) ──────────────────────────────────────────────────────────
 
 def _defi_and_oracle_checks(code: str, findings: list[Finding], idx: int) -> int:
     """Flash loan sensitivity, oracle dependency, and unlimited approval checks."""
@@ -813,5 +832,332 @@ def _signature_and_permit_checks(code: str, findings: list[Finding], idx: int) -
             references=["EIP-712 Typed Structured Data Signing", "EIP-2612 permit", "SWC-121 Missing Protection Against Signature Replay"],
         ))
         idx += 1
+
+    return idx
+
+
+# ── 8 New Rules — Competitor Gap Bridge (WG-SOL-RAND-001 through WG-SOL-SHADOW-001) ─────────────────────────────────
+
+_INLINE_FIXES: dict[str, str] = {
+    "WG-SOL-RAND-001": (
+        "// ❌ AVOID:\n"
+        "// uint256 rand = uint256(blockhash(block.number - 1)) % 100;\n"
+        "// uint256 rand = block.timestamp % entries.length;\n\n"
+        "// ✅ SAFER (commit-reveal for low-stakes):\n"
+        "// bytes32 commitment;\n"
+        "// function commit(bytes32 hash) external { commitment = hash; }\n"
+        "// function reveal(uint256 secret) external {\n"
+        "//   require(keccak256(abi.encodePacked(secret)) == commitment);\n"
+        "//   // use secret for selection\n"
+        "// }"
+    ),
+    "WG-SOL-DOS-001": (
+        "// ❌ AVOID unbounded loop over user-controlled array:\n"
+        "// for (uint i = 0; i < users.length; i++) { distribute(users[i]); }\n\n"
+        "// ✅ USE pull-over-push pattern:\n"
+        "// mapping(address => uint256) public pendingRewards;\n"
+        "// function claimReward() external {\n"
+        "//   uint256 amount = pendingRewards[msg.sender];\n"
+        "//   pendingRewards[msg.sender] = 0;\n"
+        "//   payable(msg.sender).transfer(amount);\n"
+        "// }"
+    ),
+    "WG-SOL-ZERO-001": (
+        "// ✅ Add zero address checks to critical functions:\n"
+        "// require(newOwner != address(0), 'zero address');\n"
+        "// require(token != address(0), 'zero token');\n"
+        "// require(recipient != address(0), 'zero recipient');"
+    ),
+    "WG-SOL-DEPR-001": (
+        "// ❌ AVOID transfer() and send() — they forward 2300 gas (breaks with multisig/contract receivers):\n"
+        "// payable(recipient).transfer(amount); // RISKY\n\n"
+        "// ✅ USE call with success check:\n"
+        "// (bool ok, ) = payable(recipient).call{value: amount}('');\n"
+        "// require(ok, 'ETH transfer failed');"
+    ),
+    "WG-SOL-FRONT-001": (
+        "// ❌ VULNERABLE: predictable outcome before tx mines:\n"
+        "// function buy(uint256 price) external { require(price >= currentPrice); }\n\n"
+        "// ✅ ADD slippage tolerance + deadline:\n"
+        "// function buy(uint256 maxPrice, uint256 deadline) external {\n"
+        "//   require(block.timestamp <= deadline, 'expired');\n"
+        "//   require(currentPrice <= maxPrice, 'slippage exceeded');\n"
+        "// }"
+    ),
+    "WG-SOL-LOCK-001": (
+        "// Contract accepts ETH (payable) but has no withdrawal function.\n"
+        "// ✅ Add an emergency withdrawal:\n"
+        "// function rescueETH() external onlyOwner {\n"
+        "//   (bool ok,) = msg.sender.call{value: address(this).balance}('');\n"
+        "//   require(ok);\n"
+        "// }"
+    ),
+    "WG-SOL-EQ-001": (
+        "// ❌ AVOID strict equality on balances/block numbers:\n"
+        "// require(address(this).balance == TARGET); // can be blocked\n\n"
+        "// ✅ USE >= comparisons:\n"
+        "// require(address(this).balance >= TARGET, 'insufficient');"
+    ),
+    "WG-SOL-SHADOW-001": (
+        "// ❌ Local variable shadows state variable:\n"
+        "// uint256 public owner; // state\n"
+        "// function fn() { uint256 owner = 1; } // shadows!\n\n"
+        "// ✅ Rename to avoid confusion:\n"
+        "// function fn() { uint256 localOwner = 1; }"
+    ),
+}
+
+
+def _randomness_and_dos_checks(code: str, findings: list[Finding], idx: int) -> int:
+    # Weak randomness
+    if re.search(r"blockhash|block\.timestamp|block\.difficulty|block\.prevrandao", code):
+        line, _ = first_match_line(code, r"blockhash|block\.timestamp|block\.difficulty")
+        snippet = line_text(code, line)
+        # Only flag if used in arithmetic/modulo (likely randomness)
+        if re.search(r"(blockhash|block\.timestamp|block\.difficulty)\s*[\)%\*\+\-]|%\s*\w+\s*;", code):
+            _add_unique(findings, _finding(
+                idx, severity="high",
+                title="Weak Randomness — block.timestamp / blockhash",
+                description="The contract uses block.timestamp or blockhash as a source of randomness. Miners can manipulate these values within a small window.",
+                line=line, code=snippet,
+                business="Lottery, NFT mint order, or game outcomes can be predicted or manipulated by miners, undermining fairness.",
+                dev="block.timestamp and blockhash are not cryptographically secure randomness sources. Use commit-reveal or a verifiable randomness provider.",
+                fix=_INLINE_FIXES["WG-SOL-RAND-001"],
+                confidence="medium", category="randomness", rule_id="WG-SOL-RAND-001",
+                references=["SWC-120 Weak Sources of Randomness", "Chainlink VRF documentation"],
+            ))
+            idx += 1
+
+    # DoS — unbounded loop
+    if re.search(r"for\s*\(.*\.length", code):
+        line, _ = first_match_line(code, r"for\s*\(.*\.length")
+        snippet = line_text(code, line)
+        _add_unique(findings, _finding(
+            idx, severity="medium",
+            title="Unbounded Loop — Denial of Service Risk",
+            description="A loop iterates over a dynamic-length array. If the array grows large, the transaction will exceed the block gas limit and permanently revert.",
+            line=line, code=snippet,
+            business="A DoS via gas exhaustion can permanently freeze distribution, staking rewards, or governance functions.",
+            dev="Avoid loops over user-controlled or unbounded arrays. Use pull-over-push (claimable mappings) or paginated processing.",
+            fix=_INLINE_FIXES["WG-SOL-DOS-001"],
+            confidence="medium", category="dos", rule_id="WG-SOL-DOS-001",
+            references=["SWC-128 DoS With Block Gas Limit", "Pull-over-push pattern"],
+        ))
+        idx += 1
+    return idx
+
+
+def _zero_address_and_deprecated_checks(code: str, findings: list[Finding], idx: int) -> int:
+    # Missing zero-address check on owner/address params
+    if re.search(r"function\s+\w+\s*\([^)]*address\s+\w+", code):
+        if not re.search(r"address\(0\)|address(0)", code):
+            line, _ = first_match_line(code, r"function\s+\w+\s*\([^)]*address\s+\w+")
+            snippet = line_text(code, line)
+            _add_unique(findings, _finding(
+                idx, severity="low",
+                title="Missing Zero-Address Check on Address Parameter",
+                description="Functions accept address parameters but do not check for address(0). Accidentally passing zero address can lock funds or break ownership.",
+                line=line, code=snippet,
+                business="Sending to zero address burns tokens permanently. Setting owner to zero address locks all admin functions forever.",
+                dev="Add require(param != address(0), 'zero address') at the start of functions that accept critical address arguments.",
+                fix=_INLINE_FIXES["WG-SOL-ZERO-001"],
+                confidence="medium", category="validation", rule_id="WG-SOL-ZERO-001",
+                references=["SWC-115 Authorization through tx.origin"],
+            ))
+            idx += 1
+
+    # Deprecated transfer/send
+    if re.search(r"\.\s*transfer\s*\(|\.\s*send\s*\(", code):
+        line, _ = first_match_line(code, r"\.\s*transfer\s*\(|\.\s*send\s*\(")
+        snippet = line_text(code, line)
+        _add_unique(findings, _finding(
+            idx, severity="medium",
+            title="Use of Deprecated .transfer() / .send() — 2300 Gas Limit Risk",
+            description=".transfer() and .send() forward only 2300 gas. Since EIP-1884 increased gas costs, contracts that receive ETH (multisigs, smart wallets) will fail.",
+            line=line, code=snippet,
+            business="Payments to multisig wallets, smart contract wallets, or any receiver with logic will silently fail, blocking withdrawals.",
+            dev="Replace .transfer()/.send() with .call{value:}('') and handle the return value explicitly.",
+            fix=_INLINE_FIXES["WG-SOL-DEPR-001"],
+            confidence="high", category="compatibility", rule_id="WG-SOL-DEPR-001",
+            references=["SWC-134 Message call with hardcoded gas", "EIP-1884"],
+        ))
+        idx += 1
+    return idx
+
+
+def _frontrunning_and_locked_ether(code: str, findings: list[Finding], idx: int) -> int:
+    # Front-running: function with price param but no deadline/slippage
+    if re.search(r"function\s+\w*(buy|sell|swap|mint|bid)\w*\s*\([^)]*uint", code, re.IGNORECASE):
+        if not re.search(r"deadline|expiry|maxPrice|minAmount|slippage", code, re.IGNORECASE):
+            line, _ = first_match_line(code, r"function\s+\w*(buy|sell|swap|mint|bid)\w*\s*\(", flags=re.IGNORECASE)
+            snippet = line_text(code, line)
+            _add_unique(findings, _finding(
+                idx, severity="medium",
+                title="Potential Front-Running — Missing Deadline / Slippage Protection",
+                description="Trade, mint, or auction functions lack deadline or slippage parameters. Bots can observe the mempool and insert transactions at worse prices.",
+                line=line, code=snippet,
+                business="Users receive worse prices than expected. MEV bots extract value directly from user transactions.",
+                dev="Add a deadline timestamp check and a maxPrice/minAmountOut parameter so users can set acceptable bounds.",
+                fix=_INLINE_FIXES["WG-SOL-FRONT-001"],
+                confidence="low", category="mev", rule_id="WG-SOL-FRONT-001",
+                references=["MEV and front-running protection patterns", "Uniswap deadline pattern"],
+            ))
+            idx += 1
+
+    # Locked ether: payable function(s) but no withdrawal
+    has_payable = bool(re.search(r"\bpayable\b", code))
+    has_withdraw = bool(re.search(r"function\s+\w*(withdraw|rescue|reclaim|pull)\w*", code, re.IGNORECASE))
+    if has_payable and not has_withdraw:
+        _add_unique(findings, _finding(
+            idx, severity="high",
+            title="Locked Ether — Payable Contract Has No Withdrawal Function",
+            description="The contract accepts ETH via payable functions but does not have a function to withdraw ETH. Funds sent to this contract may be permanently locked.",
+            line=None, code=None,
+            business="Any ETH accidentally sent or intentionally deposited cannot be recovered. This is a common cause of permanent fund loss.",
+            dev="Add an authorized withdrawal function or ensure payable is only on functions that consume the ETH immediately.",
+            fix=_INLINE_FIXES["WG-SOL-LOCK-001"],
+            confidence="medium", category="funds", rule_id="WG-SOL-LOCK-001",
+            references=["SWC-132 Unexpected Ether Balance"],
+        ))
+        idx += 1
+    return idx
+
+
+def _equality_and_shadowing_checks(code: str, findings: list[Finding], idx: int) -> int:
+    # Dangerous equality on balance
+    if re.search(r"==\s*address\(this\)\.balance|\.balance\s*==", code):
+        line, _ = first_match_line(code, r"==\s*address\(this\)\.balance|\.balance\s*==")
+        snippet = line_text(code, line)
+        _add_unique(findings, _finding(
+            idx, severity="medium",
+            title="Dangerous Strict Equality on Contract Balance",
+            description="Using == to compare contract balance is risky. An attacker can selfdestruct a contract and forcefully send ETH to change the balance, breaking the invariant.",
+            line=line, code=snippet,
+            business="Logic gated on exact balance (== TARGET) can be broken by sending 1 wei, permanently locking or bypassing contract state.",
+            dev="Replace == balance check with >= comparison. Do not gate critical logic on exact ETH balance.",
+            fix=_INLINE_FIXES["WG-SOL-EQ-001"],
+            confidence="medium", category="logic", rule_id="WG-SOL-EQ-001",
+            references=["SWC-132 Unexpected Ether Balance"],
+        ))
+        idx += 1
+
+    # State variable shadowing (local var same name as state)
+    state_vars = re.findall(r"^\s+(?:uint\d*|int\d*|address|bool|bytes\d*|string)\s+public\s+(\w+)", code, re.MULTILINE)
+    for var in state_vars:
+        pattern = rf"function\s+\w+[^{{]*\{{[^}}]*(?:uint\d*|int\d*|address|bool)\s+{re.escape(var)}\s*="
+        if re.search(pattern, code, re.DOTALL):
+            _add_unique(findings, _finding(
+                idx, severity="low",
+                title=f"State Variable Shadowing — '{var}'",
+                description=f"A local variable named '{var}' inside a function shadows the state variable of the same name. This can cause subtle logic bugs.",
+                line=None, code=None,
+                business="Shadowing causes developers to accidentally read/write local variable instead of intended state, creating hidden logic errors.",
+                dev=f"Rename local variable to avoid collision with state variable '{var}'.",
+                fix=_INLINE_FIXES["WG-SOL-SHADOW-001"],
+                confidence="low", category="logic", rule_id="WG-SOL-SHADOW-001",
+                references=["SWC-119 Shadowing State Variables"],
+            ))
+            idx += 1
+            break
+    return idx
+
+
+# ── 6 More Advanced Rules — v3.1 ─────────────────────────────────────────────
+
+def _rug_pull_pattern_checks(code: str, findings: list[Finding], idx: int) -> int:
+    """Detect rug pull risk patterns: hidden mint, owner drain, liquidity trap."""
+
+    # Owner can drain liquidity / sweep all ETH without condition
+    if re.search(r"function\s+\w*(?:sweep|drain|rugpull|emergency|withdraw[Aa]ll|ownerWithdraw)\w*\s*\([^)]*\)\s*(?:external|public)\s*(?:onlyOwner|onlyAdmin)", code, re.IGNORECASE):
+        line, _ = first_match_line(code, r"function\s+\w*(?:sweep|drain|emergency|withdraw[Aa]ll|ownerWithdraw)\w*", flags=re.IGNORECASE)
+        _add_unique(findings, _finding(
+            idx, severity="high",
+            title="Owner Drain / Emergency Sweep Function",
+            description="The contract has a function that allows the owner to withdraw all ETH or tokens without restriction. This is a common rug pull vector.",
+            line=line, code=line_text(code, line),
+            business="Investors and users can lose all funds if the owner calls this function. Exchanges and launchpads will flag this as a rug pull risk.",
+            dev="Add a timelock delay, community governance, or hard limit (e.g., max 10% of liquidity). Document the emergency use case clearly.",
+            fix="// Add timelock: require(block.timestamp >= lastSweepRequest + 48 hours);\n// Or remove function and use multisig governance instead.",
+            confidence="high", category="rug_pull", rule_id="WG-SOL-RUG-001",
+            references=["Token Sniffer rug pull patterns", "GoPlus token security API"],
+        ))
+        idx += 1
+
+    # Mint with no max supply cap
+    has_mint = bool(re.search(r"function\s+\w*mint\w*\s*\([^)]*address[^)]*uint", code, re.IGNORECASE))
+    has_max_supply = bool(re.search(r"maxSupply|MAX_SUPPLY|totalSupply\s*\+\s*amount\s*<=|cap\s*=", code, re.IGNORECASE))
+    if has_mint and not has_max_supply:
+        _add_unique(findings, _finding(
+            idx, severity="medium",
+            title="Mint Function Without Supply Cap",
+            description="The contract has a public or permissioned mint function but no maximum supply enforcement in the minting logic.",
+            line=None, code=None,
+            business="Unlimited mint authority allows token dilution at any time, destroying token value. Investors expect a hard supply cap.",
+            dev="Add: require(totalSupply() + amount <= MAX_SUPPLY, 'cap exceeded'); in the mint function.",
+            fix="// Add to mint function:\nuint256 public constant MAX_SUPPLY = 1_000_000 * 1e18;\nrequire(totalSupply() + amount <= MAX_SUPPLY, 'Cap exceeded');",
+            confidence="medium", category="rug_pull", rule_id="WG-SOL-RUG-002",
+            references=["ERC20 supply cap best practices"],
+        ))
+        idx += 1
+
+    return idx
+
+
+def _gas_and_storage_checks(code: str, findings: list[Finding], idx: int) -> int:
+    """Gas inefficiency patterns that cost users real money."""
+
+    # Multiple SLOAD of same variable in loop
+    if re.search(r"for\s*\([^)]+\)\s*\{[^}]*storage[^}]*\}", code, re.DOTALL):
+        _add_unique(findings, _finding(
+            idx, severity="info",
+            title="Potential Storage Read in Loop — Gas Optimization",
+            description="Reading from storage inside a loop costs 2100 gas per read. Caching in a local variable saves significant gas.",
+            line=None, code=None,
+            business="Higher gas costs mean users pay more per transaction. For high-frequency operations this can make your dApp unusable.",
+            dev="Cache storage reads before the loop: uint256 _total = total; then use _total inside the loop.",
+            fix="// ❌ EXPENSIVE:\n// for(uint i=0; i<arr.length; i++) { total += storageVar; }\n// ✅ CACHE:\n// uint256 _storageVar = storageVar;\n// for(uint i=0; i<arr.length; i++) { total += _storageVar; }",
+            confidence="low", category="gas", rule_id="WG-SOL-GAS-003",
+            references=["Solidity gas optimization patterns"],
+        ))
+        idx += 1
+
+    # Using string in events/mappings (expensive vs bytes32)
+    if re.search(r"mapping\s*\(\s*string", code):
+        _add_unique(findings, _finding(
+            idx, severity="info",
+            title="String Used as Mapping Key — Use bytes32 for Gas Savings",
+            description="Using string as a mapping key is more expensive than bytes32 because strings are dynamically sized.",
+            line=None, code=None,
+            business="Higher deployment and interaction costs — especially noticeable for registry or name-based contracts.",
+            dev="Replace mapping(string => ...) with mapping(bytes32 => ...) and use keccak256(abi.encodePacked(name)) as the key.",
+            fix="// ❌ mapping(string => address) public registry;\n// ✅ mapping(bytes32 => address) public registry;\n// Usage: registry[keccak256(abi.encodePacked(name))]",
+            confidence="medium", category="gas", rule_id="WG-SOL-GAS-004",
+            references=["Solidity storage layout optimization"],
+        ))
+        idx += 1
+
+    return idx
+
+
+def _compliance_and_disclosure_checks(code: str, findings: list[Finding], idx: int) -> int:
+    """Regulatory compliance hints — FATF, India VDA, MiCA relevant."""
+
+    # No KYC/AML hook in token contract (compliance disclosure)
+    if re.search(r"pragma solidity", code, re.IGNORECASE):
+        has_compliance = bool(re.search(r"kyc|aml|whitelist|isKYCed|verified|compliance", code, re.IGNORECASE))
+        is_token = bool(re.search(r"ERC20|IERC20|transfer\s*\(|balanceOf", code))
+        if is_token and not has_compliance and "DeFi" not in (code[:200]):
+            _add_unique(findings, _finding(
+                idx, severity="info",
+                title="No KYC/Compliance Hook — Regulatory Disclosure",
+                description="This token contract has no KYC/AML or compliance hook. In regulated jurisdictions (India VDA framework, EU MiCA), token issuers may need to implement compliance controls.",
+                line=None, code=None,
+                business="Without any compliance hook, this token may face regulatory challenges in India (PMLA/VDA rules) and EU (MiCA 2024) for public offerings.",
+                dev="Consider adding a compliance hook interface that can be activated by governance if required. Document your legal opinion on token classification.",
+                fix="// Optional compliance hook (can be no-op initially):\n// function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual {\n//   if (complianceContract != address(0)) ICompliance(complianceContract).check(from, to, amount);\n// }",
+                confidence="low", category="compliance", rule_id="WG-SOL-COMP-001",
+                references=["India VDA framework 2023", "EU MiCA Regulation 2024", "FATF guidance on virtual assets"],
+            ))
+            idx += 1
 
     return idx

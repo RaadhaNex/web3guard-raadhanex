@@ -54,27 +54,23 @@ const moreGroups = [
     ],
   },
   {
-    title: "Trust & setup",
+    title: "Trust & resources",
     links: [
       { href: "/feature-status", label: "Feature Status" },
-      { href: "/launch-pack", label: "Launch Pack" },
-      { href: "/learning", label: "Learn" },
       { href: "/methodology", label: "Methodology" },
       { href: "/sample-reports", label: "Samples" },
-      { href: "/trust", label: "Trust" },
-      { href: "/local-qa", label: "Local QA" },
-      { href: "/production-qa", label: "Production QA" },
-      { href: "/final-qa", label: "Final QA" },
-      { href: "/admin/super", label: "Admin v2" },
+      { href: "/trust", label: "Trust Policy" },
+      { href: "/learning", label: "Learning" },
+      { href: "/launch-pack", label: "Launch Pack" },
     ],
   },
 ];
 
 const mobileQuickNav = [
-  { href: "/scanner/unified-url", label: "URL Scan" },
+  { href: "/scanner/unified-url", label: "Scan" },
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/pricing", label: "Pricing" },
   { href: "/report/professional", label: "Reports" },
-  { href: "/feature-status", label: "Status" },
 ];
 
 function MoreMenu({ compact = false }: { compact?: boolean }) {
