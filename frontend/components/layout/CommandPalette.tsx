@@ -28,6 +28,7 @@ const commands = [
       { label: "Methodology", href: "/methodology", keywords: "scoring score split confidence" },
       { label: "Limitations", href: "/limitations", keywords: "not certified audit boundaries" },
       { label: "Feature Status", href: "/feature-status", keywords: "integration tool not installed provider configured" },
+      { label: "Engine Depth", href: "/engine-depth", keywords: "slither aderyn semgrep mythril goplus etherscan github real tools" },
       { label: "Responsible Use", href: "/responsible-use", keywords: "no exploit no private key no wallet signing" },
       { label: "Launch QA Board", href: "/launch-qa", keywords: "phase eight final ui qa mobile overflow checklist" },
     ],

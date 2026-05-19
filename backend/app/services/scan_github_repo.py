@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import hashlib
 import json
@@ -35,6 +35,14 @@ SOLIDITY_EXTENSIONS = {".sol"}
 PACKAGE_FILENAMES = {"package.json"}
 ENV_RISK_NAMES = {".env", ".env.local", ".env.production", ".env.development", ".env.staging"}
 CONFIG_HINT_NAMES = {"hardhat.config.js", "hardhat.config.ts", "foundry.toml", "truffle-config.js", "truffle.js", "next.config.js", "next.config.mjs", "vite.config.ts", "vite.config.js"}
+LOCKFILE_NAMES = {"package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lockb", "bun.lock", "poetry.lock", "requirements.txt", "Cargo.lock"}
+CI_WORKFLOW_RE = re.compile(r"(?i)^\.github/workflows/.*\.(yml|yaml)$")
+SECURITY_POLICY_NAMES = {"security.md", "security.txt", "security-policy.md"}
+TEST_PATH_RE = re.compile(r"(?i)(^|/)(test|tests|spec|__tests__)/|(_test\.|\.test\.|\.spec\.)")
+CODEOWNERS_RE = re.compile(r"(?i)(^|/)(CODEOWNERS)$")
+LICENSE_RE = re.compile(r"(?i)(^|/)(LICENSE|LICENSE\.md|COPYING)$")
+README_RE = re.compile(r"(?i)(^|/)(README|README\.md)$")
+GITIGNORE_RE = re.compile(r"(?i)(^|/)\.gitignore$")
 
 
 def _now() -> datetime:
@@ -301,6 +309,14 @@ def _content_findings(path: str, text: str, start_idx: int) -> list[Finding]:
 def _repo_structure_summary(paths: list[str]) -> dict[str, Any]:
     solidity = [p for p in paths if p.endswith(".sol")]
     package_json = [p for p in paths if _basename(p) == "package.json"]
+    lockfiles = [p for p in paths if _basename(p) in LOCKFILE_NAMES]
+    ci_workflows = [p for p in paths if CI_WORKFLOW_RE.search(p)]
+    security_policies = [p for p in paths if _basename(p).lower() in SECURITY_POLICY_NAMES or p.lower().endswith("/.well-known/security.txt")]
+    codeowners = [p for p in paths if CODEOWNERS_RE.search(p)]
+    licenses = [p for p in paths if LICENSE_RE.search(p)]
+    readmes = [p for p in paths if README_RE.search(p)]
+    gitignore = [p for p in paths if GITIGNORE_RE.search(p)]
+    tests = [p for p in paths if TEST_PATH_RE.search(p)]
     env_like = [p for p in paths if _basename(p).lower() in ENV_RISK_NAMES or _basename(p).lower().startswith(".env.")]
     configs = [p for p in paths if _basename(p) in CONFIG_HINT_NAMES]
     api_like = [p for p in paths if re.search(r"(?i)(^|/)(api|backend|server|routes|controllers|app|main)\b", p) or _basename(p) in {"server.js", "server.ts", "main.py", "app.py"}]
@@ -312,6 +328,22 @@ def _repo_structure_summary(paths: list[str]) -> dict[str, Any]:
         "solidity_count": len(solidity),
         "package_json_files": package_json[:20],
         "package_json_count": len(package_json),
+        "lockfiles": lockfiles[:30],
+        "lockfile_count": len(lockfiles),
+        "ci_workflows": ci_workflows[:30],
+        "ci_workflow_count": len(ci_workflows),
+        "security_policy_files": security_policies[:20],
+        "security_policy_count": len(security_policies),
+        "codeowners_files": codeowners[:20],
+        "codeowners_count": len(codeowners),
+        "license_files": licenses[:20],
+        "license_count": len(licenses),
+        "readme_files": readmes[:20],
+        "readme_count": len(readmes),
+        "gitignore_files": gitignore[:20],
+        "gitignore_count": len(gitignore),
+        "test_files": tests[:50],
+        "test_file_count": len(tests),
         "env_like_files": env_like[:20],
         "env_like_count": len(env_like),
         "config_files": configs[:30],
@@ -323,6 +355,129 @@ def _repo_structure_summary(paths: list[str]) -> dict[str, Any]:
         "deployment_script_hints": deploy_like[:50],
         "deployment_script_count": len(deploy_like),
     }
+
+
+def _package_manifest_summary(path: str, text: str) -> dict[str, Any] | None:
+    if _basename(path) != "package.json":
+        return None
+    try:
+        pkg = json.loads(text)
+    except json.JSONDecodeError:
+        return {"path": path, "valid_json": False, "dependency_count": 0, "script_names": [], "security_relevant_dependencies": []}
+    deps: dict[str, str] = {}
+    for key in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
+        value = pkg.get(key)
+        if isinstance(value, dict):
+            deps.update({str(name): str(version) for name, version in value.items()})
+    security_relevant = []
+    for name, version in sorted(deps.items()):
+        if re.search(r"(?i)(wagmi|viem|ethers|web3|wallet|rainbowkit|solana|hardhat|foundry|slither|semgrep|openzeppelin|supabase|jsonwebtoken|next-auth|express|fastify|cors|helmet)", name):
+            security_relevant.append({"name": name, "version": version})
+    scripts = pkg.get("scripts") if isinstance(pkg.get("scripts"), dict) else {}
+    return {
+        "path": path,
+        "valid_json": True,
+        "dependency_count": len(deps),
+        "script_names": sorted(str(k) for k in scripts.keys())[:40],
+        "security_relevant_dependencies": security_relevant[:80],
+        "has_audit_script": any("audit" in str(k).lower() or "audit" in str(v).lower() for k, v in scripts.items()),
+        "has_test_script": any(str(k).lower() in {"test", "test:unit", "test:ci"} or "test" in str(v).lower() for k, v in scripts.items()),
+    }
+
+
+def _repo_readiness_findings(summary: dict[str, Any], start_idx: int) -> list[Finding]:
+    findings: list[Finding] = []
+    idx = start_idx
+    has_code = bool(summary.get("frontend_like_count") or summary.get("api_like_count") or summary.get("solidity_count"))
+    if has_code and not summary.get("ci_workflow_count"):
+        findings.append(_finding(
+            idx=idx, severity="medium", title="CI Security Workflow Missing",
+            description="No GitHub Actions workflow was found in the scanned branch.",
+            category="repo_readiness", rule_id="GITHUB-READINESS-CI-MISSING", confidence="medium",
+            source="GitHub Repository Readiness Analyzer",
+            business_impact="Without CI, obvious lint/test/security checks may be missed before launch or before a contest/audit.",
+            developer_explanation="This is structure-level evidence from the public repository tree only.",
+            recommendation="Add a GitHub Actions workflow that runs typecheck/tests, dependency review, secret scanning, and optional Web3Guard static analysis.",
+            refs=["CI security"],
+        )); idx += 1
+    if has_code and not summary.get("security_policy_count"):
+        findings.append(_finding(
+            idx=idx, severity="low", title="Security Policy Missing",
+            description="No SECURITY.md or security.txt-style disclosure policy was found.",
+            category="repo_readiness", rule_id="GITHUB-READINESS-SECURITY-POLICY-MISSING", confidence="medium",
+            source="GitHub Repository Readiness Analyzer",
+            business_impact="Researchers and users may not know where to report security issues safely.",
+            developer_explanation="The scanner checked repository paths only; it did not verify external policy pages.",
+            recommendation="Add SECURITY.md and publish security.txt/disclosure contact before public launch or bug bounty readiness.",
+            refs=["responsible disclosure"],
+        )); idx += 1
+    if summary.get("package_json_count") and not summary.get("lockfile_count"):
+        findings.append(_finding(
+            idx=idx, severity="medium", title="Dependency Lockfile Missing",
+            description="package.json exists, but no common lockfile was found in the scanned branch.",
+            category="dependencies", rule_id="GITHUB-READINESS-LOCKFILE-MISSING", confidence="medium",
+            source="GitHub Repository Readiness Analyzer",
+            business_impact="Unpinned dependency resolution can change build behavior and complicate incident response.",
+            developer_explanation="This is not npm audit output; it is a repository structure readiness check.",
+            recommendation="Commit the correct lockfile for your package manager and run dependency review in CI.",
+            refs=["dependency reproducibility"],
+        )); idx += 1
+    if (summary.get("solidity_count") or summary.get("config_count")) and not summary.get("test_file_count"):
+        findings.append(_finding(
+            idx=idx, severity="medium", title="Test Evidence Missing",
+            description="Solidity/config files were found, but no test/spec directory or test file pattern was detected.",
+            category="test_readiness", rule_id="GITHUB-READINESS-TESTS-MISSING", confidence="medium",
+            source="GitHub Repository Readiness Analyzer",
+            business_impact="Auditors and contest participants expect reproducible tests, edge-case coverage, and regression evidence.",
+            developer_explanation="This is a path-based evidence gap, not a claim that no tests exist elsewhere.",
+            recommendation="Add Foundry/Hardhat tests, include invariant/fuzz starters where relevant, and document how to run them.",
+            refs=["test readiness", "Foundry", "Hardhat"],
+        )); idx += 1
+    if has_code and not summary.get("codeowners_count"):
+        findings.append(_finding(
+            idx=idx, severity="info", title="CODEOWNERS Not Found",
+            description="No CODEOWNERS file was found in the scanned branch.",
+            category="repo_governance", rule_id="GITHUB-READINESS-CODEOWNERS-MISSING", confidence="medium",
+            source="GitHub Repository Readiness Analyzer",
+            business_impact="Sensitive changes may miss required reviewer routing in team repositories.",
+            developer_explanation="This is repository governance evidence only.",
+            recommendation="Add CODEOWNERS for contracts, backend, payment, deployment, and admin/security-critical paths.",
+            refs=["review controls"],
+        )); idx += 1
+    if has_code and not summary.get("license_count"):
+        findings.append(_finding(
+            idx=idx, severity="info", title="License File Not Found",
+            description="No common LICENSE/COPYING file was found.",
+            category="repo_governance", rule_id="GITHUB-READINESS-LICENSE-MISSING", confidence="low",
+            source="GitHub Repository Readiness Analyzer",
+            business_impact="Public projects may create legal/compliance ambiguity for users and contributors.",
+            developer_explanation="This is a public repository hygiene signal, not a security vulnerability.",
+            recommendation="Add the correct license or keep the repository private until legal posture is clear.",
+            refs=["open source governance"],
+        )); idx += 1
+    if has_code and not summary.get("readme_count"):
+        findings.append(_finding(
+            idx=idx, severity="info", title="README Not Found",
+            description="No README was found in the scanned branch.",
+            category="repo_governance", rule_id="GITHUB-READINESS-README-MISSING", confidence="medium",
+            source="GitHub Repository Readiness Analyzer",
+            business_impact="Auditors, bounty researchers, and builders need architecture/setup context before review.",
+            developer_explanation="This is repository documentation evidence only.",
+            recommendation="Add setup, architecture, threat model, env variable descriptions, and test commands to README.",
+            refs=["documentation readiness"],
+        )); idx += 1
+    if has_code and not summary.get("gitignore_count"):
+        findings.append(_finding(
+            idx=idx, severity="low", title=".gitignore Not Found",
+            description="No .gitignore file was found in the scanned branch.",
+            category="repo_secret_hygiene", rule_id="GITHUB-READINESS-GITIGNORE-MISSING", confidence="medium",
+            source="GitHub Repository Readiness Analyzer",
+            business_impact="Build artifacts, env files, caches, or local secrets are more likely to be committed accidentally.",
+            developer_explanation="This is a repository hygiene check from the public tree.",
+            recommendation="Add .gitignore entries for env files, build output, caches, node_modules, virtualenvs, and local data stores.",
+            refs=["secret hygiene"],
+        )); idx += 1
+    return findings
 
 
 async def scan_github_repository(repo_url: str, *, project_name: str | None = None, branch: str | None = None) -> ScanResponse:
@@ -349,6 +504,7 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
         summary = _repo_structure_summary(limited_paths)
         fetched_files: list[dict[str, Any]] = []
         linked_reports: list[dict[str, Any]] = []
+        dependency_manifests: list[dict[str, Any]] = []
         total_bytes = 0
 
         priority_paths: list[str] = []
@@ -383,6 +539,9 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
                 fetched_files.append({"path": path, "size": size, "fetched": False, "reason": "raw fetch failed"})
                 continue
             fetched_files.append({"path": path, "size": size or len(raw.encode("utf-8", errors="ignore")), "fetched": True})
+            manifest_summary = _package_manifest_summary(path, raw)
+            if manifest_summary:
+                dependency_manifests.append(manifest_summary)
             findings.extend(_content_findings(path, raw, idx))
             idx = len(findings) + 1
             if path.endswith(".sol"):
@@ -478,6 +637,8 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
             recommendation="Run the API scanner with API base URL and source snippets for deeper readiness checks.",
         ))
 
+    findings.extend(_repo_readiness_findings(summary, len(findings) + 1))
+
     score = score_findings(findings)
     metadata = {
         "version": "1.0",
@@ -498,6 +659,7 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
             "max_solidity_files": settings.max_github_solidity_files,
         },
         "structure_summary": summary,
+        "dependency_manifests": dependency_manifests,
         "fetched_files": fetched_files,
         "linked_contract_reports": linked_reports,
         "safety_controls": {
@@ -529,7 +691,7 @@ def github_scanner_status() -> dict[str, Any]:
     return {
         "ok": True,
         "version": "1.0",
-        "engine_version": "web3guard-github-repo-scanner-v11.0",
+        "engine_version": "web3guard-github-repo-scanner-v12.0",
         "github_token_configured": bool(settings.github_api_token),
         "live_features": [
             "Public GitHub repo URL parsing",
@@ -538,6 +700,8 @@ def github_scanner_status() -> dict[str, Any]:
             "Solidity file discovery and limited rule-engine scan",
             "package.json, frontend, API, config, deploy script hints",
             "secret-like path/content pattern detection",
+            "CI workflow, SECURITY.md, CODEOWNERS, lockfile, tests, README, license, and .gitignore readiness checks",
+            "package.json dependency manifest summary without npm install/audit execution",
             "real-only output with no fake private repo/deep audit claims",
         ],
         "not_enabled_or_not_claimed": [
