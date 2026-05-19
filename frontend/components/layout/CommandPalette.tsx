@@ -40,6 +40,7 @@ const commands = [
       { label: "EON Risk Graph", href: "/eon", keywords: "risk graph fix plan evidence ledger next best action launch blockers" },
       { label: "Launch Trust Readiness", href: "/trust-readiness", keywords: "founder trust score launch readiness score evidence completeness fixes monitoring bounty" },
       { label: "India Launch Pack", href: "/india-launch", keywords: "hindi hinglish india founder investor due diligence hackathon upi opsec launch pack" },
+      { label: "Security Copilot Workspace", href: "/security-copilot", keywords: "ai coach copilot assistant next steps fix explanation commands report wording local fallback" },
       { label: "Security Test Generator", href: "/security-tests", keywords: "foundry echidna slither aderyn semgrep tests properties defensive templates" },
       { label: "Sentinel Monitoring", href: "/sentinel", keywords: "monitoring vulnerability intelligence admin user alerts advisories" },
       { label: "Continuous Monitoring Lite", href: "/continuous-monitoring", keywords: "scheduled recheck stale report website drift github monitoring alerts" },
