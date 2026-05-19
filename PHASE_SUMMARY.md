@@ -1,27 +1,33 @@
-# Web3Guard AI — Brand + Simple Nav + Settings UI Patch
+# Web3Guard AI — UI-3D Home Patch
+
+## Goal
+Create a premium, video-inspired Web3Guard Home experience without touching backend, scanner execution, payments, env files, secrets, or database logic.
 
 ## What changed
+- Rebuilt `/` Home into a cinematic dark SaaS landing page inspired by the uploaded video style.
+- Added a lightweight animated risk-intelligence orb using only React markup + CSS, no heavy 3D dependency.
+- Kept Web3Guard AI by RAADHANEX branding visible and premium.
+- Kept top nav simple: Home, Scan, Price, More.
+- Kept Results, Report, Docs, Dashboard, Advanced, payment validation, feature status, and risk intelligence under More.
+- Added top-right animated Settings icon from the earlier brand/nav patch.
+- Preserved login behavior on Home: Login CTA shows when the user is signed out or Supabase browser auth is not configured; it hides when already signed in.
+- Preserved safety wording: pre-audit readiness only, not a certified audit, no security guarantee, no private key/seed phrase, no wallet signing, no exploit automation.
 
-- Restored top-left branding text as `Web3Guard AI` and `by RAADHANEX`.
-- Kept the header simple with only: `Home`, `Scan`, `Price`, and `More`.
-- Moved Results, Report, Docs, Dashboard, Saved scans, Launch pack, Risk intelligence, Payment validation, Feature status, Advanced tools, and Settings under `More`.
-- Added a future-ready animated settings icon on the top-right.
-- Improved the logo hover treatment with a lightweight 3D tilt/glow and a hover tooltip showing `Web3Guard AI by RAADHANEX`.
-- Preserved Home page Web3 intro section and updated one line so it no longer says branding only lives inside Home.
-
-## Safety / scope
-
-- Frontend UI-only patch.
-- Backend was not touched.
-- Scanner logic was not touched.
-- Payment/env/secrets/database were not touched.
-- No fake scan result, fake score, fake payment success, or certified-audit claim was added.
+## Files touched
+Frontend only. No backend files changed.
 
 ## Validation performed
-
 ```bash
 cd frontend
 npm run typecheck
 ```
-
 Result: passed.
+
+```bash
+cd frontend
+npm run build
+```
+Result: production build started and reached the optimized build phase, but the sandbox hit the 5-minute timeout. No TypeScript error was produced before timeout.
+
+## Notes
+This patch is intentionally CSS/lightweight for performance. It gives the premium 3D/glow feel without adding Three.js or other heavy animation libraries.
