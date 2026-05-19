@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 from app.core.security import require_admin
 from app.services.final_launch_completion import external_provider_status, final_completion_summary, next_chat_handoff_text, remaining_work_items
-from app.services.final_qa import implementation_map, launch_readiness, manual_accounts_needed, record_qa_run
+from app.services.final_qa import final_launch_checklist, implementation_map, launch_readiness, manual_accounts_needed, record_qa_run
 
 router = APIRouter(prefix="/final-qa", tags=["Final Production QA"])
 
@@ -21,6 +21,11 @@ def status():
 @router.get("/manual-accounts")
 def manual_accounts():
     return {"ok": True, "accounts": manual_accounts_needed()}
+
+
+@router.get("/final-checklist")
+def final_checklist():
+    return {"ok": True, "checklist": final_launch_checklist()}
 
 
 @router.get("/implementation-map")
@@ -64,6 +69,11 @@ def alias_status():
 @alias_router.get("/account-setup")
 def alias_account_setup():
     return {"ok": True, "accounts": manual_accounts_needed()}
+
+
+@alias_router.get("/final-checklist")
+def alias_final_checklist():
+    return {"ok": True, "checklist": final_launch_checklist()}
 
 
 @alias_router.get("/implementation-map")

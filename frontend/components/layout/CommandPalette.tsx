@@ -33,7 +33,8 @@ const commands = [
       { label: "Engine Depth", href: "/engine-depth", keywords: "slither aderyn semgrep mythril goplus etherscan github real tools" },
       { label: "Provider Readiness", href: "/provider-readiness", keywords: "etherscan goplus github api keys provider integrations" },
       { label: "Responsible Use", href: "/responsible-use", keywords: "no exploit no private key no wallet signing" },
-      { label: "Launch QA Board", href: "/launch-qa", keywords: "phase eight final ui qa mobile overflow checklist" },
+      { label: "Launch QA Board", href: "/launch-qa", keywords: "final ui qa mobile overflow checklist" },
+      { label: "Production Deployment QA", href: "/production-deployment-qa", keywords: "vercel render supabase production deployment qa security headers robots sitemap live routes" },
     ],
   },
   {

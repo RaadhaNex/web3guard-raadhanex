@@ -27,15 +27,16 @@ export default function LaunchQaPage() {
             <p className="section-label">Launch QA board</p>
             <h1 className="mt-4 text-4xl font-black sm:text-6xl">Final UI readiness pass before public beta traffic.</h1>
             <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
-              This page is a lightweight frontend checklist for the Quantum UI phase. It does not change scanner logic, activate providers, or create fake security results.
+              This page is a lightweight frontend checklist for the public beta UI. It does not change scanner logic, activate providers, or create fake security results.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/scanner/unified-url" className="btn-primary">Test unified scanner →</Link>
               <Link href="/feature-status" className="btn-secondary">Review feature status</Link>
+              <Link href="/production-deployment-qa" className="btn-secondary">Production deployment QA</Link>
             </div>
           </div>
           <div className="glass-tile p-5">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan">Phase 8 additions</p>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan">Global QA tools</p>
             <div className="mt-4 grid gap-3">
               {[
                 "Global Ctrl/⌘K command palette",
