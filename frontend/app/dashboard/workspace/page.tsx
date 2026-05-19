@@ -1,5 +1,8 @@
-import { WorkspaceClient } from "@/components/workspace/WorkspaceClient";
+import { DashboardWorkflowClient } from "@/components/dashboard/DashboardWorkflowClient";
 
-export default function WorkspacePage() {
-  return <WorkspaceClient />;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+export default function DashboardWorkflowPage() {
+  return <DashboardWorkflowClient />;
 }

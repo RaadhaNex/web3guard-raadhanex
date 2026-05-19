@@ -159,6 +159,7 @@ export function DashboardClient() {
         </div>
         <div className="flex flex-wrap gap-3">
           <Link className="btn-secondary" href="/dashboard/projects">Projects</Link>
+          <Link className="btn-secondary" href="/dashboard/workflow">Workflow</Link>
           <Link className="btn-secondary" href="/dashboard/scans">Scans</Link>
           <Link className="btn-secondary" href="/dashboard/workspace">Workspace</Link>
           <Link className="btn-secondary" href="/dashboard/securescore">SecureScore</Link>
@@ -213,6 +214,19 @@ export function DashboardClient() {
               <p className="mt-3 text-sm leading-7 text-slate-300">{overview.real_only_note}</p>
               <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-slate-400">
                 Subscription, payments, scan history, report saves, and SecureScore-related data are displayed only from real stored records.
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-8">
+            <div className="quantum-stage p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="section-label">Workflow layer</p>
+                  <h2 className="mt-2 text-2xl font-black">Project timeline, risk trend, and finding queue</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">Phase 12 adds a real-record workflow board. It stays empty until projects, scans, and reports are saved.</p>
+                </div>
+                <Link href="/dashboard/workflow" className="btn-primary">Open workflow board →</Link>
               </div>
             </div>
           </section>

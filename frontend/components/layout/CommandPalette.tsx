@@ -11,6 +11,7 @@ const commands = [
       { label: "Unified Launch Scanner", href: "/scanner/unified-url", keywords: "scan scanner url launch evidence website dapp" },
       { label: "Scanner Hub", href: "/scanner", keywords: "all scanners modules command center" },
       { label: "Dashboard", href: "/dashboard", keywords: "projects scans reports history workspace" },
+      { label: "Workflow Board", href: "/dashboard/workflow", keywords: "timeline risk trend scan comparison findings tasks comments" },
       { label: "Projects", href: "/dashboard/projects", keywords: "saved project workspace" },
     ],
   },

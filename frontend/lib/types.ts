@@ -573,3 +573,88 @@ export type AIFixSuggestion = {
   safety_flags: string[];
   safety_note: string;
 };
+
+export type DashboardWorkflowTimelineItem = {
+  id: string;
+  type: "project" | "scan" | "report" | string;
+  title: string;
+  subtitle?: string | null;
+  created_at: string;
+  project_id?: string | null;
+  href?: string | null;
+};
+
+export type DashboardWorkflowTrendPoint = {
+  scan_id: string;
+  created_at: string;
+  module: string;
+  score?: number | null;
+  bucket: string;
+  risk_label: string;
+  findings_count: number;
+  critical_high_count: number;
+  href: string;
+};
+
+export type DashboardWorkflowModuleComparison = {
+  module: string;
+  scans_count: number;
+  latest_scan_id: string;
+  latest_score?: number | null;
+  average_score?: number | null;
+  latest_risk_label: string;
+  findings_count: number;
+  critical_high_count: number;
+  last_seen_at: string;
+  href: string;
+};
+
+export type DashboardWorkflowProjectHealth = {
+  project_id?: string | null;
+  name: string;
+  website_url?: string | null;
+  chain?: string | null;
+  scans_count: number;
+  reports_count: number;
+  average_score?: number | null;
+  critical_high_count: number;
+  latest_scan_at?: string | null;
+  latest_risk_label?: string | null;
+  href: string;
+};
+
+export type DashboardWorkflowFindingTask = {
+  id: string;
+  scan_id?: string | null;
+  report_id?: string | null;
+  project_id?: string | null;
+  module: string;
+  title: string;
+  severity: Severity | string;
+  status: string;
+  recommendation?: string | null;
+  created_at: string;
+  href: string;
+};
+
+export type DashboardWorkflow = {
+  ok: boolean;
+  scope: {
+    mode: "workspace" | "project" | string;
+    project_id?: string | null;
+    project_name?: string | null;
+  };
+  summary: Record<string, number | string | null>;
+  timeline: DashboardWorkflowTimelineItem[];
+  risk_trend: DashboardWorkflowTrendPoint[];
+  module_comparison: DashboardWorkflowModuleComparison[];
+  project_health: DashboardWorkflowProjectHealth[];
+  finding_workflow: {
+    tasks: DashboardWorkflowFindingTask[];
+    status_breakdown: Record<string, number>;
+    severity_breakdown: Record<string, number>;
+    note: string;
+  };
+  real_only_note: string;
+  storage_note: string;
+};

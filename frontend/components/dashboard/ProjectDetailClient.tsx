@@ -119,9 +119,14 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
               </p>
             </div>
 
-            <Link className="btn-primary" href="/scanner/unified-url">
-              Run new scan
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link className="btn-secondary" href={`/dashboard/projects/${projectId}/workflow`}>
+                Workflow view
+              </Link>
+              <Link className="btn-primary" href="/scanner/unified-url">
+                Run new scan
+              </Link>
+            </div>
           </div>
 
           <section className="mt-8 grid gap-4 md:grid-cols-4">
