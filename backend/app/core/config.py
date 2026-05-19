@@ -179,6 +179,13 @@ class Settings(BaseSettings):
     cisa_kev_catalog_url: str = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 
 
+    # Phase 31 — launch validation sprint: optional live OSV/CISA dependency checks.
+    launch_validation_network_enabled: bool = False
+    launch_validation_timeout_seconds: int = 12
+    launch_validation_max_vulnerabilities_per_package: int = 8
+    launch_validation_max_cisa_matches: int = 20
+
+
     # Web3Guard Sentinel: monitoring + vulnerability intelligence core.
     sentinel_enabled: bool = True
     sentinel_live_ingestion_enabled: bool = False

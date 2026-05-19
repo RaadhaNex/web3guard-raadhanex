@@ -6,66 +6,38 @@ import { usePathname } from "next/navigation";
 
 const commands = [
   {
-    group: "Start",
+    group: "Primary journey",
     items: [
-      { label: "Unified Launch Scanner", href: "/scanner/unified-url", keywords: "scan scanner url launch evidence website dapp" },
-      { label: "Scanner Hub", href: "/scanner", keywords: "all scanners modules command center" },
-      { label: "Dashboard", href: "/dashboard", keywords: "projects scans reports history workspace" },
-      { label: "Workflow Board", href: "/dashboard/workflow", keywords: "timeline risk trend scan comparison findings tasks comments" },
-      { label: "Projects", href: "/dashboard/projects", keywords: "saved project workspace" },
+      { label: "Scanner", href: "/scanner/unified-url", keywords: "start scan website dapp api contract github wallet admin" },
+      { label: "Results", href: "/results", keywords: "assessed not assessed needs api key tool not installed" },
+      { label: "Fix Plan", href: "/fix-plan", keywords: "fix blockers remediation eon next action" },
+      { label: "Report", href: "/report", keywords: "export report professional verify public" },
+      { label: "Pricing", href: "/pricing", keywords: "razorpay upi payment plan revenue validation" },
+      { label: "Dashboard", href: "/dashboard", keywords: "projects scans saved reports history" },
+      { label: "Docs", href: "/docs", keywords: "methodology limitations responsible use advanced setup" },
     ],
   },
   {
-    group: "Reports",
+    group: "Launch validation",
     items: [
-      { label: "Professional Report Builder", href: "/report/professional", keywords: "pdf html markdown json export artifacts" },
-      { label: "Report Verification", href: "/report/verify", keywords: "verify hash report integrity evidence findings workflow" },
-      { label: "Public Trust Pages", href: "/trust-pages", keywords: "public trust page project readiness evidence ledger report hash disclosure" },
-      { label: "Sample Reports", href: "/sample-reports", keywords: "example report evidence wording" },
-      { label: "Public Registry", href: "/registry", keywords: "public reports registry verify" },
+      { label: "Phase 31 Launch Validation", href: "/launch-validation", keywords: "slither render razorpay osv cisa dependency compression" },
+      { label: "Billing & Payment Final", href: "/billing", keywords: "razorpay checkout webhook signature plan limits" },
+      { label: "Launch Final QA", href: "/launch-final", keywords: "vercel render supabase razorpay release gates" },
+      { label: "Feature Status", href: "/feature-status", keywords: "tool provider configured not assessed" },
     ],
   },
   {
-    group: "Trust",
+    group: "Advanced tools",
     items: [
-      { label: "Methodology", href: "/methodology", keywords: "scoring score split confidence" },
-      { label: "Limitations", href: "/limitations", keywords: "not certified audit boundaries" },
-      { label: "Feature Status", href: "/feature-status", keywords: "integration tool not installed provider configured" },
-      { label: "Engine Depth", href: "/engine-depth", keywords: "slither aderyn semgrep mythril goplus etherscan github real tools" },
-      { label: "Worker Execution", href: "/worker-execution", keywords: "slither aderyn semgrep foundry echidna mythril docker worker real output" },
-      { label: "Provider Readiness", href: "/provider-readiness", keywords: "etherscan goplus github api keys provider integrations" },
-      { label: "Provider Live Integration", href: "/provider-live", keywords: "phase 28 etherscan basescan polygonscan goplus github osv nvd cisa kev live provider no fake data" },
-      { label: "Trust Metrics Engine", href: "/trust-metrics", keywords: "phase 29 trust metrics public vulnerability records advisories disclosures safe wording no fake discovery claims" },
-      { label: "Launch Final QA", href: "/launch-final", keywords: "phase 30 launch final qa public release gates vercel render supabase razorpay legal seo security final checklist" },
-      { label: "Billing & Payment Final", href: "/billing", keywords: "razorpay upi payment billing subscription webhook plan limits" },
-      { label: "Responsible Use", href: "/responsible-use", keywords: "no exploit no private key no wallet signing" },
-      { label: "Launch QA Board", href: "/launch-qa", keywords: "final ui qa mobile overflow checklist" },
-      { label: "Production Deployment QA", href: "/production-deployment-qa", keywords: "vercel render supabase production deployment qa security headers robots sitemap live routes" },
-      { label: "EON Risk Graph", href: "/eon", keywords: "risk graph fix plan evidence ledger next best action launch blockers" },
-      { label: "Launch Trust Readiness", href: "/trust-readiness", keywords: "founder trust score launch readiness score evidence completeness fixes monitoring bounty" },
-      { label: "India Launch Pack", href: "/india-launch", keywords: "hindi hinglish india founder investor due diligence hackathon upi opsec launch pack" },
-      { label: "Security Copilot Workspace", href: "/security-copilot", keywords: "ai coach copilot assistant next steps fix explanation commands report wording local fallback" },
-      { label: "Community Review Layer", href: "/community-review", keywords: "community review request feedback triage reviewer manual safe scope" },
-      { label: "Community Review Admin", href: "/community-review/admin", keywords: "admin moderation triage feedback queue reviewer requests" },
-      { label: "Security Passport", href: "/security-passport", keywords: "passport trust network readiness report hash evidence monitoring community review external audit links" },
-      { label: "Security Passport Admin", href: "/security-passport/admin", keywords: "admin passport trust network overview monitoring community external links" },
-      { label: "Agency Launch Layer", href: "/agency-launch", keywords: "agency enterprise client portfolio white label handoff intake reviewer roles" },
-      { label: "Security Test Generator", href: "/security-tests", keywords: "foundry echidna slither aderyn semgrep tests properties defensive templates" },
-      { label: "Sentinel Monitoring", href: "/sentinel", keywords: "monitoring vulnerability intelligence admin user alerts advisories" },
-      { label: "Continuous Monitoring Lite", href: "/continuous-monitoring", keywords: "scheduled recheck stale report website drift github monitoring alerts" },
-      { label: "Monitoring Admin Board", href: "/continuous-monitoring/admin", keywords: "admin monitoring due configs alerts scheduler snapshots" },
-      { label: "Sentinel Intelligence", href: "/sentinel/intelligence", keywords: "nvd osv github advisory cisa kev indexed vulnerabilities risk mapping" },
-      { label: "Sentinel Admin Board", href: "/sentinel/admin", keywords: "admin intelligence source health public stats disclosure queue" },
-      { label: "Responsible Disclosure Draft", href: "/sentinel/disclosure", keywords: "responsible disclosure draft template contact security" },
-    ],
-  },
-  {
-    group: "Free tools",
-    items: [
-      { label: "Free Tools Console", href: "/free-tools", keywords: "checklist security txt robots sitemap bounty ci workflow" },
-      { label: "Bug Bounty Readiness", href: "/bug-bounty", keywords: "immunefi bounty triage" },
-      { label: "CI/CD Security", href: "/cicd", keywords: "github action workflow scanner" },
-      { label: "Developer API", href: "/developer-api", keywords: "api integration key docs" },
+      { label: "All Scanners", href: "/scanner", keywords: "scanner hub modules" },
+      { label: "Engine Depth", href: "/engine-depth", keywords: "slither aderyn semgrep mythril echidna" },
+      { label: "Worker Execution", href: "/worker-execution", keywords: "real worker slither foundry mythril docker" },
+      { label: "Provider Live", href: "/provider-live", keywords: "etherscan goplus github osv nvd cisa kev" },
+      { label: "Security Tests", href: "/security-tests", keywords: "foundry echidna semgrep templates" },
+      { label: "Sentinel", href: "/sentinel", keywords: "monitoring advisories intelligence" },
+      { label: "Trust Metrics", href: "/trust-metrics", keywords: "advisory mapping disclosures public metrics" },
+      { label: "Security Passport", href: "/security-passport", keywords: "passport trust network report hash" },
+      { label: "Agency Launch", href: "/agency-launch", keywords: "client portfolio handoff white label" },
     ],
   },
 ];
@@ -78,8 +50,8 @@ const flatCommands = commands.flatMap((group) =>
   }))
 );
 
-const MAX_DEFAULT_RESULTS = 18;
-const MAX_SEARCH_RESULTS = 32;
+const MAX_DEFAULT_RESULTS = 12;
+const MAX_SEARCH_RESULTS = 24;
 
 export function CommandPalette() {
   const pathname = usePathname();
@@ -149,17 +121,17 @@ export function CommandPalette() {
                 ref={inputRef}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search scanners, reports, trust pages, tools..."
+                placeholder="Search scan, results, fix plan, report, pricing, docs..."
                 className="command-search-input"
               />
               <button type="button" className="kbd-chip" onClick={() => setOpen(false)}>ESC</button>
             </div>
 
             <div className="command-status-grid">
-              <span className="badge badge-green">Pre-audit only</span>
+              <span className="badge badge-green">7-path journey</span>
               <span className="badge badge-cyan">No wallet signing</span>
-              <span className="badge badge-cyan">Payment verified only</span>
-              <span className="badge badge-purple">Real-only status</span>
+              <span className="badge badge-amber">Missing tools visible</span>
+              <span className="badge badge-purple">No fake output</span>
             </div>
 
             <div className="command-result-list">
@@ -184,7 +156,7 @@ export function CommandPalette() {
               ) : (
                 <div className="command-empty">
                   <p className="font-black text-white">No matching page found.</p>
-                  <p className="mt-1 text-sm text-slate-400">Try “scanner”, “report”, “feature status”, “free tools”, or “dashboard”.</p>
+                  <p className="mt-1 text-sm text-slate-400">Try “scanner”, “results”, “fix”, “payment”, “slither”, or “docs”.</p>
                 </div>
               )}
             </div>

@@ -9,12 +9,12 @@ import { brand } from "@/lib/constants";
 
 const navLinks = [
   { href: "/scanner/unified-url", label: "Scanner" },
-  { href: "/methodology", label: "Methodology" },
-  { href: "/sample-reports", label: "Reports" },
-  { href: "/feature-status", label: "Status" },
+  { href: "/results", label: "Results" },
+  { href: "/fix-plan", label: "Fix Plan" },
+  { href: "/report", label: "Report" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/free-tools", label: "Tools" },
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/docs", label: "Docs" },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -52,7 +52,7 @@ export function Header() {
         <div className="hidden shrink-0 items-center gap-2 sm:flex">
           <div className="nav-pill hidden xl:inline-flex">
             <span className="pulse-dot mr-2 h-2 w-2 rounded-full bg-cyan" />
-            <span className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-300">Quantum UI beta</span>
+            <span className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-300">Launch validation</span>
           </div>
           <Link href="/scanner/unified-url" className="btn-primary !px-4 !py-2 text-xs">
             Start Scan
@@ -79,7 +79,7 @@ export function Header() {
         <div className="mobile-panel lg:hidden">
           <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
             <div className="mb-3 rounded-2xl border border-cyan/15 bg-cyan/[0.05] px-4 py-3 text-sm text-slate-300">
-              Clean navigation, fewer distractions, faster access to scan, reports, and dashboard.
+              Seven visible paths only: scan, understand results, fix, report, pay, dashboard, and docs.
             </div>
           </div>
           <nav className="mx-auto grid max-w-7xl gap-2 px-4 pb-4 sm:grid-cols-2 sm:px-6" aria-label="Mobile navigation">

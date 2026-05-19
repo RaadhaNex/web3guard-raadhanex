@@ -26,10 +26,10 @@ export const modules = [
 export const nav = [
   { href: "/", label: "Home" },
   { href: "/scanner/unified-url", label: "Scanner" },
-  { href: "/methodology", label: "Methodology" },
-  { href: "/limitations", label: "Limitations" },
-  { href: "/sample-reports", label: "Sample Reports" },
+  { href: "/results", label: "Results" },
+  { href: "/fix-plan", label: "Fix Plan" },
+  { href: "/report", label: "Report" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/free-tools", label: "Free Tools" },
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/docs", label: "Docs" },
 ];

@@ -3,31 +3,30 @@ import { brand } from "@/lib/constants";
 
 const columns = [
   {
-    title: "Product",
+    title: "Core flow",
     links: [
-      { label: "Free Scanner", href: "/scanner/unified-url" },
-      { label: "All Scanners", href: "/scanner" },
+      { label: "Scanner", href: "/scanner/unified-url" },
+      { label: "Results", href: "/results" },
+      { label: "Fix Plan", href: "/fix-plan" },
+      { label: "Report", href: "/report" },
+    ],
+  },
+  {
+    title: "Validation",
+    links: [
       { label: "Pricing", href: "/pricing" },
       { label: "Billing", href: "/billing" },
+      { label: "Launch Validation", href: "/launch-validation" },
       { label: "Dashboard", href: "/dashboard" },
     ],
   },
   {
-    title: "Resources",
+    title: "Trust docs",
     links: [
+      { label: "Docs", href: "/docs" },
       { label: "Methodology", href: "/methodology" },
-      { label: "Sample Reports", href: "/sample-reports" },
-      { label: "Free Tools", href: "/free-tools" },
-      { label: "Launch Readiness", href: "/launch-readiness" },
-    ],
-  },
-  {
-    title: "Trust",
-    links: [
-      { label: "Security", href: "/security" },
-      { label: "Privacy", href: "/privacy" },
-      { label: "Terms", href: "/terms" },
       { label: "Limitations", href: "/limitations" },
+      { label: "Responsible Use", href: "/responsible-use" },
     ],
   },
 ];
@@ -47,12 +46,12 @@ export function Footer() {
             </Link>
 
             <p className="mt-4 max-w-xs text-xs leading-6 text-slate-400">
-              Evidence-first Web3 launch readiness scanner for founders and developers preparing before formal audits.
+              Evidence-first Web3 launch readiness scanner for founders preparing before formal audits.
             </p>
 
             <div className="mt-4 flex flex-wrap gap-2">
               {[
-                { tone: "bg-emerald-400", text: "Scanners live" },
+                { tone: "bg-emerald-400", text: "7-path journey" },
                 { tone: "bg-amber-300", text: "Payments verified only" },
                 { tone: "bg-slate-400", text: "Pre-audit only" },
               ].map(({ tone, text }) => (
