@@ -32,6 +32,7 @@ const commands = [
       { label: "Feature Status", href: "/feature-status", keywords: "integration tool not installed provider configured" },
       { label: "Engine Depth", href: "/engine-depth", keywords: "slither aderyn semgrep mythril goplus etherscan github real tools" },
       { label: "Provider Readiness", href: "/provider-readiness", keywords: "etherscan goplus github api keys provider integrations" },
+      { label: "Billing & Payment Final", href: "/billing", keywords: "razorpay upi payment billing subscription webhook plan limits" },
       { label: "Responsible Use", href: "/responsible-use", keywords: "no exploit no private key no wallet signing" },
       { label: "Launch QA Board", href: "/launch-qa", keywords: "final ui qa mobile overflow checklist" },
       { label: "Production Deployment QA", href: "/production-deployment-qa", keywords: "vercel render supabase production deployment qa security headers robots sitemap live routes" },
@@ -121,7 +122,7 @@ export function CommandPalette() {
             <div className="command-status-grid">
               <span className="badge badge-green">Pre-audit only</span>
               <span className="badge badge-cyan">No wallet signing</span>
-              <span className="badge badge-amber">Payments deferred</span>
+              <span className="badge badge-cyan">Payment verified only</span>
               <span className="badge badge-purple">Real-only status</span>
             </div>
 

@@ -6,7 +6,7 @@ const notDone = [
   "No private key, seed phrase, mnemonic, or wallet-signing collection is allowed.",
   "AI provider is OFF unless configured with real backend env and clear data-sharing policy.",
   "Slither, Aderyn, Mythril, Manticore, Echidna, and Semgrep only run if real tools/workers are installed and enabled.",
-  "Payment/Razorpay/UPI activation is deferred to the final payment phase.",
+  "Payment/Razorpay/UPI access is active only after verified backend signature/webhook processing or manual admin approval.",
 ];
 
 const needsEvidence = [

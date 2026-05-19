@@ -41,7 +41,7 @@ function ChecklistPanel({ title, items, tone }: { title: string; items: string[]
 export default function LaunchReadinessPage() {
   return (
     <main className="min-h-screen bg-ink text-white">
-      <TrustHero eyebrow="Public beta readiness" title="A launch board for everything useful except payments." text="Public beta can ship real scanners, free tools, reports, and trust pages while UPI/Razorpay/subscriptions remain deferred until verified payment integration." />
+      <TrustHero eyebrow="Public beta readiness" title="A launch board for scanners, reports, trust, and verified payments." text="Public beta can ship real scanners, free tools, reports, trust pages, and payment UI while paid access still requires backend verification or manual approval." />
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-8 grid gap-4 md:grid-cols-4">
           {["Auth", "Scanner", "Exports", "Free tools"].map((item) => (

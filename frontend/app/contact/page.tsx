@@ -11,7 +11,7 @@ export default function ContactPage() {
           Share project context, public links, and the type of review you need. Do not paste private keys, seed phrases, production credentials, or customer secrets.
         </p>
         <div className="mt-6 rounded-3xl border border-cyan/20 bg-cyan/10 p-5 text-sm leading-6 text-cyan-50">
-          Paid checkout is intentionally deferred. This form is for scope collection and follow-up only; it does not create a payment, subscription, or certified-audit claim.
+          This form is for scope collection and follow-up only. Checkout/subscription access is handled through verified billing flows and never creates a certified-audit claim.
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <Link href="/scanner/unified-url" className="btn-primary">Run free scan first</Link>

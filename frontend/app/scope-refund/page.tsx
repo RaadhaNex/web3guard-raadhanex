@@ -16,7 +16,7 @@ export default function ScopeRefundPage() {
       <p className="section-label">Scope policy</p>
       <h1 className="mt-3 max-w-4xl text-4xl font-black sm:text-5xl">Clear boundaries before any paid review goes live.</h1>
       <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400 sm:text-base">
-        The free scanner is live. Paid reviews, subscriptions, Razorpay, UPI, and automated billing remain deferred until the final payment phase is verified. This page documents scope expectations without implying active checkout.
+        The free scanner is live. Paid reviews, subscriptions, Razorpay, UPI, and billing are available only when backend verification is configured and a payment/admin approval is verified. This page documents scope expectations without implying certified audit coverage.
       </p>
 
       <div className="mt-8 rounded-3xl border border-amber-400/20 bg-amber-400/10 p-5 text-sm leading-6 text-amber-100">

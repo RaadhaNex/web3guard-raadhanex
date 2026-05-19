@@ -29,7 +29,7 @@ export const trustPages = [
   { href: "/methodology", title: "Methodology", text: "How module scoring, evidence, and Not Assessed states work." },
   { href: "/limitations", title: "Limitations", text: "Clear boundaries for scanners, reports, AI, external tools, and manual review." },
   { href: "/sample-reports", title: "Sample Reports", text: "Public-safe report examples with no certified audit wording." },
-  { href: "/changelog", title: "Changelog", text: "Public beta changes, real integrations, and deferred modules." },
+  { href: "/changelog", title: "Changelog", text: "Public beta changes, real integrations, verified payments, and evidence-dependent modules." },
   { href: "/security", title: "Security", text: "Responsible use, data handling, no-secrets rule, and incident contact guidance." },
   { href: "/privacy", title: "Privacy", text: "What is processed, what should never be pasted, and retention guidance." },
   { href: "/terms", title: "Terms", text: "Usage rules, safe claims, authorization, and report limitations." },
@@ -80,10 +80,10 @@ export const integrationReadiness: ReadinessItem[] = [
   },
   {
     title: "Payment / UPI / Razorpay",
-    status: "Deferred to final payment phase",
-    tone: "blocked",
-    evidence: "Pricing can be shown as request-only, but no paid/subscription success must be displayed until verification/webhook/audit logs are complete.",
-    nextStep: "Do not unlock paid UI from frontend-only state. Finish Razorpay order + checkout + webhook + audit trail later.",
+    status: "Live when backend provider keys/webhook are configured",
+    tone: "warning",
+    evidence: "Pricing and checkout can be shown, but paid/subscription success appears only after Razorpay signature/webhook verification or manual admin approval.",
+    nextStep: "Use backend-created Razorpay orders, signature/webhook verification, audit events, and manual UPI fallback. Never unlock from frontend-only state.",
   },
 ];
 

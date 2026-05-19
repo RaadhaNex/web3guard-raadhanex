@@ -4,7 +4,7 @@ const changes = [
   ["Public beta readiness patch", "Added trust pages, evidence-first report split, free founder tools, integration readiness status, and premium black/charcoal UI system."],
   ["Report realism", "Reports split Website Surface Score, Contract Rule Score, Launch Evidence Score, and Overall Launch Confidence without calling it a full audit score."],
   ["Direct exports", "Scanner result exports remain PDF, HTML, Markdown, and JSON. Missing modules stay Not Assessed in exports."],
-  ["Payment deferred", "UPI/Razorpay remains pending. Paid packages are request-only until real verification/webhook/audit logs are complete."],
+  ["Payment verification final", "Razorpay/UPI billing now uses backend-created orders, signature/webhook verification, audit logs, and manual UPI fallback. Paid access still never unlocks from frontend-only state."],
   ["External tools", "Slither/Aderyn/Mythril and AI provider remain honest status-only unless real tools/API keys are configured."],
 ];
 

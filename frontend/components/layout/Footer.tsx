@@ -7,7 +7,8 @@ const columns = [
     links: [
       { label: "Free Scanner", href: "/scanner/unified-url" },
       { label: "All Scanners", href: "/scanner" },
-      { label: "Pricing Status", href: "/pricing" },
+      { label: "Pricing", href: "/pricing" },
+      { label: "Billing", href: "/billing" },
       { label: "Dashboard", href: "/dashboard" },
     ],
   },
@@ -52,7 +53,7 @@ export function Footer() {
             <div className="mt-4 flex flex-wrap gap-2">
               {[
                 { tone: "bg-emerald-400", text: "Scanners live" },
-                { tone: "bg-amber-300", text: "Payments deferred" },
+                { tone: "bg-amber-300", text: "Payments verified only" },
                 { tone: "bg-slate-400", text: "Pre-audit only" },
               ].map(({ tone, text }) => (
                 <span key={text} className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.07] bg-white/[0.03] px-2.5 py-1 text-[11px] font-semibold text-slate-400">

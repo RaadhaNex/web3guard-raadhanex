@@ -4,7 +4,7 @@ const checks = [
   ["Navigation", "Command palette, header links, footer links, and mobile menu stay visible and readable."],
   ["Scanner UX", "Unified scan remains the primary path, with export flow and Not Assessed wording still visible."],
   ["Trust copy", "Pre-audit only, no certified audit claim, no 100% secure claim, and no exploit automation language is preserved."],
-  ["Provider honesty", "AI, Slither, Aderyn, Mythril, GoPlus, Etherscan, and payments stay pending unless real providers are configured."],
+  ["Provider honesty", "AI, Slither, Aderyn, Mythril, GoPlus, Etherscan, and payment success stay honest unless real providers and backend verification are configured."],
   ["Mobile", "375px+ screens should avoid horizontal overflow, clipped CTAs, and unreadable cards."],
   ["Accessibility", "Keyboard shortcut uses Ctrl/⌘K, Escape closes modal, focus styles stay visible, reduced-motion is supported."],
 ];
@@ -15,7 +15,7 @@ const deployChecks = [
   "Verify Vercel env only contains frontend public env keys.",
   "Verify Render backend env is separate and secrets are not committed.",
   "Click unified scanner, report builder, dashboard, pricing, trust, and limitations after deploy.",
-  "Keep payment activation deferred until real order, checkout, webhook, and audit logs are tested.",
+  "Verify Razorpay order, checkout signature, webhook, manual UPI fallback, and audit logs before public paid launch.",
 ];
 
 export default function LaunchQaPage() {
