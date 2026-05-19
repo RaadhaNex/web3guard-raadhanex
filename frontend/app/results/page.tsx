@@ -12,7 +12,7 @@ const states = [
 
 export const metadata = {
   title: "Results | Web3Guard AI",
-  description: "Normalize scanner findings, advisories, Not Assessed modules, and pilot report output without fake certainty.",
+  description: "Normalize scanner findings, advisories, risk intelligence, Not Assessed modules, and pilot report output without fake certainty.",
 };
 
 export default function ResultsPage() {
@@ -27,6 +27,7 @@ export default function ResultsPage() {
         <div className="mt-7 flex flex-wrap gap-3">
           <Link href="/scanner/unified-url" className="btn-primary">Run scanner →</Link>
           <Link href="/report" className="btn-secondary">Report flow</Link>
+          <Link href="/risk-intelligence" className="btn-secondary">Risk intelligence</Link>
           <Link href="/dashboard/scans" className="btn-secondary">Saved scans</Link>
         </div>
       </section>

@@ -19,6 +19,7 @@ const secondaryLinks = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/dashboard/scans", label: "Saved scans" },
   { href: "/launch-pack", label: "First 10 users" },
+  { href: "/risk-intelligence", label: "Risk intelligence" },
   { href: "/payment-validation", label: "Payment validation" },
   { href: "/feature-status", label: "Feature status" },
   { href: "/advanced", label: "Advanced tools" },

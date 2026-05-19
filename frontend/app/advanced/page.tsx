@@ -6,6 +6,7 @@ const groups = [
     text: "Use these only when you are ready to enable real scanner tools or external APIs.",
     links: [
       ["Scanner depth", "/scanner-depth"],
+      ["Risk intelligence", "/risk-intelligence"],
       ["Worker runs", "/worker-runs"],
       ["Worker execution", "/worker-execution"],
       ["Provider live", "/provider-live"],

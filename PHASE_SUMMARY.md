@@ -1,69 +1,56 @@
-# PHASE SUMMARY — Clean Beta UI Polish
-
-Project: Web3Guard AI by RAADHANEX  
-Patch name: Clean Beta UI Polish  
-Scope: Frontend UI/UX only. Backend, env, database, scanner APIs, and payment APIs were not changed.
+# Web3Guard Clean Beta UI + Risk Intelligence Patch
 
 ## What this patch does
 
-- Keeps the main public journey focused on: Scanner → Results → Report → Pricing → Docs.
-- Reduces noisy/futuristic copy and replaces it with a cleaner founder-focused beta message.
-- Clarifies the product position as an India-first Web3 founder pre-audit readiness scanner / Founder Security OS.
-- Makes the result-state language clearer:
-  - Assessed
-  - Not Assessed
-  - Tool Not Installed
-  - Needs API Key
-  - Provider Not Configured
-  - Manual Review Required
-- Makes the ₹999 pilot readiness report offer clearer while keeping payment safety:
-  - Free scan remains the first step.
-  - ₹999 report flow must be used only after backend payment validation is configured.
-  - No fake payment success is claimed.
-- Updates metadata from the older KavachWing public identity wording back to Web3Guard AI.
-- Improves mobile overflow safety for buttons, cards, panels, and mobile navigation.
+This is the safe merged version of:
 
-## Hard safety boundaries preserved
+1. Clean beta UI polish for first-user launch readiness.
+2. Phase 39 Advanced Risk Intelligence Engine.
 
-- No certified audit claim.
-- No “100% secure” claim.
-- No fake score or fake result claim.
-- No fake payment success.
-- No private key, seed phrase, mnemonic, wallet signing, or exploit automation.
-- Missing providers/tools remain visible instead of being guessed.
+It keeps the main product flow simple:
 
-## Backend touched?
+Scanner → Results → Report → Pricing → Docs
 
-No.
+Advanced/risk intelligence stays under More/Advanced and as a contextual link from Results.
 
-## Env/database touched?
+## Added
 
-No.
+- Backend risk intelligence service and router.
+- Backend tests for risk intelligence.
+- Frontend `/risk-intelligence` page and client.
+- Advanced tools link for Risk intelligence.
+- Documentation for Phase 39.
 
-## Validation performed in sandbox
+## Preserved
 
-From `frontend/`:
+- Existing backend API architecture.
+- Existing scanner/report routes.
+- Clean beta UI polish.
+- Main visible nav stays simple.
+- No secrets/env/database changes.
+- No fake findings, fake scores, fake monitoring, fake payment success, or certified-audit claims.
+
+## Validation performed in dry-run
+
+Backend targeted tests:
 
 ```bash
+cd backend
+python -m pytest tests/test_phase39_risk_intelligence.py -q
+```
+
+Result: `6 passed`.
+
+Frontend typecheck after dependency install:
+
+```bash
+cd frontend
 npm ci --ignore-scripts
 npm run typecheck
 ```
 
-Result: typecheck passed.
+Result: passed.
 
-`npm run build` was also started after dependencies were installed. It entered the production build phase, but the sandbox command hit the 5-minute execution timeout before completion. No TypeScript error appeared before timeout. Please run the build locally or on Vercel after applying the patch.
+## Important note
 
-## Recommended local validation
-
-```bash
-cd frontend
-npm run typecheck
-npm run build
-```
-
-If backend is unchanged, backend tests are optional for this patch. If you still want to run them:
-
-```bash
-cd backend
-python -m pytest -q
-```
+This engine is useful as a finding explainer / risk intelligence layer. It is not a replacement for real scanner execution. It only becomes strong when real evidence comes from Slither, Semgrep, OSV, CISA KEV, manual review, or imported scanner outputs.

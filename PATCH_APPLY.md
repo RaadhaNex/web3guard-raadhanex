@@ -1,62 +1,44 @@
-# PATCH APPLY GUIDE
+# Apply Patch
 
-Apply this ZIP on top of your current project root.
-
-## Option A — Windows Explorer
-
-1. Extract this patch ZIP.
-2. Copy the extracted `frontend/` folder into your project root.
-3. Allow Windows to replace the existing files.
-4. Do not delete any other files.
-
-## Option B — PowerShell
-
-From the folder where you extracted this patch:
-
-```powershell
-Copy-Item -Path .\frontend -Destination C:\web\web3guard -Recurse -Force
-```
-
-Change `C:\web\web3guard` to your actual project path.
+1. Take a backup or commit current state first.
+2. Extract this ZIP at the project root.
+3. Allow overwrite only for files included in this patch.
+4. Do not overwrite `.env`, secrets, database credentials, Vercel variables, or Render variables.
 
 ## Validate frontend
 
 ```bash
 cd frontend
+npm ci --ignore-scripts
 npm run typecheck
 npm run build
 ```
 
-## Backend validation
-
-Backend was not changed. Run only if you want a full sanity check:
+## Validate backend if backend was applied
 
 ```bash
 cd backend
-python -m pytest -q
+python -m pytest tests/test_phase39_risk_intelligence.py -q
 ```
 
-## GitHub push commands
+## Push
 
 ```bash
 git status
 git add .
-git commit -m "Polish Web3Guard clean beta UI"
+git commit -m "Polish clean beta UI and add risk intelligence"
 git push origin main
 ```
 
-## After deploy, check these live pages
+## After deployment check
 
 - `/`
-- `/scanner`
 - `/scanner/unified-url`
 - `/results`
+- `/risk-intelligence`
 - `/report`
 - `/pricing`
 - `/docs`
 - `/advanced`
-- `/payment-validation`
-
-## Deployment/env changes
-
-No new env variable is required by this patch.
+- Backend `/risk-intelligence/status`
+- Backend `/risk-intelligence/taxonomy`
