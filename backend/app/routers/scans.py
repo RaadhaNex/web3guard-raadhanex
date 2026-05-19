@@ -24,6 +24,7 @@ from app.services.upgrade_safety import upgrade_safety_status, build_upgrade_saf
 from app.services.advanced_website_scan import advanced_website_status, run_advanced_website_scan
 from app.services.api_deep_readiness import api_deep_status, run_api_deep_readiness_scan
 from app.services.wallet_risk_integrations import wallet_risk_api_status, run_wallet_risk_api_scan
+from app.services.public_beta_readiness import public_beta_readiness_status
 
 router = APIRouter(prefix="/scan", tags=["scans"])
 SAMPLE_CONTRACT_DIR = Path(__file__).resolve().parents[1] / "data" / "sample_contracts"
@@ -421,9 +422,13 @@ async def scan_github_repo_endpoint(payload: GitHubRepoScanRequest, request: Req
 
 @router.get("/feature-status")
 def feature_status_matrix():
+    beta = public_beta_readiness_status()
     return {
         "rule": "Real-only feature status. Live features must have real backend logic; manual features require human/admin verification; future inputs must not receive fake scores.",
         "features": REALNESS_MATRIX,
+        "public_beta_readiness": beta["readiness"],
+        "payments_deferred": True,
+        "blocked_claims": beta["blocked_claims"],
     }
 
 

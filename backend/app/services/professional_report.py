@@ -102,6 +102,29 @@ def _html_list(items: list[Any]) -> str:
     return "<ul>" + "".join(f"<li>{_safe_text(item)}</li>" for item in items) + "</ul>"
 
 
+
+
+def _score_split_rows(report: dict[str, Any]) -> str:
+    split = report.get("score_split") if isinstance(report.get("score_split"), dict) else {}
+    keys = ["website_surface_score", "contract_rule_score", "launch_evidence_score", "overall_launch_confidence"]
+    rows: list[str] = []
+    for key in keys:
+        item = split.get(key) if isinstance(split, dict) else None
+        if not isinstance(item, dict):
+            continue
+        score = item.get("score")
+        rows.append(
+            "<tr>"
+            f"<td>{_safe_text(item.get('label', key))}</td>"
+            f"<td>{_safe_text('Not assessed' if score is None else str(score))}</td>"
+            f"<td>{_safe_text(item.get('status'))}</td>"
+            f"<td>{_safe_text(item.get('source'))}</td>"
+            "</tr>"
+        )
+    if not rows:
+        rows.append("<tr><td colspan='4'>Score split was not provided by this report payload.</td></tr>")
+    return "".join(rows)
+
 def _module_matrix_rows(report: dict[str, Any]) -> list[str]:
     rows: list[str] = []
     for row in report.get("module_matrix", []) or []:
@@ -291,6 +314,15 @@ def build_pdf_bytes(report: dict[str, Any]) -> bytes:
     story.append(_para(f"{_score_title(report)}: {_score_value(report)} · Risk: {_risk_label(report)} · Coverage: {_coverage_text(report)}", h2))
     story.append(_para(REAL_ONLY_NOTE, normal))
     story.append(Spacer(1, 0.12 * inch))
+
+    story.append(_para("Score Split", h2))
+    split = report.get("score_split") if isinstance(report.get("score_split"), dict) else {}
+    for key in ["website_surface_score", "contract_rule_score", "launch_evidence_score", "overall_launch_confidence"]:
+        item = split.get(key) if isinstance(split, dict) else None
+        if isinstance(item, dict):
+            score = "Not assessed" if item.get("score") is None else str(item.get("score"))
+            story.append(_para(f"{item.get('label', key)}: {score} · {item.get('status', '')}", normal))
+            story.append(_para(str(item.get("source", "")), small))
 
     story.append(_para("Executive Summary", h2))
     story.append(_para(str(report.get("executive_summary", "No executive summary provided.")), normal))

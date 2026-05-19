@@ -187,6 +187,52 @@ def _github_not_assessed() -> dict:
     )
 
 
+def _score_split(module_cards: list[dict], combined: dict) -> dict:
+    by_module = {card.get("module"): card for card in module_cards}
+
+    def module_score(module: str, label: str, source: str) -> dict:
+        card = by_module.get(module) or {}
+        assessed = bool(card.get("assessed"))
+        score = card.get("score") if assessed else None
+        return {
+            "label": label,
+            "score": score,
+            "status": card.get("status") or "Not assessed",
+            "risk_label": card.get("risk_label") or "Not assessed",
+            "source": source if assessed else "Not Assessed — required evidence was not provided.",
+        }
+
+    total = len(module_cards) or 1
+    assessed_count = sum(1 for card in module_cards if card.get("assessed"))
+    required_missing = sum(len(card.get("required_input") or []) for card in module_cards)
+    evidence_score = max(0, min(100, round((assessed_count / total) * 100 - min(required_missing * 2, 24))))
+    overall = (combined.get("combined") or {}).get("overall_score")
+    available = (combined.get("combined") or {}).get("available_score")
+    coverage = combined.get("coverage") or {}
+    full_coverage = bool(coverage.get("total_modules") and coverage.get("assessed_count") == coverage.get("total_modules"))
+
+    return {
+        "website_surface_score": module_score("website", "Website Surface Score", "Passive public URL evidence: HTTP/HTTPS, headers, HTML hints, robots/sitemap/policy signals."),
+        "contract_rule_score": module_score("contract", "Contract Rule Score", "Pasted Solidity or verified explorer source analyzed by local rules. External tools remain separate."),
+        "launch_evidence_score": {
+            "label": "Launch Evidence Score",
+            "score": evidence_score,
+            "status": "Evidence complete" if required_missing == 0 else "Evidence needed",
+            "risk_label": "Evidence gap" if required_missing else "Evidence present",
+            "source": f"{assessed_count}/{total} modules assessed; {required_missing} required evidence item(s) still listed.",
+        },
+        "overall_launch_confidence": {
+            "label": "Overall Launch Confidence",
+            "score": overall if full_coverage else available,
+            "status": "Full assessed confidence" if full_coverage else "Partial assessed confidence",
+            "risk_label": (combined.get("combined") or {}).get("risk_label") or "Not assessed",
+            "source": "Uses all weighted modules only when all are assessed. Otherwise uses assessed-module available score and marks confidence as partial.",
+        },
+        "no_full_audit_score": not full_coverage,
+        "note": "These are launch-readiness scores, not a certified audit score, penetration-test score, or guarantee of security.",
+    }
+
+
 async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
     started = datetime.now(timezone.utc)
     safe_website_url = validate_public_http_url(payload.website_url)
@@ -353,6 +399,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
     assessed_modules = [card["module"] for card in module_cards if card["assessed"]]
     not_assessed_modules = [card["module"] for card in module_cards if not card["assessed"]]
     live_count = sum(1 for card in module_cards if str(card["status"]).lower().startswith("live"))
+    score_split = _score_split(module_cards, combined)
 
     return {
         "report_id": f"W3G-URL-LAUNCH-{_hash(safe_website_url)[:12]}",
@@ -367,6 +414,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "available_score": combined.get("combined", {}).get("available_score"),
         "overall_score": combined.get("combined", {}).get("overall_score"),
         "risk_label": combined.get("combined", {}).get("risk_label"),
+        "score_split": score_split,
         "coverage": combined.get("coverage"),
         "assessed_modules": assessed_modules,
         "not_assessed_modules": not_assessed_modules,
