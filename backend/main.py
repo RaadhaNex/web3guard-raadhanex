@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.middleware import SecurityHeadersMiddleware
-from app.routers import admin, admin_super, ai, billing_final, bug_bounty, cicd, compliance, continuous_monitoring, crosschain, database, developer_api, engine_depth, eon, india_launch, provider_readiness, public_trust_page, report_verification, dashboard_workflow, production_deployment_qa, final_qa, health, leads, launch, learning, monitoring, notifications, ownership, packages, payments, public_beta, public_registry, qa, reports, scans, securescore, security_copilot, security_hardening, security_tests, sentinel, threat_intel, trust, trust_readiness, workspace
+from app.routers import admin, admin_super, ai, billing_final, bug_bounty, cicd, community_review, compliance, continuous_monitoring, crosschain, database, developer_api, engine_depth, eon, india_launch, provider_readiness, public_trust_page, report_verification, dashboard_workflow, production_deployment_qa, final_qa, health, leads, launch, learning, monitoring, notifications, ownership, packages, payments, public_beta, public_registry, qa, reports, scans, securescore, security_copilot, security_hardening, security_tests, sentinel, threat_intel, trust, trust_readiness, workspace
 
 app = FastAPI(
     title=settings.app_name,
@@ -43,6 +43,7 @@ app.include_router(trust_readiness.router)
 app.include_router(ownership.router)
 app.include_router(monitoring.router)
 app.include_router(continuous_monitoring.router)
+app.include_router(community_review.router)
 app.include_router(threat_intel.router)
 app.include_router(sentinel.router)
 app.include_router(bug_bounty.router)
