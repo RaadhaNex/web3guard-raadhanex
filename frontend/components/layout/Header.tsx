@@ -9,10 +9,10 @@ import { brand } from "@/lib/constants";
 const navLinks = [
   { href: "/scanner/unified-url", label: "Scanner" },
   { href: "/methodology", label: "Methodology" },
-  { href: "/limitations", label: "Limitations" },
-  { href: "/sample-reports", label: "Sample Reports" },
+  { href: "/sample-reports", label: "Reports" },
+  { href: "/feature-status", label: "Status" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/free-tools", label: "Free Tools" },
+  { href: "/free-tools", label: "Tools" },
   { href: "/dashboard", label: "Dashboard" },
 ];
 
@@ -51,8 +51,12 @@ export function Header() {
         </nav>
 
         <div className="hidden shrink-0 items-center gap-2 sm:flex">
+          <div className="nav-pill hidden xl:inline-flex">
+            <span className="pulse-dot mr-2 h-2 w-2 rounded-full bg-cyan" />
+            <span className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-300">Quantum UI beta</span>
+          </div>
           <Link href="/scanner/unified-url" className="btn-primary !px-4 !py-2 text-xs">
-            Free Scan
+            Start Scan
           </Link>
           <AuthSessionButton />
         </div>
@@ -74,7 +78,12 @@ export function Header() {
 
       {open ? (
         <div className="mobile-panel lg:hidden">
-          <nav className="mx-auto grid max-w-7xl gap-2 px-4 py-4 sm:grid-cols-2 sm:px-6" aria-label="Mobile navigation">
+          <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
+            <div className="mb-3 rounded-2xl border border-cyan/15 bg-cyan/[0.05] px-4 py-3 text-sm text-slate-300">
+              Clean navigation, fewer distractions, faster access to scan, reports, and dashboard.
+            </div>
+          </div>
+          <nav className="mx-auto grid max-w-7xl gap-2 px-4 pb-4 sm:grid-cols-2 sm:px-6" aria-label="Mobile navigation">
             {navLinks.map((item) => (
               <Link
                 key={item.href}
@@ -90,7 +99,7 @@ export function Header() {
               </Link>
             ))}
             <Link href="/scanner/unified-url" onClick={() => setOpen(false)} className="btn-primary mt-2 sm:col-span-2">
-              Start Free Scan →
+              Open scanner →
             </Link>
           </nav>
         </div>

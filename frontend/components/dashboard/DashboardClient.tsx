@@ -108,20 +108,27 @@ export function DashboardClient() {
       return;
     }
 
+    const cleanProjectName = projectName.trim();
+    if (!cleanProjectName) {
+      setError("Please enter a project name.");
+      return;
+    }
+
     try {
       await apiPost(
         "/projects",
         {
           user_id: authState.userId,
-          name: projectName,
+          name: cleanProjectName,
           website_url: null,
           chain: null,
           project_type: "Launch readiness",
         },
-        { headers: authHeaders },
+        { headers: authHeaders }
       );
 
       setMessage("Project saved as a real authenticated account record.");
+      setProjectName("");
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save project");
@@ -145,9 +152,9 @@ export function DashboardClient() {
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan">Real user dashboard</p>
-          <h1 className="mt-2 text-4xl font-black">User dashboard + scan history</h1>
-          <p className="mt-3 max-w-3xl text-slate-600">
-            This dashboard shows authenticated Supabase user records only. Missing data is shown as empty or not assessed.
+          <h1 className="mt-2 text-4xl font-black">Dashboard + scan history</h1>
+          <p className="mt-3 max-w-3xl text-slate-400">
+            A cleaner command-center view for authenticated Supabase users only. Missing integrations remain clearly visible instead of hidden.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -168,17 +175,17 @@ export function DashboardClient() {
         <Stat label="Auth mode" value={overview?.auth_mode || (authState ? "authenticated" : loading ? "loading" : "not signed in")} />
       </section>
 
-      {loading && <p className="mt-8 text-slate-500">Loading dashboard...</p>}
+      {loading ? <p className="mt-8 text-slate-500">Loading dashboard...</p> : null}
 
       {error ? (
-        <div className="mt-8 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950">
+        <div className="mt-8 rounded-3xl border border-amber-400/20 bg-amber-500/10 p-5 text-amber-100">
           <p className="font-black">Dashboard needs a real active session.</p>
-          <p className="mt-2 text-sm">{error}</p>
+          <p className="mt-2 text-sm leading-6">{error}</p>
           <Link href="/auth/login" className="btn-primary mt-4 inline-flex">Login</Link>
         </div>
       ) : null}
 
-      {message && <p className="mt-8 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900">{message}</p>}
+      {message ? <p className="mt-8 rounded-3xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-emerald-100">{message}</p> : null}
 
       {overview && !error ? (
         <>
@@ -186,32 +193,58 @@ export function DashboardClient() {
             <Stat label="Projects" value={totals.projects ?? 0} />
             <Stat label="Saved scans" value={totals.saved_scans ?? 0} />
             <Stat label="Saved reports" value={totals.saved_reports ?? 0} />
-            <Stat label="Critical/high" value={totals.critical_high_findings ?? 0} />
+            <Stat label="Critical / high" value={totals.critical_high_findings ?? 0} />
             <Stat label="Average score" value={totals.average_score ? `${totals.average_score}/100` : "Not scored"} />
           </section>
 
           <section className="mt-8 grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
-            <div className="card p-6">
+            <div className="glass-tile p-6">
               <h2 className="text-2xl font-black">Create project</h2>
-              <p className="mt-2 text-sm text-slate-600">Save a real project record before running scans. Scanner pages can save outputs to dashboard using these same APIs.</p>
-              <label className="mt-5 block text-sm font-bold text-slate-700">Project name</label>
+              <p className="mt-2 text-sm leading-6 text-slate-400">
+                Save a real project record first, then attach scans and reports later from the same authenticated workspace.
+              </p>
+              <label className="mt-5 block text-sm font-bold text-slate-300">Project name</label>
               <input className="input mt-2" value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="Project name" />
-              <button className="btn-secondary mt-5" onClick={createProject} type="button">Save project only</button>
+              <button className="btn-primary mt-5" onClick={createProject} type="button">Save project</button>
             </div>
 
-            <div className="card p-6">
-              <h2 className="text-2xl font-black">Real-only note</h2>
-              <p className="mt-3 text-slate-600">{overview.real_only_note}</p>
-              <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                Subscription/payment records are real records only. SecureScore and finding workflows are real saved-scan records only.
+            <div className="glass-tile p-6">
+              <h2 className="text-2xl font-black">Real-only policy</h2>
+              <p className="mt-3 text-sm leading-7 text-slate-300">{overview.real_only_note}</p>
+              <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-slate-400">
+                Subscription, payments, scan history, report saves, and SecureScore-related data are displayed only from real stored records.
               </div>
             </div>
           </section>
 
           <section className="mt-8 grid gap-6 lg:grid-cols-3">
-            <RecordList title="Projects" empty="No saved projects yet." rows={overview.projects.map((project) => ({ href: `/dashboard/projects/${project.id}`, title: project.name, meta: `${project.chain || "Chain not set"} • ${project.website_url || "No URL"}` }))} />
-            <RecordList title="Recent scans" empty="No scan history yet." rows={overview.recent_scans.map((scan) => ({ href: `/dashboard/scans/${scan.id}`, title: `${scan.module} • ${scan.score ?? "—"}`, meta: `${scan.risk_label || "No risk label"} • findings ${scan.findings_count}` }))} />
-            <RecordList title="Saved reports" empty="No saved reports yet." rows={overview.recent_reports.map((report) => ({ href: `/dashboard/reports/${report.id}`, title: report.title, meta: `${report.report_id} • ${report.risk_label || "No risk label"}` }))} />
+            <RecordList
+              title="Projects"
+              empty="No saved projects yet."
+              rows={overview.projects.map((project) => ({
+                href: `/dashboard/projects/${project.id}`,
+                title: project.name,
+                meta: `${project.chain || "Chain not set"} • ${project.website_url || "No URL"}`,
+              }))}
+            />
+            <RecordList
+              title="Recent scans"
+              empty="No scan history yet."
+              rows={overview.recent_scans.map((scan) => ({
+                href: `/dashboard/scans/${scan.id}`,
+                title: `${scan.module} • ${scan.score ?? "—"}`,
+                meta: `${scan.risk_label || "No risk label"} • findings ${scan.findings_count}`,
+              }))}
+            />
+            <RecordList
+              title="Saved reports"
+              empty="No saved reports yet."
+              rows={overview.recent_reports.map((report) => ({
+                href: `/dashboard/reports/${report.id}`,
+                title: report.title,
+                meta: `${report.report_id} • ${report.risk_label || "No risk label"}`,
+              }))}
+            />
           </section>
         </>
       ) : null}
@@ -221,25 +254,25 @@ export function DashboardClient() {
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="card p-4">
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-2 truncate text-lg font-black text-slate-950">{value}</p>
+    <div className="stat-slab p-4">
+      <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">{label}</p>
+      <p className="mt-2 truncate text-lg font-black text-white">{value}</p>
     </div>
   );
 }
 
 function RecordList({ title, empty, rows }: { title: string; empty: string; rows: Array<{ href: string; title: string; meta: string }> }) {
   return (
-    <div className="card p-6">
+    <div className="glass-tile p-6">
       <h3 className="text-xl font-black">{title}</h3>
       <div className="mt-4 grid gap-3">
         {rows.length === 0 ? (
           <p className="text-sm text-slate-500">{empty}</p>
         ) : (
           rows.map((row) => (
-            <Link key={row.href} href={row.href} className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-cyan hover:bg-cyan/10">
-              <p className="font-bold text-slate-950">{row.title}</p>
-              <p className="mt-1 text-xs text-slate-500">{row.meta}</p>
+            <Link key={row.href} href={row.href} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-cyan/30 hover:bg-cyan/[0.05]">
+              <p className="font-bold text-white">{row.title}</p>
+              <p className="mt-1 text-xs text-slate-400">{row.meta}</p>
             </Link>
           ))
         )}

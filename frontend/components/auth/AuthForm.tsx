@@ -36,16 +36,14 @@ function PasswordRule({ passed, label }: { passed: boolean; label: string }) {
       <span
         className={
           passed
-            ? "flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15 text-xs font-black text-emerald-600"
-            : "flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 text-xs font-black text-slate-400"
+            ? "flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15 text-xs font-black text-emerald-300"
+            : "flex h-5 w-5 items-center justify-center rounded-full border border-white/10 text-xs font-black text-slate-500"
         }
         aria-hidden="true"
       >
         {passed ? "✓" : "•"}
       </span>
-      <span className={passed ? "text-emerald-700" : "text-slate-600"}>
-        {label}
-      </span>
+      <span className={passed ? "text-emerald-200" : "text-slate-400"}>{label}</span>
     </li>
   );
 }
@@ -107,9 +105,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
     }
 
     if (isSignup && !passwordStrong) {
-      setError(
-        "Please create a stronger password with uppercase, lowercase, number, special character, and at least 8 characters."
-      );
+      setError("Use a stronger password with uppercase, lowercase, number, special character, and minimum 8 characters.");
       return;
     }
 
@@ -123,16 +119,12 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
     try {
       const client = getSupabaseClient();
       if (!client) {
-        setError(
-          "Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel, then redeploy."
-        );
+        setError("Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, then redeploy.");
         return;
       }
 
       if (isSignup) {
-        const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(
-          redirectTarget()
-        )}`;
+        const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTarget())}`;
 
         const { data, error: signUpError } = await client.auth.signUp({
           email: cleanEmail,
@@ -149,15 +141,13 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
 
         if (data.user?.id && data.session) {
           await syncProfile(data.user.id);
-          setStatus("Account created. Redirecting to your dashboard...");
+          setStatus("Account created. Opening your dashboard...");
           router.push(redirectTarget());
           router.refresh();
           return;
         }
 
-        setStatus(
-          "Account created. Please check your email and confirm your account before login."
-        );
+        setStatus("Account created. Please verify your email before login.");
         return;
       }
 
@@ -169,7 +159,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       if (loginError) throw loginError;
       if (data.user?.id) await syncProfile(data.user.id);
 
-      setStatus("Login successful. Redirecting to your dashboard...");
+      setStatus("Login successful. Opening dashboard...");
       router.push(redirectTarget());
       router.refresh();
     } catch (err) {
@@ -185,117 +175,125 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
     (isSignup ? !fullName.trim() || !passwordStrong : !password);
 
   return (
-    <div className="card p-6 sm:p-8">
-      <div className="mb-6">
-        <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan">
-          Secure account access
-        </p>
-        <h1 className="mt-2 text-3xl font-black">
-          {isSignup ? "Create your account" : "Login to Web3Guard"}
-        </h1>
-        <p className="mt-2 text-sm leading-6 text-slate-500">
-          {isSignup
-            ? "Use a real email to save scan history, reports, and billing records."
-            : "Access your protected dashboard, reports, and saved scan history."}
-        </p>
-      </div>
+    <div className="auth-shell p-6 sm:p-8">
+      <div className="relative z-[1]">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan">Secure account access</p>
+            <h1 className="mt-2 text-3xl font-black">{isSignup ? "Create your Web3Guard account" : "Login to Web3Guard"}</h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-400">
+              {isSignup
+                ? "Create a real account to save scan history, reports, and future billing records."
+                : "Access your protected dashboard, saved reports, and scan history from the command center."}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs leading-6 text-slate-400">
+            <p className="font-black uppercase tracking-[0.18em] text-cyan">Security posture</p>
+            <p>No seed phrases · No fake sessions · Real Supabase auth only</p>
+          </div>
+        </div>
 
-      <div className="grid gap-4">
-        {isSignup && (
-          <label className="grid gap-2 text-sm font-semibold text-slate-700">
-            Full name
-            <input
-              className="input"
-              name="web3guard_full_name"
-              autoComplete="off"
-              value={fullName}
-              onChange={(event) => setFullName(event.target.value)}
-              placeholder="Full name"
-            />
-          </label>
-        )}
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="grid gap-4">
+            {isSignup && (
+              <label className="grid gap-2 text-sm font-semibold text-slate-300">
+                Full name
+                <input
+                  className="input"
+                  name="web3guard_full_name"
+                  autoComplete="off"
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                  placeholder="Full name"
+                />
+              </label>
+            )}
 
-        <label className="grid gap-2 text-sm font-semibold text-slate-700">
-          Email
-          <input
-            className="input"
-            name="email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="founder@example.com"
-          />
-        </label>
+            <label className="grid gap-2 text-sm font-semibold text-slate-300">
+              Email
+              <input
+                className="input"
+                name="web3guard_email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@example.com"
+              />
+            </label>
 
-        <label className="grid gap-2 text-sm font-semibold text-slate-700">
-          Password
-          <div className="relative">
-            <input
-              className="input pr-24"
-              name={isSignup ? "new-password" : "current-password"}
-              type={showPassword ? "text" : "password"}
-              autoComplete={isSignup ? "new-password" : "current-password"}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder={
-                isSignup
-                  ? "Minimum 8 chars with A-z, 0-9 and special char"
-                  : "Enter your password"
-              }
-            />
-            <button
-              type="button"
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-slate-200 px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100"
-              onClick={() => setShowPassword((value) => !value)}
-            >
-              {showPassword ? "Hide" : "Show"}
+            <label className="grid gap-2 text-sm font-semibold text-slate-300">
+              Password
+              <div className="flex rounded-[14px] border border-white/10 bg-[rgba(6,15,30,0.7)] focus-within:border-cyan/30 focus-within:shadow-[0_0_0_3px_rgba(6,182,212,.10)]">
+                <input
+                  className="w-full bg-transparent px-4 py-3 text-sm text-white outline-none"
+                  type={showPassword ? "text" : "password"}
+                  name="web3guard_password"
+                  autoComplete={isSignup ? "new-password" : "current-password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder={isSignup ? "Create password" : "Enter password"}
+                />
+                <button
+                  type="button"
+                  className="px-4 text-xs font-bold uppercase tracking-[0.15em] text-slate-400 hover:text-white"
+                  onClick={() => setShowPassword((value) => !value)}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+            </label>
+
+            {error ? <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-100">{error}</div> : null}
+            {status ? <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">{status}</div> : null}
+
+            <button className="btn-primary w-full" disabled={disabled} onClick={submit} type="button">
+              {loading ? "Please wait..." : isSignup ? "Create account" : "Login"}
             </button>
-          </div>
-        </label>
 
-        {isSignup && (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
-            <p className="mb-3 font-bold text-slate-900">Password must include:</p>
-            <ul className="grid gap-2 sm:grid-cols-2">
-              <PasswordRule passed={passwordChecks.length} label="At least 8 characters" />
-              <PasswordRule passed={passwordChecks.uppercase} label="One uppercase letter" />
-              <PasswordRule passed={passwordChecks.lowercase} label="One lowercase letter" />
-              <PasswordRule passed={passwordChecks.number} label="One number" />
-              <PasswordRule passed={passwordChecks.special} label="One special character" />
-            </ul>
+            <p className="text-sm text-slate-400">
+              {isSignup ? "Already have an account?" : "New to Web3Guard?"}{" "}
+              <Link href={isSignup ? "/auth/login" : "/auth/signup"} className="font-bold text-cyan hover:text-cyan-200">
+                {isSignup ? "Login" : "Create account"}
+              </Link>
+            </p>
           </div>
-        )}
 
-        <button className="btn-primary" disabled={disabled} onClick={submit}>
-          {loading
-            ? "Please wait..."
-            : isSignup
-              ? "Create account"
-              : "Login"}
-        </button>
+          <div className="glass-tile p-5">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan">Access preview</p>
+            <div className="mt-4 space-y-3 text-sm text-slate-300">
+              <div className="command-line">
+                <span className="kbd-chip">01</span>
+                <span>Dashboard + project workspace</span>
+              </div>
+              <div className="command-line">
+                <span className="kbd-chip">02</span>
+                <span>Saved reports + scan history</span>
+              </div>
+              <div className="command-line">
+                <span className="kbd-chip">03</span>
+                <span>Future subscriptions and billing records</span>
+              </div>
+            </div>
+
+            {isSignup ? (
+              <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
+                <p className="text-sm font-bold text-white">Password strength</p>
+                <ul className="mt-3 grid gap-2 text-sm">
+                  <PasswordRule passed={passwordChecks.length} label="At least 8 characters" />
+                  <PasswordRule passed={passwordChecks.uppercase} label="One uppercase letter" />
+                  <PasswordRule passed={passwordChecks.lowercase} label="One lowercase letter" />
+                  <PasswordRule passed={passwordChecks.number} label="One number" />
+                  <PasswordRule passed={passwordChecks.special} label="One special character" />
+                </ul>
+              </div>
+            ) : (
+              <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-slate-400">
+                Use the same email you used during signup. If email confirmation is enabled in Supabase, verify first and then login.
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-
-      {status && (
-        <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-700">
-          {status}
-        </div>
-      )}
-      {error && (
-        <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-400/10 p-4 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
-      <p className="mt-5 text-sm text-slate-500">
-        {isSignup ? "Already have an account? " : "Need an account? "}
-        <Link
-          className="font-bold text-cyan hover:text-slate-900"
-          href={isSignup ? "/auth/login" : "/auth/signup"}
-        >
-          {isSignup ? "Login" : "Create account"}
-        </Link>
-      </p>
     </div>
   );
 }

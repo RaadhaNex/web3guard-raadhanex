@@ -8,11 +8,9 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-slate-50 px-6 py-10 text-slate-950">
-          <div className="mx-auto max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-            <p className="text-sm font-semibold text-slate-700">
-              Loading secure login...
-            </p>
+        <main className="min-h-screen bg-ink px-4 py-10 text-white sm:px-6 lg:px-8">
+          <div className="auth-shell mx-auto max-w-5xl p-8">
+            <p className="text-sm font-semibold text-slate-300">Loading secure login...</p>
           </div>
         </main>
       }

@@ -9,19 +9,20 @@ import { TrustStrip } from "@/components/sections/TrustStrip";
 
 function StatsBar() {
   const stats = [
-    { value: "53", label: "Rules" },
-    { value: "6+", label: "Surfaces" },
-    { value: "₹0", label: "Free Beta" },
-    { value: "Hindi", label: "Support" },
+    { value: "53", label: "Rule checks", note: "launch-risk signals" },
+    { value: "6+", label: "Core surfaces", note: "website to admin OpSec" },
+    { value: "₹0", label: "Public beta", note: "free founder access" },
+    { value: "24/7", label: "Command view", note: "always ready" },
   ];
 
   return (
     <section className="border-y border-cyan/[0.08] bg-cyan/[0.02]">
-      <div className="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-y divide-cyan/[0.06] px-4 sm:px-6 md:grid-cols-4 md:divide-y-0 lg:px-8">
-        {stats.map(({ value, label }) => (
-          <div key={label} className="px-4 py-6 text-center">
+      <div className="mx-auto grid max-w-7xl gap-3 px-4 py-6 sm:px-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
+        {stats.map(({ value, label, note }) => (
+          <div key={label} className="stat-slab px-5 py-5 text-center">
             <p className="text-3xl font-black tracking-tight text-white">{value}</p>
-            <p className="mt-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+            <p className="mt-1 text-xs font-black uppercase tracking-[0.2em] text-slate-400">{label}</p>
+            <p className="mt-2 text-xs text-slate-500">{note}</p>
           </div>
         ))}
       </div>
@@ -31,26 +32,48 @@ function StatsBar() {
 
 function HowItWorks() {
   const steps = [
-    { n: "01", title: "Scan", icon: "🔍", text: "Paste an authorized URL, Solidity code, public GitHub repo, API URL, or contract address." },
-    { n: "02", title: "Review", icon: "📊", text: "Get severity breakdown, evidence gaps, Not Assessed modules, and split launch-confidence scoring." },
-    { n: "03", title: "Fix", icon: "🛠", text: "Use fix hints, checklists, and pre-audit pack guidance before manual audit or public launch." },
+    {
+      n: "01",
+      title: "Collect",
+      icon: "◉",
+      text: "Paste only what you own or are authorized to review: URL, Solidity source, public repo, API base, or launch evidence.",
+    },
+    {
+      n: "02",
+      title: "Scan",
+      icon: "◎",
+      text: "The platform checks live passive signals, rule-engine findings, evidence completeness, and cleanly marks missing modules as Not Assessed.",
+    },
+    {
+      n: "03",
+      title: "Ship",
+      icon: "◇",
+      text: "Export a polished pre-audit package, share priorities with your team, and close obvious launch blockers before public release.",
+    },
   ];
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+    <section className="mx-auto max-w-7xl px-4 py-18 sm:px-6 lg:px-8">
       <div className="mb-12 text-center">
-        <p className="section-label justify-center">How it works</p>
-        <h2 className="mt-3 text-3xl font-black sm:text-4xl">Three steps from uncertainty to launch evidence.</h2>
+        <p className="section-label justify-center">Flight path</p>
+        <h2 className="mt-3 text-3xl font-black sm:text-4xl">A cleaner path from raw inputs to launch confidence.</h2>
+        <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-400">
+          The new UI feels more futuristic, but the logic stays strict: only real evidence goes into the result.
+        </p>
       </div>
 
       <div className="relative grid gap-4 md:grid-cols-3">
-        <div className="pointer-events-none absolute left-[16%] right-[16%] top-12 hidden h-px bg-gradient-to-r from-cyan via-purple-400 to-cyan md:block" />
+        <div className="pointer-events-none absolute left-[17%] right-[17%] top-12 hidden h-px bg-gradient-to-r from-transparent via-cyan/60 to-transparent md:block" />
         {steps.map(({ n, title, icon, text }) => (
-          <div key={n} className="card relative p-6">
-            <span className="absolute right-5 top-3 text-6xl font-black leading-none text-cyan/[0.10]">{n}</span>
-            <span className="mb-5 grid h-12 w-12 place-items-center rounded-[14px] border border-cyan/20 bg-cyan/[0.07] text-2xl">{icon}</span>
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan">{n} {title}</p>
-            <h3 className="mt-3 text-xl font-black text-white">{title} with boundaries</h3>
+          <div key={n} className="glass-tile p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="grid h-12 w-12 place-items-center rounded-2xl border border-cyan/20 bg-cyan/10 mono text-xl font-black text-cyan shadow-soft">
+                {icon}
+              </div>
+              <span className="mono text-4xl font-black leading-none text-cyan/10">{n}</span>
+            </div>
+            <p className="mt-5 text-xs font-black uppercase tracking-[0.24em] text-cyan">Step {n}</p>
+            <h3 className="mt-2 text-xl font-black text-white">{title}</h3>
             <p className="mt-3 text-sm leading-6 text-slate-400">{text}</p>
           </div>
         ))}
@@ -74,22 +97,27 @@ function ComparisonTable() {
   const columns = ["Coverage", "Web3Guard AI", "Premium audit firms", "Manual consultants", "Contest platforms"];
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+    <section className="mx-auto max-w-7xl px-4 py-18 sm:px-6 lg:px-8">
       <div className="mb-8 text-center">
         <p className="section-label justify-center">Positioning</p>
-        <h2 className="mt-3 text-3xl font-black sm:text-4xl">More preparation coverage. Fraction of the cost.</h2>
+        <h2 className="mt-3 text-3xl font-black sm:text-4xl">Founder-first preparation before expensive review cycles.</h2>
         <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-400">
-          Web3Guard prepares founders before expensive reviews. It does not replace certified auditors, contest judges, or manual security experts.
+          Web3Guard AI helps teams get sharper before formal audits or bounty programs begin. It complements—not replaces—manual experts.
         </p>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-white/[0.07] bg-white/[0.02]">
+      <div className="holo-shell overflow-x-auto rounded-[28px] border border-white/[0.07] bg-white/[0.02] shadow-[0_24px_90px_rgba(6,182,212,.06)]">
         <table className="min-w-[850px] w-full border-collapse text-sm">
-          <thead className="sticky top-0 bg-[#060b18] text-left">
+          <thead className="sticky top-0 bg-[#060b18]/95 backdrop-blur-xl text-left">
             <tr>
               {columns.map((col, index) => (
-                <th key={col} className={`border-b border-white/[0.07] px-4 py-4 text-xs font-black uppercase tracking-[0.18em] ${index === 1 ? "border-t-2 border-t-cyan bg-cyan/[0.05] text-cyan" : "text-slate-500"}`}>
-                  {index === 1 ? <span className="mb-1 block text-[10px] text-cyan/70">YOU ARE HERE</span> : null}
+                <th
+                  key={col}
+                  className={`border-b border-white/[0.07] px-4 py-4 text-xs font-black uppercase tracking-[0.18em] ${
+                    index === 1 ? "bg-cyan/[0.05] text-cyan" : "text-slate-500"
+                  }`}
+                >
+                  {index === 1 ? <span className="mb-1 block text-[10px] text-cyan/70">Best pre-launch fit</span> : null}
                   {col}
                 </th>
               ))}
@@ -99,7 +127,16 @@ function ComparisonTable() {
             {rows.map((row, rowIndex) => (
               <tr key={row[0]} className={rowIndex % 2 ? "bg-white/[0.018]" : ""}>
                 {row.map((cell, index) => (
-                  <td key={`${row[0]}-${index}`} className={`border-b border-white/[0.05] px-4 py-3 ${index === 1 ? "bg-cyan/[0.035] font-bold text-cyan" : index === 0 ? "font-semibold text-slate-200" : "text-slate-400"}`}>
+                  <td
+                    key={`${row[0]}-${index}`}
+                    className={`border-b border-white/[0.05] px-4 py-3 ${
+                      index === 1
+                        ? "bg-cyan/[0.035] font-bold text-cyan"
+                        : index === 0
+                        ? "font-semibold text-slate-200"
+                        : "text-slate-400"
+                    }`}
+                  >
                     {cell === "✓" ? <span className="font-black text-cyan">✓</span> : cell === "✕" ? <span className="font-black text-slate-600">✕</span> : cell}
                   </td>
                 ))}
@@ -114,18 +151,18 @@ function ComparisonTable() {
 
 function SocialProof() {
   const cards = [
-    ["🏆", "Hackathon-ready", "Quick launch evidence for teams that need to move fast."],
-    ["🇮🇳", "India-first", "Hindi-friendly guidance and founder-focused public beta posture."],
-    ["⚖️", "Legally safer", "No certified audit, no exploit automation, no 100% secure claims."],
-    ["🔓", "Transparent", "Provider gaps are visible instead of hidden behind fake scores."],
+    ["3D", "Future-facing UI", "Premium motion, layered surfaces, and a cleaner command-center look across phases."],
+    ["IND", "India-friendly", "Founder-friendly language, practical guidance, and beta positioning that stays easy to understand."],
+    ["SAFE", "Safer wording", "No 100% secure promises, no certified audit claims, and no hidden provider limitations."],
+    ["REAL", "Transparent outputs", "If a tool or provider is missing, the interface says so clearly instead of pretending."],
   ];
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+    <section className="mx-auto max-w-7xl px-4 py-18 sm:px-6 lg:px-8">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map(([icon, title, text]) => (
-          <div key={title} className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 text-center transition hover:-translate-y-0.5 hover:border-cyan/25 hover:bg-white/[0.04]">
-            <div className="text-4xl">{icon}</div>
+        {cards.map(([code, title, text]) => (
+          <div key={title} className="glass-tile p-6 text-center">
+            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-cyan/20 bg-cyan/10 mono text-sm font-black text-cyan">{code}</div>
             <h3 className="mt-4 text-base font-black text-white">{title}</h3>
             <p className="mt-2 text-xs leading-6 text-slate-400">{text}</p>
           </div>
@@ -138,20 +175,20 @@ function SocialProof() {
 function CtaBanner() {
   return (
     <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
-      <div className="relative overflow-hidden rounded-[28px] border border-cyan/20 bg-[linear-gradient(135deg,rgba(6,182,212,0.07),rgba(139,92,246,0.05))] p-8 text-center shadow-[0_24px_90px_rgba(6,182,212,.08)] sm:p-12">
+      <div className="quantum-stage p-8 text-center sm:p-12">
         <div className="pointer-events-none absolute left-[-8rem] top-[-8rem] h-72 w-72 rounded-full bg-cyan/10 blur-3xl" />
         <div className="pointer-events-none absolute bottom-[-10rem] right-[-8rem] h-80 w-80 rounded-full bg-purple-500/10 blur-3xl" />
         <div className="relative">
-          <p className="section-label justify-center">Ready to launch securely?</p>
-          <h2 className="mt-3 text-3xl font-black sm:text-4xl">Scan your project before launch. It takes 5 minutes.</h2>
+          <p className="section-label justify-center">Phase 3 ready</p>
+          <h2 className="mt-3 text-3xl font-black sm:text-4xl">Run the command-center scan before launch day.</h2>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-400">
-            Find obvious launch blockers, missing evidence, and provider gaps before users, investors, or auditors see them.
+            Find blockers early, keep wording safe, and export a professional result your team can actually act on.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link href="/scanner/unified-url" className="btn-primary">Start Free Scan →</Link>
-            <Link href="/sample-reports" className="btn-secondary">View Sample Reports</Link>
+            <Link href="/scanner/unified-url" className="btn-primary">Start free scan →</Link>
+            <Link href="/sample-reports" className="btn-secondary">View sample reports</Link>
           </div>
-          <p className="mt-4 text-xs text-slate-500">· No account needed · Free forever · Hindi support</p>
+          <p className="mt-4 text-xs text-slate-500">No account needed for basic use · Real-only status by design</p>
         </div>
       </div>
     </section>
