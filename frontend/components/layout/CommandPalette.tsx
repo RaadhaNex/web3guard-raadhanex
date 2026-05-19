@@ -9,9 +9,9 @@ const commands = [
     group: "Core flow",
     items: [
       { label: "Scanner", href: "/scanner/unified-url", keywords: "start scan website dapp api contract github wallet admin" },
-      { label: "Results", href: "/results", keywords: "assessed not assessed needs api key tool not installed" },
-      { label: "Pilot Report", href: "/report/pilot", keywords: "export report professional limitations" },
-      { label: "Pricing", href: "/pricing", keywords: "razorpay upi payment plan revenue validation" },
+      { label: "Results", href: "/results", keywords: "assessed not assessed needs api key provider configured tool not installed" },
+      { label: "Report", href: "/report", keywords: "pilot report export professional limitations" },
+      { label: "Pricing", href: "/pricing", keywords: "999 pilot readiness report razorpay upi payment validation" },
       { label: "Docs", href: "/docs", keywords: "methodology limitations responsible use" },
     ],
   },
@@ -19,10 +19,10 @@ const commands = [
     group: "Setup",
     items: [
       { label: "Dashboard", href: "/dashboard", keywords: "projects scans saved reports history" },
-      { label: "Launch Validation", href: "/launch-validation", keywords: "slither render razorpay osv cisa dependency compression" },
-      { label: "Payment Validation", href: "/payment-validation", keywords: "razorpay test live webhook signature" },
-      { label: "Launch Pack", href: "/launch-pack", keywords: "first ten users outreach sample report" },
-      { label: "Advanced Tools", href: "/advanced", keywords: "worker provider sentinel passport metrics agency" },
+      { label: "Saved scans", href: "/dashboard/scans", keywords: "scan history saved results" },
+      { label: "Payment validation", href: "/payment-validation", keywords: "razorpay test live webhook signature" },
+      { label: "First 10 users", href: "/launch-pack", keywords: "first ten users outreach sample report" },
+      { label: "Advanced tools", href: "/advanced", keywords: "worker provider sentinel passport metrics agency" },
     ],
   },
 ];
@@ -116,7 +116,7 @@ export function CommandPalette() {
               ) : (
                 <div className="command-empty">
                   <p className="font-black text-white">No matching page found.</p>
-                  <p className="mt-1 text-sm text-slate-400">Try scanner, results, report, payment, or docs.</p>
+                  <p className="mt-1 text-sm text-slate-400">Try scanner, results, report, pricing, or docs.</p>
                 </div>
               )}
             </div>

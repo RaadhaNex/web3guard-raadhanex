@@ -1,16 +1,19 @@
 import Link from "next/link";
 
-const docs = [
+const coreDocs = [
   ["Methodology", "/methodology", "How readiness scoring, evidence, confidence, and Not Assessed states work."],
-  ["Limitations", "/limitations", "What Web3Guard does not claim and where manual audit is still required."],
-  ["Responsible Use", "/responsible-use", "No private keys, no wallet signing, no exploit automation, no unauthorized scanning."],
-  ["Provider Live", "/provider-live", "Etherscan/GoPlus/GitHub/advisory provider readiness and error handling."],
-  ["Worker Execution", "/worker-execution", "Slither, Semgrep, Foundry, Echidna, and Mythril worker status."],
-  ["Launch Validation", "/launch-validation", "Phase 31 compression, payment readiness, Slither readiness, and dependency intelligence."],
-  ["Pilot Experience", "/pilot-experience", "Phase 35 first-user journey cleanup, clearer setup states, feedback intake, and safe copy checks."],
-  ["MVP Launch Pack", "/launch-pack", "Phase 36 first 10 users tracker, outreach kit, public beta checklist, and safe launch claim guardrails."],
-  ["Launch Final QA", "/launch-final", "Final release gates for Vercel, Render, Supabase, Razorpay, SEO, and legal ops."],
-  ["Trust Metrics", "/trust-metrics", "Public-safe metrics, advisory mapping, disclosures, and no fake discovery claims."],
+  ["Limitations", "/limitations", "What Web3Guard does not claim and where manual security review is still required."],
+  ["Responsible Use", "/responsible-use", "No private keys, no wallet signing, no exploit automation, and no unauthorized scanning."],
+  ["Scope & Refund", "/scope-refund", "How to keep paid pilot-report scope clear for early users."],
+];
+
+const setupDocs = [
+  ["Provider Live", "/provider-live", "Explorer, advisory, GitHub, and external-provider readiness states."],
+  ["Worker Execution", "/worker-execution", "Slither, Semgrep, Foundry, Echidna, Mythril, and worker status boundaries."],
+  ["Payment Validation", "/payment-validation", "Razorpay/UPI test flow, verification, webhook, and audit-log status."],
+  ["Launch Pack", "/launch-pack", "First 10 users checklist, outreach, public beta wording, and safe launch guardrails."],
+  ["Trust Metrics", "/trust-metrics", "Public-safe metrics, disclosures, and no fake discovery claims."],
+  ["Advanced Tools", "/advanced", "All non-core modules moved away from the main navigation."],
 ];
 
 export const metadata = {
@@ -21,21 +24,44 @@ export const metadata = {
 export default function DocsPage() {
   return (
     <main className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-      <section className="quantum-stage p-6 sm:p-8">
+      <section className="clean-panel p-6 sm:p-8">
         <p className="section-label">Docs</p>
-        <h1 className="mt-3 max-w-4xl text-4xl font-black sm:text-5xl">Advanced pages moved out of the main journey.</h1>
+        <h1 className="mt-3 max-w-4xl text-4xl font-black sm:text-5xl">Everything users need to trust the beta.</h1>
         <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400 sm:text-base">
-          Public navigation stays simple. Technical layers remain available here for setup, transparency, and advanced review.
+          Main navigation stays simple. Technical setup, advanced modules, provider status, and limitations stay organized here.
         </p>
       </section>
-      <section className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {docs.map(([title, href, text]) => (
-          <Link key={href} href={href} className="glass-tile block p-5 transition hover:-translate-y-1">
-            <p className="text-lg font-black text-white">{title}</p>
-            <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
-            <p className="mt-4 text-xs font-bold text-cyan">Open →</p>
-          </Link>
-        ))}
+
+      <section className="mt-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="section-label">Core trust docs</p>
+            <h2 className="mt-2 text-2xl font-black text-white">Show these to beta users first.</h2>
+          </div>
+          <Link href="/responsible-use" className="btn-secondary">Responsible use →</Link>
+        </div>
+        <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {coreDocs.map(([title, href, text]) => (
+            <Link key={href} href={href} className="glass-tile block p-5 transition hover:-translate-y-1">
+              <p className="text-lg font-black text-white">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
+              <p className="mt-4 text-xs font-bold text-cyan">Open →</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-12">
+        <p className="section-label">Setup and advanced</p>
+        <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {setupDocs.map(([title, href, text]) => (
+            <Link key={href} href={href} className="glass-tile block p-5 transition hover:-translate-y-1">
+              <p className="text-lg font-black text-white">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
+              <p className="mt-4 text-xs font-bold text-cyan">Open →</p>
+            </Link>
+          ))}
+        </div>
       </section>
     </main>
   );

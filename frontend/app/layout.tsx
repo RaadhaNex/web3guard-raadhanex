@@ -11,14 +11,14 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
 
   title: {
-    default: "KavachWing — Web3 Launch Readiness Scanner | RAADHANEX",
-    template: "%s | KavachWing",
+    default: "Web3Guard AI — Web3 Launch Readiness Scanner | RAADHANEX",
+    template: "%s | Web3Guard AI",
   },
 
   description:
-    "Evidence-first Web3 launch readiness scanner for websites, dApps, APIs, Solidity code, wallet UX, GitHub, and admin OpSec. Public beta. Pre-audit only; not a certified audit.",
+    "India-first evidence-first Web3 founder pre-audit launch readiness scanner for websites, dApps, APIs, Solidity code, wallet UX, GitHub, and admin OpSec. Public beta. Not a certified audit.",
 
-  applicationName: "KavachWing",
+  applicationName: "Web3Guard AI",
   authors: [{ name: "RAADHANEX", url: siteUrl }],
   creator: "RAADHANEX",
   publisher: "RAADHANEX",
@@ -33,8 +33,7 @@ export const metadata: Metadata = {
     "pre-audit review",
     "web3 launch security",
     "web3 security tool india",
-    "bug bounty readiness",
-    "KavachWing",
+    "founder security os",
     "RAADHANEX",
   ],
 
@@ -57,23 +56,23 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_IN",
     url: siteUrl,
-    siteName: "KavachWing",
-    title: "KavachWing — Web3 Launch Readiness Scanner",
+    siteName: "Web3Guard AI",
+    title: "Web3Guard AI — Web3 Launch Readiness Scanner",
     description:
-      "Check launch readiness across websites, dApps, APIs, Solidity code, wallet UX, GitHub, and admin OpSec. Public beta. Pre-audit only; not a certified audit.",
+      "Check Web3 launch readiness across websites, dApps, APIs, Solidity code, wallet UX, GitHub, and admin OpSec. Public beta. Pre-audit only; not a certified audit.",
     images: [
       {
         url: "/brand/kavachwing-hero.png",
         width: 1200,
         height: 630,
-        alt: "KavachWing — Web3 launch readiness scanner by RAADHANEX",
+        alt: "Web3Guard AI — Web3 launch readiness scanner by RAADHANEX",
       },
     ],
   },
 
   twitter: {
     card: "summary_large_image",
-    title: "KavachWing — Web3 Launch Readiness Scanner",
+    title: "Web3Guard AI — Web3 Launch Readiness Scanner",
     description:
       "Evidence-first public beta scanner for Web3 launch readiness. Pre-audit only; not a certified audit.",
     images: ["/brand/kavachwing-hero.png"],

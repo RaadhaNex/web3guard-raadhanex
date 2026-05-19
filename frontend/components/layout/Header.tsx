@@ -10,17 +10,17 @@ import { brand } from "@/lib/constants";
 const primaryLinks = [
   { href: "/scanner/unified-url", label: "Scanner" },
   { href: "/results", label: "Results" },
-  { href: "/report/pilot", label: "Report" },
+  { href: "/report", label: "Report" },
   { href: "/pricing", label: "Pricing" },
   { href: "/docs", label: "Docs" },
 ];
 
 const secondaryLinks = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/fix-plan", label: "Fix plan" },
-  { href: "/launch-validation", label: "Launch validation" },
+  { href: "/dashboard/scans", label: "Saved scans" },
+  { href: "/launch-pack", label: "First 10 users" },
   { href: "/payment-validation", label: "Payment validation" },
-  { href: "/launch-pack", label: "Launch pack" },
+  { href: "/feature-status", label: "Feature status" },
   { href: "/advanced", label: "Advanced tools" },
 ];
 
@@ -77,7 +77,7 @@ export function Header() {
 
         <div className="hidden shrink-0 items-center gap-2 sm:flex">
           <Link href="/scanner/unified-url" className="btn-primary !px-4 !py-2 text-xs">
-            Start Scan
+            Start readiness scan
           </Link>
           <AuthSessionButton />
         </div>
@@ -86,7 +86,7 @@ export function Header() {
           type="button"
           aria-label="Open navigation menu"
           aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => setOpen((value) => !value)}
           className="grid h-10 w-10 place-items-center rounded-[10px] border border-white/[0.08] bg-white/[0.04] text-white lg:hidden"
         >
           <span className="relative h-4 w-5">
@@ -101,7 +101,7 @@ export function Header() {
         <div className="mobile-panel lg:hidden">
           <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
             <div className="mb-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm text-slate-300">
-              Clean launch flow: scan → results → report → pricing. Advanced tools are still available under More.
+              Clean beta flow: scan → results → report → pricing. Advanced setup stays under More.
             </div>
           </div>
           <nav className="mx-auto grid max-w-7xl gap-2 px-4 pb-4 sm:grid-cols-2 sm:px-6" aria-label="Mobile navigation">
@@ -120,7 +120,7 @@ export function Header() {
               </Link>
             ))}
             <Link href="/scanner/unified-url" onClick={() => setOpen(false)} className="btn-primary mt-2 sm:col-span-2">
-              Start scanner →
+              Start readiness scan →
             </Link>
           </nav>
         </div>

@@ -1,26 +1,17 @@
-# Patch File List
+# PATCH FILE LIST
 
-## Backend
-- `backend/app/core/config.py`
-- `backend/main.py`
-- `backend/app/services/sentinel.py`
-- `backend/app/routers/sentinel.py`
-- `backend/tests/test_phase15_sentinel.py`
+Only changed/new files included:
 
-## Frontend
-- `frontend/components/sentinel/SentinelClient.tsx`
-- `frontend/app/sentinel/page.tsx`
-- `frontend/app/sentinel/intelligence/page.tsx`
-- `frontend/app/sentinel/admin/page.tsx`
-- `frontend/app/sentinel/disclosure/page.tsx`
-- `frontend/app/sentinel/project/[id]/page.tsx`
+- `frontend/app/layout.tsx`
+- `frontend/app/globals.css`
+- `frontend/app/page.tsx`
+- `frontend/app/scanner/page.tsx`
+- `frontend/app/results/page.tsx`
+- `frontend/app/report/page.tsx`
+- `frontend/app/pricing/page.tsx`
+- `frontend/app/docs/page.tsx`
+- `frontend/components/layout/Header.tsx`
+- `frontend/components/layout/Footer.tsx`
 - `frontend/components/layout/CommandPalette.tsx`
-- `frontend/components/dashboard/DashboardClient.tsx`
-
-## Docs
-- `SENTINEL_MONITORING_GUIDE.md`
-- `VULNERABILITY_INTELLIGENCE_SOURCES.md`
-- `RESPONSIBLE_DISCLOSURE_WORKFLOW.md`
-- `PHASE_SUMMARY.md`
-- `PATCH_FILE_LIST.md`
-- `PATCH_APPLY.md`
+- `frontend/components/sections/PricingSection.tsx`
+- `frontend/lib/constants.ts`

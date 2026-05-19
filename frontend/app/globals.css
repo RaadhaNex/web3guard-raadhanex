@@ -1703,3 +1703,59 @@ button:disabled, .btn-primary[aria-disabled="true"] { opacity: 0.45; cursor: not
 @media (max-width: 768px) {
   .clean-command-fab { display: none; }
 }
+
+/* Phase 25 clean beta UI polish — mobile readability and overflow safety. */
+.btn-primary,
+.btn-secondary,
+.btn-ghost,
+.nav-link {
+  max-width: 100%;
+}
+
+.clean-panel,
+.glass-tile,
+.card,
+.surface-panel,
+.terminal-card {
+  overflow-wrap: anywhere;
+}
+
+.site-header {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  h1 {
+    letter-spacing: -0.055em;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost {
+    width: 100%;
+    min-height: 2.75rem;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.35;
+  }
+
+  .section-label {
+    letter-spacing: 0.16em;
+  }
+
+  .clean-panel,
+  .glass-tile,
+  .card,
+  .surface-panel {
+    border-radius: 20px;
+  }
+
+  .mobile-panel {
+    max-height: calc(100vh - 56px);
+    overflow-y: auto;
+  }
+
+  .command-fab {
+    display: none;
+  }
+}

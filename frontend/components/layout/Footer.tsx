@@ -3,11 +3,11 @@ import { brand } from "@/lib/constants";
 
 const columns = [
   {
-    title: "Use",
+    title: "Core flow",
     links: [
       { label: "Scanner", href: "/scanner/unified-url" },
       { label: "Results", href: "/results" },
-      { label: "Pilot report", href: "/report/pilot" },
+      { label: "Report", href: "/report" },
       { label: "Pricing", href: "/pricing" },
     ],
   },
@@ -21,11 +21,11 @@ const columns = [
     ],
   },
   {
-    title: "Setup",
+    title: "Beta ops",
     links: [
-      { label: "Dashboard", href: "/dashboard" },
-      { label: "Launch validation", href: "/launch-validation" },
+      { label: "First 10 users", href: "/launch-pack" },
       { label: "Payment validation", href: "/payment-validation" },
+      { label: "Feature status", href: "/feature-status" },
       { label: "Advanced tools", href: "/advanced" },
     ],
   },
@@ -46,11 +46,11 @@ export function Footer() {
             </Link>
 
             <p className="mt-4 max-w-sm text-xs leading-6 text-slate-400">
-              Clean pre-audit launch readiness for Web3 founders. Real evidence only; missing providers and tools stay visible.
+              India-first founder security OS for pre-audit launch readiness. Real evidence only; unavailable tools stay visible instead of being guessed.
             </p>
 
             <div className="mt-5 rounded-2xl border border-amber-300/15 bg-amber-300/[0.055] p-4 text-xs leading-6 text-amber-100/80">
-              <strong className="text-amber-100">Important:</strong> {brand.disclaimer} Not a certified audit. No 100% security guarantee.
+              <strong className="text-amber-100">Important:</strong> {brand.disclaimer} Does not replace professional security review.
             </div>
           </div>
 
@@ -72,7 +72,7 @@ export function Footer() {
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-6">
           <p className="text-xs text-slate-600">© {new Date().getFullYear()} {brand.product} by {brand.company}.</p>
-          <p className="text-xs text-slate-600">Preliminary readiness only. Not a certified audit.</p>
+          <p className="text-xs text-slate-600">Pre-audit readiness only. No security guarantee.</p>
         </div>
       </div>
     </footer>

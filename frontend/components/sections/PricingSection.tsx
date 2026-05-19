@@ -2,49 +2,76 @@ import Link from "next/link";
 
 const plans = [
   {
-    name: "Free",
-    badge: "Live Now",
+    name: "Free Readiness Scan",
+    badge: "Live beta",
     tone: "green",
-    price: "₹0 Free Forever",
-    description: "Instant launch-surface scan, split confidence scores, evidence gaps, and direct export.",
-    cta: "Start Free Scan →",
+    price: "₹0",
+    subprice: "Free public beta",
+    description: "Best first step for founders who want to understand launch-surface gaps before spending on manual review.",
+    cta: "Start free scan →",
     href: "/scanner/unified-url",
     live: true,
-    features: ["Unified URL scanner", "Solidity rule hints", "PDF / HTML / MD / JSON export", "Free tools and checklists", "Not Assessed transparency"],
+    features: [
+      "Unified launch readiness scan",
+      "Assessed vs Not Assessed separation",
+      "Basic fix priorities",
+      "Report export when payload is available",
+      "No private key or wallet signing",
+    ],
   },
   {
-    name: "Builder",
-    badge: "Coming Soon",
-    tone: "amber",
-    price: "₹999/mo",
-    description: "Planned workflow for saved scans, deeper evidence packs, and founder-friendly triage.",
-    cta: "Notify Me",
-    href: "/contact",
-    live: false,
-    features: ["Saved scan upgrades", "Manual review request", "Evidence pack assistant", "Priority fix checklist", "Payment activation after final phase"],
+    name: "Pilot Readiness Report",
+    badge: "Validate before sale",
+    tone: "cyan",
+    price: "₹999",
+    subprice: "Per pilot report",
+    description: "Clear early-user offer for a founder-ready pre-audit report. Access must unlock only after verified Razorpay/UPI payment.",
+    cta: "Validate ₹999 flow",
+    href: "/payment-validation",
+    live: true,
+    features: [
+      "Founder-ready report workflow",
+      "Evidence summary and limitations",
+      "Priority fix checklist",
+      "Payment must be backend-verified",
+      "Not a certified audit",
+    ],
   },
   {
-    name: "Pro",
-    badge: "Coming Soon",
+    name: "Manual / Pro Review",
+    badge: "Scope manually",
     tone: "amber",
     price: "Custom",
-    description: "Planned support for teams preparing audits, contests, bug bounties, and post-launch monitoring.",
-    cta: "Request Scope",
+    subprice: "After scope review",
+    description: "For teams that need deeper manual review, audit preparation, provider setup, or post-scan launch support.",
+    cta: "Request scope",
     href: "/contact",
     live: false,
-    features: ["Pre-audit pack review", "Bug bounty readiness", "CI security workflow", "External-tool setup support", "No certified-audit claim"],
+    features: [
+      "Manual evidence triage",
+      "Pre-audit pack review",
+      "Provider/tool setup support",
+      "Bug bounty readiness planning",
+      "No audit-company claim",
+    ],
   },
 ];
+
+function badgeClass(tone: string) {
+  if (tone === "green") return "badge badge-green";
+  if (tone === "cyan") return "badge badge-cyan";
+  return "badge badge-amber";
+}
 
 export function PricingSection() {
   return (
     <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="section-label">Pricing</p>
-          <h2 className="mt-3 text-3xl font-black sm:text-4xl">Start free. Paid plans stay locked until verified.</h2>
-          <p className="mt-3 max-w-xl text-sm leading-7 text-slate-400">
-            The public beta scan is live now. Paid tiers are roadmap cards only until Razorpay/UPI order, verification, webhook, and audit logs are implemented.
+          <p className="section-label">Plans</p>
+          <h2 className="mt-3 text-3xl font-black sm:text-4xl">Simple pricing for the first 10 beta users.</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">
+            Keep the user journey simple: free scan, review results, then offer the ₹999 pilot readiness report only when payment validation is live. Missing providers and missing tools remain visible.
           </p>
         </div>
         <Link href="/limitations" className="btn-secondary shrink-0">See limitations →</Link>
@@ -52,16 +79,17 @@ export function PricingSection() {
 
       <div className="mt-10 grid gap-4 lg:grid-cols-3">
         {plans.map((plan) => (
-          <div key={plan.name} className={`card flex flex-col p-6 ${plan.live ? "card-glow" : "opacity-75"}`}>
+          <div key={plan.name} className={`card flex flex-col p-6 ${plan.live ? "card-glow" : "opacity-80"}`}>
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-xl font-black text-white">{plan.name}</h3>
-              <span className={plan.tone === "green" ? "badge badge-green" : "badge badge-amber"}>{plan.badge}</span>
+              <span className={badgeClass(plan.tone)}>{plan.badge}</span>
             </div>
 
             <div className="mt-5">
-              <p className={`text-4xl font-black tracking-tight ${plan.live ? "text-cyan" : "text-slate-300 line-through decoration-slate-600/70"}`}>
+              <p className={`text-4xl font-black tracking-tight ${plan.live ? "text-cyan" : "text-slate-300"}`}>
                 {plan.price}
               </p>
+              <p className="mt-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">{plan.subprice}</p>
               <p className="mt-3 text-sm leading-6 text-slate-400">{plan.description}</p>
             </div>
 
@@ -81,9 +109,10 @@ export function PricingSection() {
         ))}
       </div>
 
-      <p className="mt-8 text-center text-xs text-slate-500">
-        Pre-audit only · Not a certified audit · <Link href="/limitations" className="text-cyan hover:underline">See limitations</Link>
-      </p>
+      <div className="mt-8 rounded-2xl border border-amber-300/15 bg-amber-300/[0.055] p-4 text-center text-xs leading-6 text-amber-100/85">
+        Pre-audit readiness only · Not a certified audit · No security guarantee · No fake payment success ·{" "}
+        <Link href="/limitations" className="font-bold text-amber-50 hover:underline">See limitations</Link>
+      </div>
     </section>
   );
 }
