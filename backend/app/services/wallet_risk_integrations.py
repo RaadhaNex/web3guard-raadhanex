@@ -33,6 +33,33 @@ def _finding(idx: int, severity: str, title: str, description: str, recommendati
         paid_review_recommended=severity in {"critical", "high"},
     )
 
+
+
+def _parse_goplus_address(data: dict[str, Any]) -> list[tuple[str, str, str]]:
+    result = data.get("result") or {}
+    if not isinstance(result, dict):
+        return []
+    risks: list[tuple[str, str, str]] = []
+    checks = {
+        "malicious_address": "Address flagged as malicious",
+        "is_malicious": "Address flagged as malicious",
+        "blacklist_doubt": "Address has blacklist doubt signal",
+        "honeypot_related_address": "Address related to honeypot activity",
+        "phishing_activities": "Phishing activity signal",
+        "fake_kyc": "Fake KYC signal",
+        "cybercrime": "Cybercrime signal",
+        "stealing_attack": "Stealing attack signal",
+        "blackmail_activities": "Blackmail activity signal",
+        "darkweb_transactions": "Darkweb transaction signal",
+        "money_laundering": "Money laundering signal",
+        "financial_crime": "Financial crime signal",
+    }
+    for key, title in checks.items():
+        value = str(result.get(key, "0")).lower()
+        if value in {"1", "true", "yes"}:
+            risks.append((key, title, str(result.get(key))))
+    return risks
+
 def _chain_id(chain: str) -> str:
     value = (chain or "ethereum").lower().strip()
     return CHAIN_IDS.get(value, value)
@@ -120,13 +147,32 @@ async def run_wallet_risk_api_scan(chain: str = "ethereum", token_address: str |
                         findings.append(_finding(idx, "low", "Token Security Provider Request Failed", f"Provider returned HTTP {resp.status_code} for token security request.", "Check provider credentials/rate limits and retry. Do not show fake provider result.")); idx += 1
                 except Exception as exc:
                     findings.append(_finding(idx, "low", "Token Security Provider Unavailable", f"Provider request failed: {exc}.", "Keep local wallet-flow checklist available and retry provider scan later.")); idx += 1
+            for label, address_value in (("wallet", wallet), ("spender", spender)):
+                if address_value:
+                    url = f"{settings.goplus_api_base.rstrip('/')}/api/v1/address_security/{address_value}"
+                    try:
+                        resp = await client.get(url, params={"chain_id": chain_id})
+                        metadata["provider_calls"].append({"type": f"address_security_{label}", "status_code": resp.status_code})
+                        if resp.status_code < 400:
+                            data = resp.json()
+                            metadata["raw_provider_data_available"] = True
+                            metadata[f"{label}_address_security_summary"] = {"code": data.get("code"), "message": data.get("message")}
+                            for key, title, evidence in _parse_goplus_address(data):
+                                findings.append(_finding(idx, "high", f"Provider Address Risk Flag: {title}", f"GoPlus address security field {key} returned {evidence} for {label} address.", "Manually verify provider evidence, avoid presenting this address as safe, and add a clear warning before launch.")); idx += 1
+                        else:
+                            findings.append(_finding(idx, "low", "Address Security Provider Request Failed", f"Provider returned HTTP {resp.status_code} for {label} address security request.", "Check provider credentials/rate limits and retry. Do not show fake address risk result.")); idx += 1
+                    except Exception as exc:
+                        findings.append(_finding(idx, "low", "Address Security Provider Unavailable", f"Provider request failed for {label} address: {exc}.", "Use manual address reputation review until provider is available.")); idx += 1
+
             if approval_contract:
                 url = f"{settings.goplus_api_base.rstrip('/')}/api/v1/approval_security/{chain_id}"
                 try:
                     resp = await client.get(url, params={"contract_addresses": approval_contract})
                     metadata["provider_calls"].append({"type": "approval_security", "status_code": resp.status_code})
                     if resp.status_code < 400:
-                        metadata["approval_security_summary"] = {"code": resp.json().get("code"), "message": resp.json().get("message")}
+                        data = resp.json()
+                        metadata["raw_provider_data_available"] = True
+                        metadata["approval_security_summary"] = {"code": data.get("code"), "message": data.get("message")}
                     else:
                         findings.append(_finding(idx, "low", "Approval Security Provider Request Failed", f"Provider returned HTTP {resp.status_code} for approval security request.", "Check provider support for this chain/address and retry.")); idx += 1
                 except Exception as exc:
@@ -156,5 +202,10 @@ def wallet_risk_api_status() -> dict:
         "no_private_key_collection": True,
         "no_wallet_connection": True,
         "no_transaction_signing": True,
+        "provider_endpoints": {
+            "token_security": "/api/v1/token_security/{chain_id}",
+            "address_security": "/api/v1/address_security/{address}",
+            "approval_security": "/api/v1/approval_security/{chain_id}",
+        },
         "provider_note": "External provider data is fetched only when GOPLUS_ENABLED=true. Missing provider never produces fake risk data.",
     }

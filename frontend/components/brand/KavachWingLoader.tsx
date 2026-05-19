@@ -13,14 +13,14 @@ export default function KavachWingLoader({
   showText = true,
 }: KavachWingLoaderProps) {
   return (
-    <div className={fullScreen ? styles.screen : styles.box} aria-label="Web3Guard AI loading">
+    <div className={fullScreen ? styles.screen : styles.box} aria-label="KavachWing loading">
       <div className={styles.orbit}>
         <span className={`${styles.ring} ${styles.ringOne}`} />
         <span className={`${styles.ring} ${styles.ringTwo}`} />
         <span className={`${styles.ring} ${styles.ringThree}`} />
 
         <div className={styles.logo3d}>
-          <Image src="/brand/kavachwing-emblem.webp" alt="Web3Guard AI emblem" width={520} height={520} priority />
+          <Image src="/brand/kavachwing-emblem.png" alt="KavachWing" width={520} height={520} priority />
         </div>
 
         <span className={`${styles.particle} ${styles.particleOne}`} />
@@ -31,9 +31,9 @@ export default function KavachWingLoader({
 
       {showText ? (
         <div className={styles.textBlock}>
-          <h1>Web3Guard AI</h1>
+          <h1>KavachWing</h1>
           <p>by RAADHANEX</p>
-          <small>Pre-audit readiness scanner</small>
+          <small>Scan. Fix. Launch safer.</small>
         </div>
       ) : null}
     </div>
