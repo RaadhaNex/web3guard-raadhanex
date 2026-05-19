@@ -1,82 +1,79 @@
 import Link from "next/link";
 import { brand } from "@/lib/constants";
 
-const cols = [
+const columns = [
   {
     title: "Product",
     links: [
-      { label: "Quick Scan",      href: "/scanner/unified-url" },
-      { label: "All Scanners",    href: "/scanner" },
-      { label: "Pricing",         href: "/pricing" },
-      { label: "Feature Status",  href: "/feature-status" },
-      { label: "Learning",        href: "/learning" },
+      { label: "Free Scanner", href: "/scanner/unified-url" },
+      { label: "All Scanners", href: "/scanner" },
+      { label: "Pricing", href: "/pricing" },
+      { label: "Dashboard", href: "/dashboard" },
     ],
   },
   {
     title: "Resources",
     links: [
-      { label: "Methodology",    href: "/methodology" },
+      { label: "Methodology", href: "/methodology" },
       { label: "Sample Reports", href: "/sample-reports" },
-      { label: "Launch Pack",    href: "/launch-pack" },
-      { label: "Developer API",  href: "/developer-api" },
-      { label: "Threat Intel",   href: "/threat-intel" },
+      { label: "Free Tools", href: "/free-tools" },
+      { label: "Launch Readiness", href: "/launch-readiness" },
     ],
   },
   {
     title: "Company",
     links: [
-      { label: "Trust Policy",   href: "/trust" },
-      { label: "Responsible Use",href: "/responsible-use" },
-      { label: "Scope & Refund", href: "/scope-refund" },
-      { label: "Privacy Policy", href: "/privacy" },
-      { label: "Terms",          href: "/terms" },
+      { label: "Security", href: "/security" },
+      { label: "Privacy", href: "/privacy" },
+      { label: "Terms", href: "/terms" },
+      { label: "Limitations", href: "/limitations" },
     ],
   },
 ];
 
 export function Footer() {
   return (
-    <footer style={{ borderTop: "1px solid rgba(255,255,255,0.07)", background: "rgba(0,0,0,0.2)" }}>
+    <footer className="border-t border-white/[0.07] bg-black/20">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-
-        {/* Top grid */}
-        <div className="grid gap-10 md:grid-cols-[1.6fr_1fr_1fr_1fr]">
-
-          {/* Brand */}
+        <div className="grid gap-10 md:grid-cols-[1.45fr_1fr_1fr_1fr]">
           <div>
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-cyan/25 bg-cyan/10 text-xs font-black text-cyan">W3</span>
-              <span className="text-sm font-black tracking-tight text-white">{brand.product}</span>
-            </div>
+            <Link href="/" className="flex items-center gap-2.5" aria-label="Web3Guard AI home">
+              <span className="brand-mark grid h-9 w-9 place-items-center rounded-[10px] text-[13px] font-black">W3</span>
+              <span>
+                <span className="block text-sm font-black tracking-tight text-white">{brand.product}</span>
+                <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">by {brand.company}</span>
+              </span>
+            </Link>
 
-            <p className="mt-3 max-w-xs text-xs leading-6 text-slate-400">{brand.tagline}</p>
+            <p className="mt-4 max-w-xs text-xs leading-6 text-slate-400">
+              AI-assisted Web3 launch security review before expensive audits.
+            </p>
 
             <div className="mt-4 flex flex-wrap gap-2">
               {[
-                { dot: "#22d3ee", text: "Scanners live" },
-                { dot: "#f59e0b", text: "Manual payments" },
-                { dot: "#64748b", text: "Pre-audit only" },
-              ].map(({ dot, text }) => (
-                <span key={text} className="flex items-center gap-1.5 rounded-full border border-white/[0.07] px-2.5 py-1 text-xs font-medium text-slate-400">
-                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: dot, flexShrink: 0, display: "inline-block" }} />
+                { tone: "bg-emerald-400", text: "Scanners live" },
+                { tone: "bg-amber-300", text: "Payments coming" },
+                { tone: "bg-slate-400", text: "Pre-audit only" },
+              ].map(({ tone, text }) => (
+                <span key={text} className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.07] bg-white/[0.03] px-2.5 py-1 text-[11px] font-semibold text-slate-400">
+                  <span className={`h-1.5 w-1.5 rounded-full ${tone}`} />
                   {text}
                 </span>
               ))}
             </div>
 
-            <p className="mt-4 rounded-xl border border-amber-400/15 bg-amber-400/[0.06] p-3 text-xs leading-5 text-amber-200/80">
-              {brand.disclaimer}
-            </p>
+            <div className="mt-5 rounded-2xl border border-amber-300/15 bg-amber-300/[0.06] p-4 text-xs leading-6 text-amber-100/80">
+              <strong className="text-amber-100">Important:</strong> {brand.disclaimer} It is not a certified audit and does not guarantee 100% security.
+            </div>
           </div>
 
-          {/* Link columns */}
-          {cols.map(({ title, links }) => (
+          {columns.map(({ title, links }) => (
             <div key={title}>
-              <p className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-500">{title}</p>
+              <p className="mb-3 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">{title}</p>
               <ul className="space-y-2.5">
                 {links.map(({ label, href }) => (
                   <li key={href}>
-                    <Link href={href} className="text-xs text-slate-400 transition hover:text-white">
+                    <Link href={href} className="text-xs font-medium text-slate-400 transition hover:text-white">
                       {label}
                     </Link>
                   </li>
@@ -86,14 +83,9 @@ export function Footer() {
           ))}
         </div>
 
-        {/* Bottom */}
         <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-6">
-          <p className="text-xs text-slate-600">
-            © {new Date().getFullYear()} {brand.product} by {brand.company}. All rights reserved.
-          </p>
-          <p className="text-xs text-slate-600">
-            Not a licensed security firm. Preliminary AI-assisted review only.
-          </p>
+          <p className="text-xs text-slate-600">© {new Date().getFullYear()} {brand.product} by {brand.company}.</p>
+          <p className="text-xs text-slate-600">Not a certified audit. Preliminary review only.</p>
         </div>
       </div>
     </footer>

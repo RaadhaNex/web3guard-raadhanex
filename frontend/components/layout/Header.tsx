@@ -1,146 +1,100 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { AuthSessionButton } from "@/components/auth/AuthSessionButton";
 import { brand } from "@/lib/constants";
 
-const visibleNav = [
-  { href: "/scanner/unified-url", label: "URL Scan" },
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/report/professional", label: "Reports" },
-  { href: "/launch-readiness", label: "Beta Ready" },
+const navLinks = [
+  { href: "/scanner/unified-url", label: "Scanner" },
+  { href: "/methodology", label: "Methodology" },
+  { href: "/limitations", label: "Limitations" },
+  { href: "/sample-reports", label: "Sample Reports" },
+  { href: "/pricing", label: "Pricing" },
   { href: "/free-tools", label: "Free Tools" },
-];
-
-const moreGroups = [
-  {
-    title: "Scanner modules",
-    links: [
-      { href: "/scanner/contract", label: "Contract" },
-      { href: "/scanner/website", label: "Website" },
-      { href: "/scanner/website-advanced", label: "Website Advanced" },
-      { href: "/scanner/dapp", label: "dApp" },
-      { href: "/scanner/api", label: "API" },
-      { href: "/scanner/api-deep", label: "API Deep" },
-      { href: "/scanner/wallet", label: "Wallet" },
-      { href: "/scanner/admin-opsec", label: "Admin OpSec" },
-    ],
-  },
-  {
-    title: "Security engines",
-    links: [
-      { href: "/scanner/static-analysis", label: "Static Tools" },
-      { href: "/scanner/deep-analysis", label: "Deep Analysis" },
-      { href: "/scanner/address", label: "Address Scan" },
-      { href: "/scanner/github", label: "GitHub Scan" },
-      { href: "/scanner/permission-map", label: "Permissions" },
-      { href: "/scanner/launch-transparency", label: "Launch Transparency" },
-      { href: "/scanner/contract-diff", label: "Contract Diff" },
-      { href: "/scanner/upgrade-safety", label: "Upgrade Safety" },
-      { href: "/scanner/wallet-risk", label: "Wallet Risk" },
-      { href: "/scanner/cross-chain", label: "Cross-chain" },
-    ],
-  },
-  {
-    title: "Operations",
-    links: [
-      { href: "/ai-fix-assistant", label: "AI Fix" },
-      { href: "/monitoring", label: "Monitoring" },
-      { href: "/threat-intel", label: "Threat Intel" },
-      { href: "/bug-bounty", label: "Bounty" },
-      { href: "/registry", label: "Registry" },
-      { href: "/developer-api", label: "Developer API" },
-      { href: "/cicd", label: "CI/CD" },
-      { href: "/notifications", label: "Notify" },
-      { href: "/compliance", label: "Compliance" },
-      { href: "/security-hardening", label: "Security" },
-    ],
-  },
-  {
-    title: "Trust & resources",
-    links: [
-      { href: "/feature-status", label: "Feature Status" },
-      { href: "/methodology", label: "Methodology" },
-      { href: "/sample-reports", label: "Samples" },
-      { href: "/limitations", label: "Limitations" },
-      { href: "/security", label: "Security" },
-      { href: "/privacy", label: "Privacy" },
-      { href: "/terms", label: "Terms" },
-      { href: "/changelog", label: "Changelog" },
-      { href: "/trust", label: "Trust Policy" },
-      { href: "/learning", label: "Learning" },
-      { href: "/launch-pack", label: "Launch Pack" },
-    ],
-  },
-];
-
-const mobileQuickNav = [
-  { href: "/scanner/unified-url", label: "Scan" },
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/free-tools", label: "Free Tools" },
-  { href: "/report/professional", label: "Reports" },
-  { href: "/launch-readiness", label: "Beta Ready" },
 ];
 
-function MoreMenu({ compact = false }: { compact?: boolean }) {
-  return (
-    <details className="nav-more group relative">
-      <summary className={compact ? "nav-pill cursor-pointer list-none" : "nav-link cursor-pointer list-none"}>
-        More
-        <span aria-hidden="true" className="ml-1 inline-block transition group-open:rotate-180">⌄</span>
-      </summary>
-      <div className="nav-more-panel">
-        {moreGroups.map((group) => (
-          <div key={group.title} className="min-w-0">
-            <p className="nav-more-title">{group.title}</p>
-            <div className="mt-2 grid gap-1">
-              {group.links.map((item) => (
-                <Link key={item.href} href={item.href} className="nav-more-link">
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </details>
-  );
+function isActive(pathname: string, href: string) {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export function Header() {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+
   return (
-    <header className="site-header sticky top-0 z-50 border-b backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
-        <Link href="/" className="flex min-w-0 items-center gap-3" aria-label="Web3Guard AI home">
-          <span className="brand-mark flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border shadow-soft">
-            <img src="/raadhanex-logo.svg" alt="" className="h-full w-full object-cover" />
+    <header className="site-header">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="flex min-w-0 items-center gap-3" aria-label="Web3Guard AI home" onClick={() => setOpen(false)}>
+          <span className="brand-mark grid h-9 w-9 shrink-0 place-items-center rounded-[10px] text-[13px] font-black tracking-tight">
+            W3
           </span>
           <span className="hidden min-w-0 sm:block">
-            <span className="brand-product block truncate text-sm font-black tracking-wide">{brand.product}</span>
-            <span className="brand-company block truncate text-xs">by {brand.company}</span>
+            <span className="brand-product block truncate text-sm font-black tracking-[-0.02em]">{brand.product}</span>
+            <span className="brand-company block truncate text-[10px] font-semibold uppercase tracking-[0.18em]">by {brand.company}</span>
           </span>
         </Link>
 
-        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 text-sm lg:flex" aria-label="Main navigation">
-          {visibleNav.map((item) => (
-            <Link key={item.href} href={item.href} className="nav-link">
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex" aria-label="Main navigation">
+          {navLinks.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`nav-link ${isActive(pathname, item.href) ? "nav-link-active" : ""}`}
+            >
               {item.label}
             </Link>
           ))}
-          <MoreMenu />
         </nav>
 
         <div className="hidden shrink-0 items-center gap-2 sm:flex">
+          <Link href="/scanner/unified-url" className="btn-primary !px-4 !py-2 text-xs">
+            Free Scan
+          </Link>
           <AuthSessionButton />
         </div>
+
+        <button
+          type="button"
+          aria-label="Open navigation menu"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className="grid h-10 w-10 place-items-center rounded-[10px] border border-white/[0.08] bg-white/[0.04] text-white lg:hidden"
+        >
+          <span className="relative h-4 w-5">
+            <span className={`absolute left-0 top-0 h-0.5 w-5 rounded-full bg-current transition ${open ? "translate-y-[7px] rotate-45" : ""}`} />
+            <span className={`absolute left-0 top-[7px] h-0.5 w-5 rounded-full bg-current transition ${open ? "opacity-0" : ""}`} />
+            <span className={`absolute left-0 top-[14px] h-0.5 w-5 rounded-full bg-current transition ${open ? "-translate-y-[7px] -rotate-45" : ""}`} />
+          </span>
+        </button>
       </div>
 
-      <nav className="scrollbar-hide flex items-center gap-2 overflow-x-auto border-t px-4 py-2 text-xs lg:hidden" aria-label="Mobile quick navigation">
-        {mobileQuickNav.map((item) => (
-          <Link key={item.href} href={item.href} className="nav-pill">
-            {item.label}
-          </Link>
-        ))}
-        <MoreMenu compact />
-      </nav>
+      {open ? (
+        <div className="mobile-panel lg:hidden">
+          <nav className="mx-auto grid max-w-7xl gap-2 px-4 py-4 sm:grid-cols-2 sm:px-6" aria-label="Mobile navigation">
+            {navLinks.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className={`rounded-xl border px-4 py-3 text-sm font-bold transition ${
+                  isActive(pathname, item.href)
+                    ? "border-cyan/30 bg-cyan/10 text-cyan"
+                    : "border-white/[0.07] bg-white/[0.03] text-slate-300 hover:border-cyan/25 hover:text-white"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+            <Link href="/scanner/unified-url" onClick={() => setOpen(false)} className="btn-primary mt-2 sm:col-span-2">
+              Start Free Scan →
+            </Link>
+          </nav>
+        </div>
+      ) : null}
     </header>
   );
 }
