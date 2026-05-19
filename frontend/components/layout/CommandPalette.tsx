@@ -35,6 +35,7 @@ const commands = [
       { label: "Worker Execution", href: "/worker-execution", keywords: "slither aderyn semgrep foundry echidna mythril docker worker real output" },
       { label: "Provider Readiness", href: "/provider-readiness", keywords: "etherscan goplus github api keys provider integrations" },
       { label: "Provider Live Integration", href: "/provider-live", keywords: "phase 28 etherscan basescan polygonscan goplus github osv nvd cisa kev live provider no fake data" },
+      { label: "Trust Metrics Engine", href: "/trust-metrics", keywords: "phase 29 trust metrics public vulnerability records advisories disclosures safe wording no fake discovery claims" },
       { label: "Billing & Payment Final", href: "/billing", keywords: "razorpay upi payment billing subscription webhook plan limits" },
       { label: "Responsible Use", href: "/responsible-use", keywords: "no exploit no private key no wallet signing" },
       { label: "Launch QA Board", href: "/launch-qa", keywords: "final ui qa mobile overflow checklist" },

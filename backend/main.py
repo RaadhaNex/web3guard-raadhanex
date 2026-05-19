@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.middleware import SecurityHeadersMiddleware
-from app.routers import admin, admin_super, agency_launch, ai, billing_final, bug_bounty, cicd, community_review, compliance, security_passport, continuous_monitoring, crosschain, database, developer_api, engine_depth, eon, india_launch, provider_readiness, provider_live, public_trust_page, report_verification, dashboard_workflow, production_deployment_qa, final_qa, health, leads, launch, learning, monitoring, notifications, ownership, packages, payments, public_beta, public_registry, qa, reports, scans, securescore, security_copilot, security_hardening, security_tests, sentinel, threat_intel, trust, trust_readiness, worker_execution, workspace
+from app.routers import admin, admin_super, agency_launch, ai, billing_final, bug_bounty, cicd, community_review, compliance, security_passport, continuous_monitoring, crosschain, database, developer_api, engine_depth, eon, india_launch, provider_readiness, provider_live, trust_metrics, public_trust_page, report_verification, dashboard_workflow, production_deployment_qa, final_qa, health, leads, launch, learning, monitoring, notifications, ownership, packages, payments, public_beta, public_registry, qa, reports, scans, securescore, security_copilot, security_hardening, security_tests, sentinel, threat_intel, trust, trust_readiness, worker_execution, workspace
 
 app = FastAPI(
     title=settings.app_name,
@@ -58,6 +58,7 @@ app.include_router(eon.router)
 app.include_router(india_launch.router)
 app.include_router(provider_readiness.router)
 app.include_router(provider_live.router)
+app.include_router(trust_metrics.router)
 app.include_router(public_trust_page.router)
 app.include_router(report_verification.router)
 app.include_router(dashboard_workflow.router)
