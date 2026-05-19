@@ -6,38 +6,23 @@ import { usePathname } from "next/navigation";
 
 const commands = [
   {
-    group: "Primary journey",
+    group: "Core flow",
     items: [
       { label: "Scanner", href: "/scanner/unified-url", keywords: "start scan website dapp api contract github wallet admin" },
       { label: "Results", href: "/results", keywords: "assessed not assessed needs api key tool not installed" },
-      { label: "Fix Plan", href: "/fix-plan", keywords: "fix blockers remediation eon next action" },
-      { label: "Report", href: "/report", keywords: "export report professional verify public" },
+      { label: "Pilot Report", href: "/report/pilot", keywords: "export report professional limitations" },
       { label: "Pricing", href: "/pricing", keywords: "razorpay upi payment plan revenue validation" },
+      { label: "Docs", href: "/docs", keywords: "methodology limitations responsible use" },
+    ],
+  },
+  {
+    group: "Setup",
+    items: [
       { label: "Dashboard", href: "/dashboard", keywords: "projects scans saved reports history" },
-      { label: "Docs", href: "/docs", keywords: "methodology limitations responsible use advanced setup" },
-    ],
-  },
-  {
-    group: "Launch validation",
-    items: [
-      { label: "Phase 31 Launch Validation", href: "/launch-validation", keywords: "slither render razorpay osv cisa dependency compression" },
-      { label: "Billing & Payment Final", href: "/billing", keywords: "razorpay checkout webhook signature plan limits" },
-      { label: "Launch Final QA", href: "/launch-final", keywords: "vercel render supabase razorpay release gates" },
-      { label: "Feature Status", href: "/feature-status", keywords: "tool provider configured not assessed" },
-    ],
-  },
-  {
-    group: "Advanced tools",
-    items: [
-      { label: "All Scanners", href: "/scanner", keywords: "scanner hub modules" },
-      { label: "Engine Depth", href: "/engine-depth", keywords: "slither aderyn semgrep mythril echidna" },
-      { label: "Worker Execution", href: "/worker-execution", keywords: "real worker slither foundry mythril docker" },
-      { label: "Provider Live", href: "/provider-live", keywords: "etherscan goplus github osv nvd cisa kev" },
-      { label: "Security Tests", href: "/security-tests", keywords: "foundry echidna semgrep templates" },
-      { label: "Sentinel", href: "/sentinel", keywords: "monitoring advisories intelligence" },
-      { label: "Trust Metrics", href: "/trust-metrics", keywords: "advisory mapping disclosures public metrics" },
-      { label: "Security Passport", href: "/security-passport", keywords: "passport trust network report hash" },
-      { label: "Agency Launch", href: "/agency-launch", keywords: "client portfolio handoff white label" },
+      { label: "Launch Validation", href: "/launch-validation", keywords: "slither render razorpay osv cisa dependency compression" },
+      { label: "Payment Validation", href: "/payment-validation", keywords: "razorpay test live webhook signature" },
+      { label: "Launch Pack", href: "/launch-pack", keywords: "first ten users outreach sample report" },
+      { label: "Advanced Tools", href: "/advanced", keywords: "worker provider sentinel passport metrics agency" },
     ],
   },
 ];
@@ -50,8 +35,7 @@ const flatCommands = commands.flatMap((group) =>
   }))
 );
 
-const MAX_DEFAULT_RESULTS = 12;
-const MAX_SEARCH_RESULTS = 24;
+const MAX_RESULTS = 10;
 
 export function CommandPalette() {
   const pathname = usePathname();
@@ -92,22 +76,12 @@ export function CommandPalette() {
   const filtered = useMemo(() => {
     const q = deferredQuery.trim().toLowerCase();
     const matches = q ? flatCommands.filter((item) => item.searchText.includes(q)) : flatCommands;
-    return matches.slice(0, q ? MAX_SEARCH_RESULTS : MAX_DEFAULT_RESULTS);
-  }, [deferredQuery]);
-
-  const totalMatches = useMemo(() => {
-    const q = deferredQuery.trim().toLowerCase();
-    return q ? flatCommands.filter((item) => item.searchText.includes(q)).length : flatCommands.length;
+    return matches.slice(0, MAX_RESULTS);
   }, [deferredQuery]);
 
   return (
     <>
-      <button
-        type="button"
-        className="command-fab"
-        onClick={() => setOpen(true)}
-        aria-label="Open command palette"
-      >
+      <button type="button" className="command-fab clean-command-fab" onClick={() => setOpen(true)} aria-label="Open command palette">
         <span className="mono">⌘K</span>
       </button>
 
@@ -121,42 +95,28 @@ export function CommandPalette() {
                 ref={inputRef}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search scan, results, fix plan, report, pricing, docs..."
+                placeholder="Search scanner, results, report, pricing, docs..."
                 className="command-search-input"
               />
               <button type="button" className="kbd-chip" onClick={() => setOpen(false)}>ESC</button>
             </div>
 
-            <div className="command-status-grid">
-              <span className="badge badge-green">7-path journey</span>
-              <span className="badge badge-cyan">No wallet signing</span>
-              <span className="badge badge-amber">Missing tools visible</span>
-              <span className="badge badge-purple">No fake output</span>
-            </div>
-
             <div className="command-result-list">
               {filtered.length ? (
-                <>
-                  {filtered.map((item) => (
-                    <Link key={item.href} href={item.href} className="command-result">
-                      <span className="command-result-icon mono">{item.group.slice(0, 2).toUpperCase()}</span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-black text-white">{item.label}</span>
-                        <span className="block truncate text-xs text-slate-500">{item.group} · {item.href}</span>
-                      </span>
-                      <span className="ml-auto text-xs text-cyan">Open →</span>
-                    </Link>
-                  ))}
-                  {totalMatches > filtered.length ? (
-                    <p className="px-2 pb-1 text-xs font-bold text-slate-500">
-                      Showing {filtered.length} of {totalMatches}. Keep typing to narrow results.
-                    </p>
-                  ) : null}
-                </>
+                filtered.map((item) => (
+                  <Link key={item.href} href={item.href} className="command-result">
+                    <span className="command-result-icon mono">{item.group.slice(0, 2).toUpperCase()}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-black text-white">{item.label}</span>
+                      <span className="block truncate text-xs text-slate-500">{item.group} · {item.href}</span>
+                    </span>
+                    <span className="ml-auto text-xs text-cyan">Open →</span>
+                  </Link>
+                ))
               ) : (
                 <div className="command-empty">
                   <p className="font-black text-white">No matching page found.</p>
-                  <p className="mt-1 text-sm text-slate-400">Try “scanner”, “results”, “fix”, “payment”, “slither”, or “docs”.</p>
+                  <p className="mt-1 text-sm text-slate-400">Try scanner, results, report, payment, or docs.</p>
                 </div>
               )}
             </div>

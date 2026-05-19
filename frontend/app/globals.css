@@ -1668,3 +1668,38 @@ button:disabled, .btn-primary[aria-disabled="true"] { opacity: 0.45; cursor: not
     transform: none !important;
   }
 }
+
+/* Phase 37 clean UI overrides: reduce clutter while preserving dark premium identity. */
+.clean-hero {
+  background:
+    radial-gradient(circle 620px at 8% -8%, rgba(6,182,212,0.10), transparent 68%),
+    radial-gradient(circle 520px at 100% 0%, rgba(59,130,246,0.055), transparent 72%),
+    linear-gradient(180deg, rgba(255,255,255,0.018), transparent 50%);
+}
+.clean-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.075);
+  border-radius: 24px;
+  background: rgba(6, 15, 30, 0.74);
+  box-shadow: 0 18px 70px rgba(0,0,0,0.35);
+  backdrop-filter: blur(18px);
+}
+.clean-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(6,182,212,0.28), transparent);
+  pointer-events: none;
+}
+.clean-more-menu > summary::-webkit-details-marker { display: none; }
+.clean-command-fab {
+  opacity: .72;
+  transform: scale(.92);
+}
+.clean-command-fab:hover { opacity: 1; transform: scale(1); }
+
+@media (max-width: 768px) {
+  .clean-command-fab { display: none; }
+}

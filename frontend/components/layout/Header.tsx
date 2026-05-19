@@ -7,19 +7,35 @@ import { AuthSessionButton } from "@/components/auth/AuthSessionButton";
 import KavachWingNavLogo from "@/components/brand/KavachWingNavLogo";
 import { brand } from "@/lib/constants";
 
-const navLinks = [
+const primaryLinks = [
   { href: "/scanner/unified-url", label: "Scanner" },
   { href: "/results", label: "Results" },
-  { href: "/fix-plan", label: "Fix Plan" },
-  { href: "/report", label: "Report" },
+  { href: "/report/pilot", label: "Report" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/dashboard", label: "Dashboard" },
   { href: "/docs", label: "Docs" },
+];
+
+const secondaryLinks = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/fix-plan", label: "Fix plan" },
+  { href: "/launch-validation", label: "Launch validation" },
+  { href: "/payment-validation", label: "Payment validation" },
+  { href: "/launch-pack", label: "Launch pack" },
+  { href: "/advanced", label: "Advanced tools" },
 ];
 
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function NavLink({ href, label, onClick }: { href: string; label: string; onClick?: () => void }) {
+  const pathname = usePathname();
+  return (
+    <Link href={href} onClick={onClick} className={`nav-link ${isActive(pathname, href) ? "nav-link-active" : ""}`}>
+      {label}
+    </Link>
+  );
 }
 
 export function Header() {
@@ -38,22 +54,28 @@ export function Header() {
         </Link>
 
         <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex" aria-label="Main navigation">
-          {navLinks.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`nav-link ${isActive(pathname, item.href) ? "nav-link-active" : ""}`}
-            >
-              {item.label}
-            </Link>
+          {primaryLinks.map((item) => (
+            <NavLink key={item.href} href={item.href} label={item.label} />
           ))}
+          <details className="clean-more-menu relative">
+            <summary className={`nav-link cursor-pointer list-none ${secondaryLinks.some((item) => isActive(pathname, item.href)) ? "nav-link-active" : ""}`}>
+              More
+            </summary>
+            <div className="absolute right-0 top-12 z-50 w-64 rounded-2xl border border-white/[0.08] bg-[#050a14]/95 p-2 shadow-[0_24px_80px_rgba(0,0,0,.55)] backdrop-blur-xl">
+              {secondaryLinks.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.05] hover:text-white"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </details>
         </nav>
 
         <div className="hidden shrink-0 items-center gap-2 sm:flex">
-          <div className="nav-pill hidden xl:inline-flex">
-            <span className="pulse-dot mr-2 h-2 w-2 rounded-full bg-cyan" />
-            <span className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-300">Launch validation</span>
-          </div>
           <Link href="/scanner/unified-url" className="btn-primary !px-4 !py-2 text-xs">
             Start Scan
           </Link>
@@ -78,12 +100,12 @@ export function Header() {
       {open ? (
         <div className="mobile-panel lg:hidden">
           <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
-            <div className="mb-3 rounded-2xl border border-cyan/15 bg-cyan/[0.05] px-4 py-3 text-sm text-slate-300">
-              Seven visible paths only: scan, understand results, fix, report, pay, dashboard, and docs.
+            <div className="mb-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm text-slate-300">
+              Clean launch flow: scan → results → report → pricing. Advanced tools are still available under More.
             </div>
           </div>
           <nav className="mx-auto grid max-w-7xl gap-2 px-4 pb-4 sm:grid-cols-2 sm:px-6" aria-label="Mobile navigation">
-            {navLinks.map((item) => (
+            {[...primaryLinks, ...secondaryLinks].map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -98,7 +120,7 @@ export function Header() {
               </Link>
             ))}
             <Link href="/scanner/unified-url" onClick={() => setOpen(false)} className="btn-primary mt-2 sm:col-span-2">
-              Open scanner →
+              Start scanner →
             </Link>
           </nav>
         </div>

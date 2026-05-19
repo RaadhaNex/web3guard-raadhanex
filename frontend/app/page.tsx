@@ -1,215 +1,145 @@
 import Link from "next/link";
-import { Hero } from "@/components/sections/Hero";
-import { LaunchSurface } from "@/components/sections/LaunchSurface";
-import { PricingSection } from "@/components/sections/PricingSection";
-import { ProductionReadiness } from "@/components/sections/ProductionReadiness";
-import { SampleScannerDemo } from "@/components/sections/SampleScannerDemo";
-import { TrustBuilderSection } from "@/components/sections/TrustBuilderSection";
-import { TrustStrip } from "@/components/sections/TrustStrip";
 
-function StatsBar() {
-  const stats = [
-    { value: "53", label: "Rule checks", note: "launch-risk signals" },
-    { value: "6+", label: "Core surfaces", note: "website to admin OpSec" },
-    { value: "₹0", label: "Public beta", note: "free founder access" },
-    { value: "24/7", label: "Command view", note: "always ready" },
-  ];
+const trustStates = [
+  ["Real result", "Only when a tool/provider actually returns evidence."],
+  ["Not assessed", "Shown clearly when a module has not been checked yet."],
+  ["Needs setup", "API keys, workers, and payment checks stay visible."],
+];
 
-  return (
-    <section className="border-y border-cyan/[0.08] bg-cyan/[0.02]">
-      <div className="mx-auto grid max-w-7xl gap-3 px-4 py-6 sm:px-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
-        {stats.map(({ value, label, note }) => (
-          <div key={label} className="stat-slab px-5 py-5 text-center">
-            <p className="text-3xl font-black tracking-tight text-white">{value}</p>
-            <p className="mt-1 text-xs font-black uppercase tracking-[0.2em] text-slate-400">{label}</p>
-            <p className="mt-2 text-xs text-slate-500">{note}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
+const flow = [
+  ["01", "Scan", "Paste an owned URL, contract source, package, or launch evidence."],
+  ["02", "Review", "See real findings, missing checks, external advisories, and setup gaps."],
+  ["03", "Report", "Generate a pre-audit pilot report with limitations and fix priorities."],
+  ["04", "Validate", "Use pricing/payment readiness only after Razorpay test mode is configured."],
+];
 
-function HowItWorks() {
-  const steps = [
-    {
-      n: "01",
-      title: "Collect",
-      icon: "◉",
-      text: "Paste only what you own or are authorized to review: URL, Solidity source, public repo, API base, or launch evidence.",
-    },
-    {
-      n: "02",
-      title: "Scan",
-      icon: "◎",
-      text: "The platform checks live passive signals, rule-engine findings, evidence completeness, and cleanly marks missing modules as Not Assessed.",
-    },
-    {
-      n: "03",
-      title: "Ship",
-      icon: "◇",
-      text: "Export a polished pre-audit package, share priorities with your team, and close obvious launch blockers before public release.",
-    },
-  ];
-
-  return (
-    <section className="mx-auto max-w-7xl px-4 py-18 sm:px-6 lg:px-8">
-      <div className="mb-12 text-center">
-        <p className="section-label justify-center">Flight path</p>
-        <h2 className="mt-3 text-3xl font-black sm:text-4xl">A cleaner path from raw inputs to launch confidence.</h2>
-        <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-400">
-          The new UI feels more futuristic, but the logic stays strict: only real evidence goes into the result.
-        </p>
-      </div>
-
-      <div className="relative grid gap-4 md:grid-cols-3">
-        <div className="pointer-events-none absolute left-[17%] right-[17%] top-12 hidden h-px bg-gradient-to-r from-transparent via-cyan/60 to-transparent md:block" />
-        {steps.map(({ n, title, icon, text }) => (
-          <div key={n} className="glass-tile p-6">
-            <div className="flex items-start justify-between gap-3">
-              <div className="grid h-12 w-12 place-items-center rounded-2xl border border-cyan/20 bg-cyan/10 mono text-xl font-black text-cyan shadow-soft">
-                {icon}
-              </div>
-              <span className="mono text-4xl font-black leading-none text-cyan/10">{n}</span>
-            </div>
-            <p className="mt-5 text-xs font-black uppercase tracking-[0.24em] text-cyan">Step {n}</p>
-            <h3 className="mt-2 text-xl font-black text-white">{title}</h3>
-            <p className="mt-3 text-sm leading-6 text-slate-400">{text}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function ComparisonTable() {
-  const rows = [
-    ["Free pre-audit scan", "✓", "✕", "✕", "✕"],
-    ["Website + dApp + API + admin surface", "✓", "Manual", "Manual", "Manual"],
-    ["Contract rule hints", "✓", "✓", "✓", "✓"],
-    ["Not Assessed separation", "✓", "Manual", "Manual", "Manual"],
-    ["Founder OpSec checklist", "✓", "Manual", "Manual", "Manual"],
-    ["Bug bounty readiness", "✓", "Manual", "✓", "✓"],
-    ["Certified audit claim", "✕", "✓", "✓", "✓"],
-    ["Typical starting cost", "₹0 Free", "$15,000+", "High", "Contest budget"],
-  ];
-
-  const columns = ["Coverage", "Web3Guard AI", "Premium audit firms", "Manual consultants", "Contest platforms"];
-
-  return (
-    <section className="mx-auto max-w-7xl px-4 py-18 sm:px-6 lg:px-8">
-      <div className="mb-8 text-center">
-        <p className="section-label justify-center">Positioning</p>
-        <h2 className="mt-3 text-3xl font-black sm:text-4xl">Founder-first preparation before expensive review cycles.</h2>
-        <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-400">
-          Web3Guard AI helps teams get sharper before formal audits or bounty programs begin. It complements—not replaces—manual experts.
-        </p>
-      </div>
-
-      <div className="holo-shell overflow-x-auto rounded-[28px] border border-white/[0.07] bg-white/[0.02] shadow-[0_24px_90px_rgba(6,182,212,.06)]">
-        <table className="min-w-[850px] w-full border-collapse text-sm">
-          <thead className="sticky top-0 bg-[#060b18]/95 backdrop-blur-xl text-left">
-            <tr>
-              {columns.map((col, index) => (
-                <th
-                  key={col}
-                  className={`border-b border-white/[0.07] px-4 py-4 text-xs font-black uppercase tracking-[0.18em] ${
-                    index === 1 ? "bg-cyan/[0.05] text-cyan" : "text-slate-500"
-                  }`}
-                >
-                  {index === 1 ? <span className="mb-1 block text-[10px] text-cyan/70">Best pre-launch fit</span> : null}
-                  {col}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, rowIndex) => (
-              <tr key={row[0]} className={rowIndex % 2 ? "bg-white/[0.018]" : ""}>
-                {row.map((cell, index) => (
-                  <td
-                    key={`${row[0]}-${index}`}
-                    className={`border-b border-white/[0.05] px-4 py-3 ${
-                      index === 1
-                        ? "bg-cyan/[0.035] font-bold text-cyan"
-                        : index === 0
-                        ? "font-semibold text-slate-200"
-                        : "text-slate-400"
-                    }`}
-                  >
-                    {cell === "✓" ? <span className="font-black text-cyan">✓</span> : cell === "✕" ? <span className="font-black text-slate-600">✕</span> : cell}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-
-function SocialProof() {
-  const cards = [
-    ["3D", "Future-facing UI", "Premium motion, layered surfaces, and a cleaner command-center look across phases."],
-    ["IND", "India-friendly", "Founder-friendly language, practical guidance, and beta positioning that stays easy to understand."],
-    ["SAFE", "Safer wording", "No 100% secure promises, no certified audit claims, and no hidden provider limitations."],
-    ["REAL", "Transparent outputs", "If a tool or provider is missing, the interface says so clearly instead of pretending."],
-  ];
-
-  return (
-    <section className="mx-auto max-w-7xl px-4 py-18 sm:px-6 lg:px-8">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map(([code, title, text]) => (
-          <div key={title} className="glass-tile p-6 text-center">
-            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-cyan/20 bg-cyan/10 mono text-sm font-black text-cyan">{code}</div>
-            <h3 className="mt-4 text-base font-black text-white">{title}</h3>
-            <p className="mt-2 text-xs leading-6 text-slate-400">{text}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function CtaBanner() {
-  return (
-    <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
-      <div className="quantum-stage p-8 text-center sm:p-12">
-        <div className="pointer-events-none absolute left-[-8rem] top-[-8rem] h-72 w-72 rounded-full bg-cyan/10 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-[-10rem] right-[-8rem] h-80 w-80 rounded-full bg-purple-500/10 blur-3xl" />
-        <div className="relative">
-          <p className="section-label justify-center">Quantum command center</p>
-          <h2 className="mt-3 text-3xl font-black sm:text-4xl">Run the command-center scan before launch day.</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-400">
-            Find blockers early, keep wording safe, and export a professional result your team can actually act on.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link href="/scanner/unified-url" className="btn-primary">Start free scan →</Link>
-            <Link href="/sample-reports" className="btn-secondary">View sample reports</Link>
-          </div>
-          <p className="mt-4 text-xs text-slate-500">No account needed for basic use · Real-only status by design</p>
-        </div>
-      </div>
-    </section>
-  );
-}
+const surfaces = [
+  "Website",
+  "dApp",
+  "API",
+  "Contract",
+  "Dependencies",
+  "Wallet UX",
+  "Admin OpSec",
+  "Disclosure",
+];
 
 export default function HomePage() {
   return (
     <>
-      <Hero />
-      <StatsBar />
-      <TrustStrip />
-      <LaunchSurface />
-      <HowItWorks />
-      <SampleScannerDemo />
-      <ComparisonTable />
-      <ProductionReadiness />
-      <TrustBuilderSection />
-      <SocialProof />
-      <PricingSection />
-      <CtaBanner />
+      <section className="clean-hero border-b border-white/[0.07]">
+        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-24">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.035] px-3.5 py-1.5">
+              <span className="h-2 w-2 rounded-full bg-cyan" />
+              <span className="text-[11px] font-black uppercase tracking-[0.20em] text-cyan">Clean beta launch mode</span>
+            </div>
+
+            <h1 className="mt-7 text-[clamp(2.65rem,6.5vw,5rem)] font-black leading-[0.94] tracking-[-0.075em] text-white">
+              Web3 launch readiness,
+              <span className="block text-gradient">without noisy dashboards.</span>
+            </h1>
+
+            <p className="mt-6 max-w-2xl text-base leading-8 text-slate-400 sm:text-lg">
+              A simpler pre-audit scanner for Indian and global Web3 founders. Start with one scan, understand what is assessed, fix the highest-risk gaps, and export an honest pilot report.
+            </p>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link href="/scanner/unified-url" className="btn-primary">Start free scan →</Link>
+              <Link href="/report/pilot" className="btn-secondary">View pilot report</Link>
+            </div>
+
+            <div className="mt-6 grid gap-2 text-xs text-slate-500 sm:grid-cols-3">
+              {trustStates.map(([title, text]) => (
+                <div key={title} className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4">
+                  <p className="font-black text-slate-200">{title}</p>
+                  <p className="mt-1 leading-5">{text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="clean-panel p-5 sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan">Product focus</p>
+                <h2 className="mt-2 text-2xl font-black text-white">One path for first users</h2>
+              </div>
+              <span className="sev-info">Pre-audit</span>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {flow.map(([step, title, text]) => (
+                <div key={step} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+                  <div className="flex gap-3">
+                    <span className="mono grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-cyan/20 bg-cyan/10 text-xs font-black text-cyan">{step}</span>
+                    <div>
+                      <p className="font-black text-white">{title}</p>
+                      <p className="mt-1 text-sm leading-6 text-slate-400">{text}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-amber-300/15 bg-amber-300/[0.055] p-4 text-sm leading-6 text-amber-100/85">
+              Web3Guard AI is not a certified audit, does not guarantee 100% security, and never asks for private keys, seed phrases, or wallet signing.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="clean-panel p-6 md:col-span-1">
+            <p className="section-label">Visible navigation</p>
+            <h2 className="mt-3 text-2xl font-black">Five main links, not fifty.</h2>
+            <p className="mt-3 text-sm leading-7 text-slate-400">
+              The main UI now pushes only Scanner, Results, Report, Pricing, and Docs. Dashboard and advanced tools are still available under More.
+            </p>
+          </div>
+          <div className="clean-panel p-6 md:col-span-2">
+            <p className="section-label">Coverage surfaces</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {surfaces.map((surface) => (
+                <span key={surface} className="rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1.5 text-xs font-bold text-slate-300">
+                  {surface}
+                </span>
+              ))}
+            </div>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              {[
+                ["Real tools", "Slither/Semgrep/worker checks show real or missing status."],
+                ["Real advisories", "OSV/CISA style results stay separate from Web3Guard findings."],
+                ["Real revenue", "Razorpay success is shown only after verified payment flow."],
+              ].map(([title, text]) => (
+                <div key={title} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+                  <p className="font-black text-white">{title}</p>
+                  <p className="mt-2 text-xs leading-5 text-slate-400">{text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
+        <div className="clean-panel p-6 sm:p-8">
+          <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div>
+              <p className="section-label">Deployment next</p>
+              <h2 className="mt-3 text-3xl font-black">Clean UI first. Then deploy. Then first 10 users.</h2>
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">
+                The product should now feel less like a phase archive and more like a focused beta scanner. After applying this patch, run tests/build, connect env, deploy Vercel/Render, and validate the ₹999 pilot-report flow with test payments.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+              <Link href="/launch-pack" className="btn-secondary">Open launch pack</Link>
+              <Link href="/pricing" className="btn-primary">Check pricing flow →</Link>
+            </div>
+          </div>
+        </div>
+      </section>
     </>
   );
 }
