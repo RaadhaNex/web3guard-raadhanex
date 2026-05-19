@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { AuthSessionButton } from "@/components/auth/AuthSessionButton";
+import KavachWingNavLogo from "@/components/brand/KavachWingNavLogo";
 import { brand } from "@/lib/constants";
 
 const navLinks = [
@@ -29,9 +30,7 @@ export function Header() {
     <header className="site-header">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex min-w-0 items-center gap-3" aria-label="Web3Guard AI home" onClick={() => setOpen(false)}>
-          <span className="brand-mark grid h-9 w-9 shrink-0 place-items-center rounded-[10px] text-[13px] font-black tracking-tight">
-            W3
-          </span>
+          <KavachWingNavLogo showText={false} />
           <span className="hidden min-w-0 sm:block">
             <span className="brand-product block truncate text-sm font-black tracking-[-0.02em]">{brand.product}</span>
             <span className="brand-company block truncate text-[10px] font-semibold uppercase tracking-[0.18em]">by {brand.company}</span>
