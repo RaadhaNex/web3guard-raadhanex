@@ -172,6 +172,7 @@ export function DashboardClient() {
           <Link className="btn-secondary" href="/india-launch">India Launch Pack</Link>
           <Link className="btn-secondary" href="/security-copilot">Security Copilot</Link>
           <Link className="btn-secondary" href="/community-review">Community Review</Link>
+          <Link className="btn-secondary" href="/security-passport">Security Passport</Link>
           <Link className="btn-primary" href="/scanner/unified-url">Run scan</Link>
           <button className="btn-secondary" type="button" onClick={logout}>Logout</button>
         </div>
