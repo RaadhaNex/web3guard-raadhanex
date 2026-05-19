@@ -32,15 +32,15 @@ export function ScansClient() {
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan">Dashboard scan history</p>
           <h1 className="mt-2 text-4xl font-black">Scan history</h1>
-          <p className="mt-3 max-w-3xl text-slate-400">Only scans explicitly saved from scanner/dashboard APIs appear here.</p>
+          <p className="mt-3 max-w-3xl text-slate-400">Only scans explicitly saved from scanner or dashboard APIs appear here. No demo rows are generated.</p>
         </div>
         <Link className="btn-primary" href="/scanner/unified-url">Run scan</Link>
       </div>
-      {loading && <p className="text-slate-400">Loading...</p>}
+      {loading && <LoadingPanel />}
       {error && <p className="rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-red-100">{error}</p>}
       <div className="grid gap-4 lg:grid-cols-2">
         {scans.map((scan) => (
-          <Link key={scan.id} href={`/dashboard/scans/${scan.id}`} className="card p-5 transition hover:border-cyan/40">
+          <Link key={scan.id} href={`/dashboard/scans/${scan.id}`} className="status-node block p-5 transition hover:-translate-y-0.5 hover:border-cyan/35 hover:bg-cyan/[0.05]">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-cyan">{scan.module}</p>
@@ -53,7 +53,33 @@ export function ScansClient() {
           </Link>
         ))}
       </div>
-      {!loading && scans.length === 0 && <p className="text-slate-500">No saved scans yet.</p>}
+      {!loading && scans.length === 0 && !error && <EmptyScans />}
     </main>
+  );
+}
+
+
+function LoadingPanel() {
+  return (
+    <div className="tool-console mb-6 p-5">
+      <div className="relative z-[1] grid gap-3">
+        <div className="skeleton-line h-4 w-48" />
+        <div className="skeleton-line h-4 w-full" />
+        <div className="skeleton-line h-4 w-2/3" />
+      </div>
+    </div>
+  );
+}
+
+function EmptyScans() {
+  return (
+    <div className="tool-console p-8 text-center">
+      <div className="relative z-[1] mx-auto max-w-md">
+        <div className="empty-state-orb mx-auto mono text-cyan">SCAN</div>
+        <h2 className="mt-6 text-2xl font-black text-white">No saved scans yet</h2>
+        <p className="mt-3 text-sm leading-6 text-slate-400">Run a real scan and save it to your dashboard. The list will stay empty until real data exists.</p>
+        <Link className="btn-primary mt-5" href="/scanner/unified-url">Run first scan</Link>
+      </div>
+    </div>
   );
 }

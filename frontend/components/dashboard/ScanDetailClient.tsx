@@ -80,7 +80,7 @@ export function ScanDetailClient({ scanId }: { scanId: string }) {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
-      <Link className="text-sm font-bold text-cyan" href="/dashboard/scans">
+      <Link className="text-sm font-bold text-cyan hover:text-cyan-200" href="/dashboard/scans">
         ← Back to scans
       </Link>
 
@@ -92,7 +92,7 @@ export function ScanDetailClient({ scanId }: { scanId: string }) {
 
       {scan ? (
         <>
-          <div className="mt-6 card p-6">
+          <div className="mt-6 tool-console p-6">
             <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan">Saved scan</p>
             <h1 className="mt-2 text-4xl font-black">{scan.module} scan</h1>
             <p className="mt-3 text-slate-400">
@@ -107,7 +107,7 @@ export function ScanDetailClient({ scanId }: { scanId: string }) {
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
-            <div className="card p-6">
+            <div className="tool-console p-6">
               <h2 className="text-2xl font-black">Workflow</h2>
               <select className="select mt-4" value={status} onChange={(event) => setStatus(event.target.value)}>
                 <option>saved</option>
@@ -127,8 +127,8 @@ export function ScanDetailClient({ scanId }: { scanId: string }) {
                 Save workflow
               </button>
 
-              <div className="mt-6 rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-                <h3 className="font-black text-white">Professional report export</h3>
+              <div className="mt-6 status-node p-4">
+                <h3 className="font-black text-white">Report export workflow</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-400">
                   Convert this saved scan into a saved report, then export it as PDF, HTML, Markdown, or JSON.
                 </p>
@@ -145,8 +145,8 @@ export function ScanDetailClient({ scanId }: { scanId: string }) {
               {message ? <p className="mt-3 text-sm text-emerald-200">{message}</p> : null}
             </div>
 
-            <div className="card overflow-hidden p-6">
-              <h2 className="text-2xl font-black">Saved payload</h2>
+            <div className="tool-console overflow-hidden p-6">
+              <h2 className="text-2xl font-black">Saved evidence payload</h2>
               <pre className="mt-4 max-h-[520px] overflow-auto rounded-2xl border border-white/10 bg-black/30 p-4 text-xs text-slate-300">
                 {JSON.stringify(scan.payload || {}, null, 2)}
               </pre>
@@ -160,7 +160,7 @@ export function ScanDetailClient({ scanId }: { scanId: string }) {
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+    <div className="status-node p-4">
       <p className="text-xs text-slate-500">{label}</p>
       <p className="mt-2 font-black text-white">{value}</p>
     </div>

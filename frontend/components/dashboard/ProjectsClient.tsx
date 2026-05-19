@@ -110,8 +110,7 @@ export function ProjectsClient() {
           <h1 className="mt-2 text-4xl font-black">Projects</h1>
 
           <p className="mt-3 max-w-3xl text-slate-400">
-            Projects are saved to your authenticated Web3Guard account. No demo
-            project rows are generated.
+            Projects are saved to your authenticated Web3Guard account. Empty states stay clean and no demo project rows are generated.
           </p>
 
           {userId ? (
@@ -127,7 +126,7 @@ export function ProjectsClient() {
       </div>
 
       <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="card p-6">
+        <div className="tool-console p-6">
           <h2 className="text-2xl font-black">Create project</h2>
 
           <p className="mt-2 text-sm leading-6 text-slate-400">
@@ -169,7 +168,7 @@ export function ProjectsClient() {
               onClick={createProject}
               disabled={saving}
             >
-              {saving ? "Saving..." : "Save real project"}
+              {saving ? "Saving..." : "Save project"}
             </button>
 
             {message ? (
@@ -180,7 +179,7 @@ export function ProjectsClient() {
           </div>
         </div>
 
-        <div className="card p-6">
+        <div className="tool-console p-6">
           <h2 className="text-2xl font-black">Saved projects</h2>
 
           {loading ? (
@@ -195,8 +194,7 @@ export function ProjectsClient() {
 
           {!loading && !error && projects.length === 0 ? (
             <p className="mt-4 text-slate-500">
-              No projects saved yet. Create your first project to start tracking
-              real scan history and reports.
+              No projects saved yet. Create your first workspace to start tracking scan history and reports.
             </p>
           ) : null}
 
@@ -205,7 +203,7 @@ export function ProjectsClient() {
               <Link
                 key={project.id}
                 href={`/dashboard/projects/${project.id}`}
-                className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-cyan/40 hover:bg-cyan/10"
+                className="status-node block p-4 transition hover:-translate-y-0.5 hover:border-cyan/35 hover:bg-cyan/[0.05]"
               >
                 <p className="font-black text-white">{project.name}</p>
 

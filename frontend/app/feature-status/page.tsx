@@ -22,26 +22,61 @@ const features = [
   ["Monitoring / public badges / bounty automation", "Manual / Not Assessed", "Do not show live badges/automation until verified."],
 ];
 
-function badge(status: string) {
+function statusClass(status: string) {
   const s = status.toLowerCase();
-  const cls = s.includes("live") ? "border-risk-green/40 bg-risk-green/10 text-green-200" : s.includes("deferred") || s.includes("not installed") || s.includes("needs") || s.includes("not assessed") || s.includes("not configured") || s.includes("manual") ? "border-risk-yellow/40 bg-risk-yellow/10 text-yellow-100" : "border-white/15 bg-white/10 text-slate-200";
-  return <span className={`rounded-full border px-3 py-1 text-xs font-black ${cls}`}>{status}</span>;
+  if (s.includes("live")) return "status-node-live border-emerald-400/25 bg-emerald-500/10 text-emerald-100";
+  if (s.includes("deferred") || s.includes("not installed") || s.includes("needs") || s.includes("not assessed") || s.includes("not configured") || s.includes("manual")) return "status-node-warn border-amber-300/25 bg-amber-300/10 text-amber-100";
+  return "border-white/10 bg-white/[0.03] text-slate-200";
+}
+
+function badge(status: string) {
+  return <span className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(status)}`}>{status}</span>;
 }
 
 export default function FeatureStatusPage() {
+  const liveCount = features.filter(([, status]) => status.toLowerCase().includes("live")).length;
+  const deferredCount = features.filter(([, status]) => status.toLowerCase().includes("deferred")).length;
+  const gatedCount = features.length - liveCount - deferredCount;
+
   return (
     <main className="min-h-screen bg-ink text-white">
-      <TrustHero eyebrow="Real-only status matrix" title="What is live, pending, optional, or Not Assessed?" text={`${brand.product} by ${brand.company} must not show dummy trust. This page defines the public beta truth so users and admins know exactly what is real.`} />
+      <TrustHero eyebrow="Real-only status matrix" title="A transparent command board for every integration." text={`${brand.product} by ${brand.company} shows what is live, deferred, gated by API key, worker-required, or Not Assessed. No dummy trust badges.`} />
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035] shadow-soft">
+        <div className="mb-8 grid gap-4 md:grid-cols-3">
+          <div className="stat-slab p-5"><p className="text-3xl font-black text-white">{liveCount}</p><p className="mt-1 text-xs font-black uppercase tracking-[0.2em] text-emerald-300">live / usable</p></div>
+          <div className="stat-slab p-5"><p className="text-3xl font-black text-white">{gatedCount}</p><p className="mt-1 text-xs font-black uppercase tracking-[0.2em] text-amber-200">gated / manual</p></div>
+          <div className="stat-slab p-5"><p className="text-3xl font-black text-white">{deferredCount}</p><p className="mt-1 text-xs font-black uppercase tracking-[0.2em] text-slate-400">deferred</p></div>
+        </div>
+
+        <div className="tool-console overflow-hidden p-0">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] border-collapse text-left text-sm">
-              <thead className="bg-white/[0.05] text-slate-300"><tr><th className="p-4">Feature</th><th className="p-4">Status</th><th className="p-4">Evidence / limitation</th></tr></thead>
-              <tbody>{features.map(([feature, status, evidence]) => <tr key={feature} className="border-t border-white/10"><td className="p-4 font-black text-white">{feature}</td><td className="p-4">{badge(status)}</td><td className="p-4 text-slate-300">{evidence}</td></tr>)}</tbody>
+            <table className="w-full min-w-[880px] border-collapse text-left text-sm">
+              <thead className="bg-white/[0.04] text-slate-300">
+                <tr><th className="p-4">Feature</th><th className="p-4">Status</th><th className="p-4">Evidence / limitation</th></tr>
+              </thead>
+              <tbody>
+                {features.map(([feature, status, evidence]) => (
+                  <tr key={feature} className="border-t border-white/10">
+                    <td className="p-4 font-black text-white">{feature}</td>
+                    <td className="p-4">{badge(status)}</td>
+                    <td className="p-4 text-slate-300">{evidence}</td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
         </div>
-        <div className="mt-8 grid gap-4 lg:grid-cols-3">{integrationReadiness.map((item) => <div key={item.title} className="rounded-3xl border border-white/10 bg-black/25 p-5"><p className="font-black text-white">{item.title}</p><div className="mt-3">{badge(item.status)}</div><p className="mt-3 text-sm leading-6 text-slate-300">{item.evidence}</p></div>)}</div>
+
+        <div className="mt-8 grid gap-4 lg:grid-cols-3">
+          {integrationReadiness.map((item) => (
+            <div key={item.title} className={`status-node p-5 ${item.tone === "live" ? "status-node-live" : item.tone === "blocked" ? "status-node-blocked" : "status-node-warn"}`}>
+              <p className="font-black text-white">{item.title}</p>
+              <div className="mt-3">{badge(item.status)}</div>
+              <p className="mt-3 text-sm leading-6 text-slate-300">{item.evidence}</p>
+              <p className="mt-3 text-xs leading-5 text-slate-500">Next: {item.nextStep}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </main>
   );
