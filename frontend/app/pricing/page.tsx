@@ -20,7 +20,8 @@ export default function PricingPage() {
             <span className="badge">Pre-audit only</span>
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/billing" className="btn-secondary">Payment readiness</Link>
+            <Link href="/payment-validation" className="btn-secondary">Payment validation</Link>
+            <Link href="/billing" className="btn-secondary">Billing readiness</Link>
             <Link href="/scanner/unified-url" className="btn-primary">Run free scan</Link>
           </div>
         </div>

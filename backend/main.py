@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.middleware import SecurityHeadersMiddleware
-from app.routers import admin, admin_super, agency_launch, ai, billing_final, bug_bounty, cicd, community_review, compliance, security_passport, continuous_monitoring, crosschain, database, developer_api, engine_depth, eon, india_launch, provider_readiness, provider_live, trust_metrics, public_trust_page, report_verification, dashboard_workflow, production_deployment_qa, final_qa, launch_final, launch_validation, scanner_results, worker_runs, health, leads, launch, learning, monitoring, notifications, ownership, packages, payments, public_beta, public_registry, qa, reports, scans, securescore, security_copilot, security_hardening, security_tests, sentinel, threat_intel, trust, trust_readiness, worker_execution, workspace
+from app.routers import admin, admin_super, agency_launch, ai, billing_final, bug_bounty, cicd, community_review, compliance, security_passport, continuous_monitoring, crosschain, database, developer_api, engine_depth, eon, india_launch, provider_readiness, provider_live, trust_metrics, public_trust_page, report_verification, dashboard_workflow, production_deployment_qa, final_qa, launch_final, launch_validation, scanner_results, worker_runs, payment_validation, health, leads, launch, learning, monitoring, notifications, ownership, packages, payments, public_beta, public_registry, qa, reports, scans, securescore, security_copilot, security_hardening, security_tests, sentinel, threat_intel, trust, trust_readiness, worker_execution, workspace
 
 app = FastAPI(
     title=settings.app_name,
@@ -79,6 +79,7 @@ app.include_router(launch_final.router)
 app.include_router(launch_validation.router)
 app.include_router(scanner_results.router)
 app.include_router(worker_runs.router)
+app.include_router(payment_validation.router)
 
 
 @app.get("/")
