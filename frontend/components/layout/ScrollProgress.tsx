@@ -1,25 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 
 export function ScrollProgress() {
-  const [progress, setProgress] = useState(0);
+  const barRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    let ticking = false;
+
     function update() {
+      ticking = false;
       const scrollTop = window.scrollY || document.documentElement.scrollTop;
       const height = document.documentElement.scrollHeight - window.innerHeight;
-      setProgress(height > 0 ? Math.min(100, Math.max(0, (scrollTop / height) * 100)) : 0);
+      const progress = height > 0 ? Math.min(100, Math.max(0, (scrollTop / height) * 100)) : 0;
+
+      if (barRef.current) {
+        barRef.current.style.transform = `scaleX(${progress / 100})`;
+      }
     }
 
-    update();
-    window.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
+    function requestUpdate() {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(update);
+    }
+
+    requestUpdate();
+    window.addEventListener("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", requestUpdate);
+
     return () => {
-      window.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", requestUpdate);
+      window.removeEventListener("resize", requestUpdate);
     };
   }, []);
 
-  return <div className="scroll-progress" style={{ transform: `scaleX(${progress / 100})` }} aria-hidden="true" />;
+  return (
+    <div
+      ref={barRef}
+      className="scroll-progress"
+      style={{ transform: "scaleX(0)" }}
+      aria-hidden="true"
+    />
+  );
 }

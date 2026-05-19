@@ -42,6 +42,8 @@ const contentSecurityPolicy = [
 const nextConfig = {
   reactStrictMode: true,
   productionBrowserSourceMaps: false,
+  poweredByHeader: false,
+  compress: true,
 
   experimental: {
     cpus: 1,

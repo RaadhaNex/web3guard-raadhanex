@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 
 const commands = [
@@ -65,12 +65,22 @@ const commands = [
   },
 ];
 
-const flatCommands = commands.flatMap((group) => group.items.map((item) => ({ ...item, group: group.group })));
+const flatCommands = commands.flatMap((group) =>
+  group.items.map((item) => ({
+    ...item,
+    group: group.group,
+    searchText: `${group.group} ${item.label} ${item.href} ${item.keywords}`.toLowerCase(),
+  }))
+);
+
+const MAX_DEFAULT_RESULTS = 18;
+const MAX_SEARCH_RESULTS = 32;
 
 export function CommandPalette() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -103,10 +113,15 @@ export function CommandPalette() {
   }, [open]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return flatCommands;
-    return flatCommands.filter((item) => `${item.group} ${item.label} ${item.href} ${item.keywords}`.toLowerCase().includes(q));
-  }, [query]);
+    const q = deferredQuery.trim().toLowerCase();
+    const matches = q ? flatCommands.filter((item) => item.searchText.includes(q)) : flatCommands;
+    return matches.slice(0, q ? MAX_SEARCH_RESULTS : MAX_DEFAULT_RESULTS);
+  }, [deferredQuery]);
+
+  const totalMatches = useMemo(() => {
+    const q = deferredQuery.trim().toLowerCase();
+    return q ? flatCommands.filter((item) => item.searchText.includes(q)).length : flatCommands.length;
+  }, [deferredQuery]);
 
   return (
     <>
@@ -144,16 +159,23 @@ export function CommandPalette() {
 
             <div className="command-result-list">
               {filtered.length ? (
-                filtered.map((item) => (
-                  <Link key={item.href} href={item.href} className="command-result">
-                    <span className="command-result-icon mono">{item.group.slice(0, 2).toUpperCase()}</span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-black text-white">{item.label}</span>
-                      <span className="block truncate text-xs text-slate-500">{item.group} · {item.href}</span>
-                    </span>
-                    <span className="ml-auto text-xs text-cyan">Open →</span>
-                  </Link>
-                ))
+                <>
+                  {filtered.map((item) => (
+                    <Link key={item.href} href={item.href} className="command-result">
+                      <span className="command-result-icon mono">{item.group.slice(0, 2).toUpperCase()}</span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-black text-white">{item.label}</span>
+                        <span className="block truncate text-xs text-slate-500">{item.group} · {item.href}</span>
+                      </span>
+                      <span className="ml-auto text-xs text-cyan">Open →</span>
+                    </Link>
+                  ))}
+                  {totalMatches > filtered.length ? (
+                    <p className="px-2 pb-1 text-xs font-bold text-slate-500">
+                      Showing {filtered.length} of {totalMatches}. Keep typing to narrow results.
+                    </p>
+                  ) : null}
+                </>
               ) : (
                 <div className="command-empty">
                   <p className="font-black text-white">No matching page found.</p>

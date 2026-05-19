@@ -1580,3 +1580,91 @@ button:disabled, .btn-primary[aria-disabled="true"] { opacity: 0.45; cursor: not
   padding: 1rem 1.25rem;
   box-shadow: var(--shadow-card);
 }
+
+
+/* ──────────────────────────────────────
+   Phase 25 — Performance + Launch Hardening
+   Keeps the Quantum UI feel while reducing mobile paint cost.
+────────────────────────────────────── */
+.phase25-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.10);
+}
+.phase25-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  animation: shimmer 1.35s ease-in-out infinite;
+}
+
+.content-visibility-auto,
+.command-page > section,
+.command-page .card,
+.command-page .surface-panel {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 560px;
+}
+
+.card,
+.surface-panel,
+.command-modal,
+.site-header {
+  transform: translateZ(0);
+}
+
+@media (max-width: 768px) {
+  :root {
+    --shadow-card: 0 4px 18px rgba(0,0,0,0.34), 0 0 0 1px rgba(6,182,212,0.05);
+    --shadow-float: 0 8px 24px rgba(0,0,0,0.42), 0 0 0 1px rgba(6,182,212,0.08);
+    --shadow-glow: 0 0 0 1px rgba(6,182,212,0.16), 0 8px 26px rgba(0,0,0,0.42);
+  }
+
+  body {
+    background-size: 100% 100%, 100% 100%, 100% 100%, 72px 72px, 72px 72px;
+  }
+
+  body::after {
+    opacity: .55;
+  }
+
+  .grid-bg,
+  .w3g-cyber-grid {
+    background-size: 72px 72px, 72px 72px, 100% 100%;
+  }
+
+  .card,
+  .surface-panel,
+  .site-header,
+  .command-backdrop {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .card:hover,
+  .surface-panel:hover,
+  .command-result:hover,
+  .dashboard-rail a:hover {
+    transform: none;
+  }
+
+  .text-glow {
+    text-shadow: none;
+  }
+
+  .command-modal::before,
+  .card-glow::after,
+  .surface-panel::before,
+  .card::before {
+    opacity: .45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phase25-skeleton::after {
+    animation: none !important;
+    transform: none !important;
+  }
+}

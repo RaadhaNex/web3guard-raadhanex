@@ -1,0 +1,13 @@
+# Phase 25 — frontend Vercel project safety
+.next
+node_modules
+out
+coverage
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+.env
+.env.*
+!.env.local.example
