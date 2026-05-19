@@ -5,6 +5,7 @@ const groups = [
     title: "Worker and provider setup",
     text: "Use these only when you are ready to enable real scanner tools or external APIs.",
     links: [
+      ["Scanner depth", "/scanner-depth"],
       ["Worker runs", "/worker-runs"],
       ["Worker execution", "/worker-execution"],
       ["Provider live", "/provider-live"],
