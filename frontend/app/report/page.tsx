@@ -31,6 +31,7 @@ export default function ReportPage() {
               <Link href="/scanner/unified-url" className="btn-primary">Run unified scan →</Link>
               <Link href="/report/professional" className="btn-secondary">Professional delivery</Link>
               <Link href="/sample-reports" className="btn-secondary">Sample reports</Link>
+              <Link href="/report/pilot" className="btn-secondary">Pilot report v1</Link>
             </div>
           </div>
 
