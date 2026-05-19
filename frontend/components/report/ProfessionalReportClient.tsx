@@ -1,6 +1,7 @@
 
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { API_BASE, apiPost } from "@/lib/api";
 
@@ -200,7 +201,13 @@ export function ProfessionalReportClient() {
           <div className="mt-4 rounded-2xl border border-cyan/15 bg-cyan/10 p-4 text-sm leading-6 text-cyan-50">
             <p><strong>Record:</strong> {publication.id}</p>
             <p><strong>Visibility:</strong> {publication.visibility}</p>
-            <p><strong>Verify:</strong> /report/public/{publication.id}/verify?report_hash={publication.report_hash}</p>
+            <p><strong>Verify API:</strong> /report/public/{publication.id}/verify?report_hash={publication.report_hash}</p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              <Link className="btn-secondary !py-2 text-xs" href={`/report/verify?public_id=${publication.id}&report_hash=${publication.report_hash || ""}`}>
+                Open verification console
+              </Link>
+              <Link className="btn-secondary !py-2 text-xs" href="/report/public">Public registry guide</Link>
+            </div>
           </div>
         ) : null}
       </section>

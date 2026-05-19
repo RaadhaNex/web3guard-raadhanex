@@ -17,6 +17,7 @@ from app.services.professional_report import (
     publish_report_record,
     verify_report_record,
 )
+from app.services.report_verification import verify_public_report_record
 from app.services.report_builder import build_combined_launch_report
 
 router = APIRouter(prefix="/report", tags=["reports"])
@@ -133,7 +134,7 @@ def public_report(public_id: str, allow_private: bool = Query(default=False)):
 
 @router.get("/public/{public_id}/verify")
 def verify_public_report(public_id: str, report_hash: str = Query(min_length=32)):
-    return verify_report_record(public_id, report_hash)
+    return verify_public_report_record(public_id, report_hash)
 
 
 @router.get("/public/{public_id}/html")
