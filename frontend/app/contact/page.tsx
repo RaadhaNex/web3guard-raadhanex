@@ -3,22 +3,27 @@ import { LeadForm } from "@/components/scanner/LeadForm";
 
 export default function ContactPage() {
   return (
-    <div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 sm:px-6 lg:grid-cols-[0.8fr_1.2fr] lg:px-8">
-      <div>
-        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Request review</p>
-        <h1 className="mt-3 text-4xl font-black sm:text-5xl">Submit project for paid Web3 launch readiness review.</h1>
-        <p className="mt-4 text-slate-400">
-          Create a payment intent on pricing page. If Razorpay is configured, Checkout verification can confirm payment; if using UPI manual fallback, paste the transaction/reference ID here. You can also submit first and pay later.
+    <main className="mx-auto grid max-w-7xl gap-8 px-4 py-14 sm:px-6 lg:grid-cols-[0.82fr_1.18fr] lg:px-8">
+      <section>
+        <p className="section-label">Request scope review</p>
+        <h1 className="mt-3 text-4xl font-black sm:text-5xl">Submit your Web3 project for a scoped readiness conversation.</h1>
+        <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400 sm:text-base">
+          Share project context, public links, and the type of review you need. Do not paste private keys, seed phrases, production credentials, or customer secrets.
         </p>
-        <div className="mt-6 rounded-2xl border border-cyan/20 bg-cyan/10 p-4 text-sm leading-6 text-cyan-50">
-          keeps trust boundaries clear: paid review starts only after Razorpay backend verification or manual admin payment confirmation, and no certified audit claim is made.
+        <div className="mt-6 rounded-3xl border border-cyan/20 bg-cyan/10 p-5 text-sm leading-6 text-cyan-50">
+          Paid checkout is intentionally deferred. This form is for scope collection and follow-up only; it does not create a payment, subscription, or certified-audit claim.
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <Link href="/pricing" className="btn-primary">Create Payment Intent</Link>
-          <Link href="/scope-refund" className="btn-secondary">Read Scope Policy</Link>
+          <Link href="/scanner/unified-url" className="btn-primary">Run free scan first</Link>
+          <Link href="/scope-refund" className="btn-secondary">Read scope policy</Link>
         </div>
-      </div>
+        <div className="mt-6 grid gap-3 text-sm text-slate-400">
+          {["Authorized projects only", "Pre-audit readiness language", "No wallet signing or secrets", "Manual review scope must be confirmed"].map((item) => (
+            <div key={item} className="command-line"><span className="kbd-chip">✓</span><span>{item}</span></div>
+          ))}
+        </div>
+      </section>
       <LeadForm />
-    </div>
+    </main>
   );
 }

@@ -22,31 +22,34 @@ export function ScoreCard({ score, label }: { score: number; label: string }) {
   const dash = (pct / 100) * circ;
 
   return (
-    <div className="card p-6">
+    <div className="command-card p-6">
       <div className="flex items-center gap-5">
-        {/* Circular progress */}
-        <div style={{ position: "relative", width: 96, height: 96, flexShrink: 0 }}>
-          <svg width="96" height="96" viewBox="0 0 96 96">
+        <div className="relative h-24 w-24 shrink-0">
+          <svg width="96" height="96" viewBox="0 0 96 96" className="drop-shadow-[0_0_18px_rgba(6,182,212,.16)]">
             <circle cx="48" cy="48" r={r} fill="none" stroke="rgba(148,163,184,0.15)" strokeWidth="8" />
             <circle
-              cx="48" cy="48" r={r} fill="none"
-              stroke={color} strokeWidth="8"
+              cx="48"
+              cy="48"
+              r={r}
+              fill="none"
+              stroke={color}
+              strokeWidth="8"
               strokeLinecap="round"
               strokeDasharray={`${dash} ${circ}`}
               strokeDashoffset="0"
               transform="rotate(-90 48 48)"
             />
           </svg>
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: "1.5rem", fontWeight: 900, lineHeight: 1, color: "var(--text)" }}>{score}</span>
-            <span style={{ fontSize: "0.65rem", color: "var(--muted)", marginTop: 1 }}>/100</span>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-2xl font-black leading-none text-white">{score}</span>
+            <span className="mt-1 text-[0.65rem] text-slate-500">/100</span>
           </div>
         </div>
 
         <div className="min-w-0">
-          <p style={{ fontSize: "0.75rem", color: "var(--muted)", marginBottom: 4 }}>Launch Readiness Score</p>
-          <p style={{ fontSize: "1.125rem", fontWeight: 800, color: risk.color, lineHeight: 1.2 }}>{risk.text}</p>
-          <p style={{ fontSize: "0.8rem", color: "var(--muted)", marginTop: 4, lineHeight: 1.5 }}>{label}</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Launch confidence</p>
+          <p className="mt-2 text-lg font-black leading-tight" style={{ color: risk.color }}>{risk.text}</p>
+          <p className="mt-2 text-sm leading-6 text-slate-400">{label}</p>
         </div>
       </div>
     </div>

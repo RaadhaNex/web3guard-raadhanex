@@ -162,7 +162,7 @@ export default function AdminPaymentsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+    <main className="quantum-module-screen mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
       <section className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-6 shadow-2xl shadow-black/20">
         <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">
           Admin payments

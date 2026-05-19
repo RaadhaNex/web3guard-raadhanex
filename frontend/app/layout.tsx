@@ -7,16 +7,22 @@ export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: {
-    default: "Web3Guard AI — Smart Contract Security Review | RAADHANEX",
+    default: "Web3Guard AI — Web3 Launch Readiness Scanner | RAADHANEX",
     template: "%s | Web3Guard AI",
   },
   description:
-    "AI-assisted Web3 launch security review for smart contracts, websites, dApps, APIs, wallet flows, and admin OpSec. Affordable pre-audit from ₹999. Hindi support. UPI payments.",
+    "Evidence-first Web3 launch readiness scanner for websites, dApps, APIs, Solidity code, wallet UX, GitHub, and admin OpSec. Public beta. Pre-audit only; not a certified audit.",
   keywords: [
-    "web3 security", "smart contract audit", "solidity scanner", "web3 india",
-    "smart contract security", "dapp security", "blockchain security",
-    "pre-audit review", "web3 launch security", "solidity vulnerability scanner",
-    "web3 security tool india", "affordable smart contract audit",
+    "web3 security readiness",
+    "smart contract scanner",
+    "solidity scanner",
+    "web3 india",
+    "dapp security readiness",
+    "blockchain launch checklist",
+    "pre-audit review",
+    "web3 launch security",
+    "web3 security tool india",
+    "bug bounty readiness",
   ],
   authors: [{ name: "RAADHANEX", url: "https://web3guard.ai" }],
   creator: "RAADHANEX",
@@ -26,15 +32,15 @@ export const metadata: Metadata = {
     locale: "en_IN",
     url: "https://web3guard-raadhanex.vercel.app",
     siteName: "Web3Guard AI",
-    title: "Web3Guard AI — Smart Contract Security Review Before Launch",
+    title: "Web3Guard AI — Web3 Launch Readiness Scanner",
     description:
-      "Check smart contracts, websites, dApps, APIs, wallet flows, and admin risks before launch. Affordable AI-assisted pre-audit from ₹999. Built for Indian Web3 builders.",
-    images: [{ url: "/og-image.svg", width: 1200, height: 630, alt: "Web3Guard AI — AI-assisted Web3 launch security review" }],
+      "Check launch readiness across websites, dApps, APIs, Solidity code, wallet UX, GitHub, and admin OpSec. Public beta. Pre-audit only; not a certified audit.",
+    images: [{ url: "/og-image.svg", width: 1200, height: 630, alt: "Web3Guard AI — Web3 launch readiness scanner" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Web3Guard AI — Affordable Web3 Security Review",
-    description: "AI-assisted pre-audit for smart contracts, websites, and dApps. From ₹999. Hindi support.",
+    title: "Web3Guard AI — Web3 Launch Readiness Scanner",
+    description: "Evidence-first public beta scanner for Web3 launch readiness. Pre-audit only; not a certified audit.",
     images: ["/og-image.svg"],
     creator: "@raadhanex",
   },
@@ -44,8 +50,8 @@ export const metadata: Metadata = {
     googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#05070d" },
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#030712" },
+    { media: "(prefers-color-scheme: light)", color: "#030712" },
   ],
 };
 

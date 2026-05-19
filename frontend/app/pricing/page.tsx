@@ -4,9 +4,21 @@ export default function PricingPage() {
   return (
     <>
       <section className="mx-auto max-w-7xl px-4 pt-14 sm:px-6 lg:px-8">
-        <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Pricing + subscription</p>
-        <h1 className="mt-3 text-4xl font-black sm:text-5xl">Razorpay + UPI paid reports and monthly subscriptions.</h1>
-        <p className="mt-4 max-w-3xl text-slate-400">Users can pay through Razorpay Checkout when backend keys are configured, or use manual UPI fallback with admin verification. No frontend-only fake payment success is used.</p>
+        <div className="quantum-stage p-6 sm:p-8">
+          <p className="section-label">Pricing</p>
+          <h1 className="mt-3 max-w-4xl text-4xl font-black sm:text-5xl">
+            Free public beta now. Paid plans stay locked until payment verification is complete.
+          </h1>
+          <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400 sm:text-base">
+            Web3Guard AI currently focuses on free launch-readiness scanning, direct report export, and evidence-first guidance. Razorpay, UPI, subscriptions, webhooks, and billing automation remain deferred until the final payment phase is verified end to end.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <span className="badge badge-green">Free scanner live</span>
+            <span className="badge badge-amber">Payments deferred</span>
+            <span className="badge badge-cyan">No fake checkout success</span>
+            <span className="badge">Pre-audit only</span>
+          </div>
+        </div>
       </section>
       <PricingSection />
     </>

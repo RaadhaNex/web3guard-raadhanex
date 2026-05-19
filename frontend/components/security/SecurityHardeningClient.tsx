@@ -118,7 +118,7 @@ export function SecurityHardeningClient() {
 
   if (error) {
     return (
-      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="quantum-module-screen mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-rose-900">
           <p className="font-black">Security hardening status could not load.</p>
           <p className="mt-2 text-sm">{error}</p>
@@ -136,7 +136,7 @@ export function SecurityHardeningClient() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f8fafc] text-slate-950">
+    <main className="quantum-module-screen min-h-screen text-white">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <p className="text-xs font-black uppercase tracking-[0.32em] text-cyan-500">Web3Guard production hardening</p>

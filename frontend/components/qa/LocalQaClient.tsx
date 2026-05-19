@@ -74,10 +74,10 @@ export function LocalQaClient() {
   return (
     <div className="space-y-8">
       <section className="card">
-        <div className="badge">Local QA</div>
-        <h1 className="mt-4 text-3xl font-semibold text-white">Local QA + Stability Console</h1>
+        <div className="badge badge-cyan">Stability Console</div>
+        <h1 className="mt-4 text-3xl font-semibold text-white">Environment + readiness console</h1>
         <p className="mt-3 max-w-3xl text-slate-300">
-          Use this page after starting both backend and frontend. It does not fake test results: it reads the live backend QA endpoint and shows env/storage warnings clearly.
+          Use this page after starting both backend and frontend. Results come from the live backend readiness endpoint and show environment/storage warnings clearly.
         </p>
         <div className="mt-5 flex flex-wrap gap-3 text-sm">
           <span className="rounded-full border border-slate-700 px-4 py-2 text-slate-300">Frontend: http://localhost:3000</span>
@@ -99,7 +99,7 @@ export function LocalQaClient() {
           <div className="card"><p className="text-slate-400">Passed</p><p className="mt-2 text-3xl font-semibold text-emerald-300">{status.summary.passed}</p></div>
           <div className="card"><p className="text-slate-400">Warnings</p><p className="mt-2 text-3xl font-semibold text-amber-300">{status.summary.warnings}</p></div>
           <div className="card"><p className="text-slate-400">Failed</p><p className="mt-2 text-3xl font-semibold text-red-300">{status.summary.failed}</p></div>
-          <div className="card"><p className="text-slate-400">Certified audit?</p><p className="mt-2 text-3xl font-semibold text-white">No</p></div>
+          <div className="card"><p className="text-slate-400">Certified audit claim</p><p className="mt-2 text-3xl font-semibold text-white">No</p></div>
         </section>
       )}
 
@@ -121,20 +121,20 @@ export function LocalQaClient() {
       )}
 
       <section className="card">
-        <h2 className="text-xl font-semibold text-white">Manual local test order</h2>
+        <h2 className="text-xl font-semibold text-white">Manual verification order</h2>
         <ol className="mt-4 list-decimal space-y-2 pl-5 text-slate-300">
           <li>Open <a className="link" href={`${API_BASE}/health`} target="_blank">backend /health</a> and <a className="link" href={`${API_BASE}/health/readiness`} target="_blank">/health/readiness</a>.</li>
           <li>Run one contract scan with sample Solidity.</li>
           <li>Run one unified URL scan with a URL you own or are authorized to test.</li>
           <li>Create a UPI payment intent from Pricing and confirm it says manual verification.</li>
           <li>Submit a review request lead.</li>
-          <li>Open Admin Leads with ADMIN_TOKEN and export CSV.</li>
+          <li>Open the admin lead review console with a valid admin token and export CSV.</li>
           <li>Open Report and test Print / Save as PDF.</li>
         </ol>
       </section>
 
       <section className="card">
-        <h2 className="text-xl font-semibold text-white">Frontend routes to click-test</h2>
+        <h2 className="text-xl font-semibold text-white">Frontend routes to verify</h2>
         <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {frontendRoutes.map((route) => (
             <a className="rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2 text-sm text-slate-300 hover:border-cyan-400/50 hover:text-white" href={route} key={route}>

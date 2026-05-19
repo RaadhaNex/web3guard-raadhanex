@@ -87,7 +87,7 @@ export function AIFixAssistantClient() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <div className="quantum-module-screen mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="max-w-4xl">
         <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">· Real AI Fix Assistant</p>
         <h1 className="mt-3 text-3xl font-black sm:text-5xl">Safe fix suggestions, not auto-fixes</h1>

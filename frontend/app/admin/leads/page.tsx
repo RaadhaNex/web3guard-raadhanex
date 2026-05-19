@@ -97,7 +97,7 @@ export default function AdminLeadsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+    <div className="quantum-module-screen mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
       <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Admin</p>
       <h1 className="mt-3 text-4xl font-black">RAADHANEX income funnel dashboard</h1>
       <p className="mt-3 max-w-3xl text-slate-400">Track leads, UPI references, manual payment verification, review status, reviewer assignment, and CSV export.</p>

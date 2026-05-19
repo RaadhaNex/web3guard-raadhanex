@@ -179,7 +179,7 @@ function CtaBanner() {
         <div className="pointer-events-none absolute left-[-8rem] top-[-8rem] h-72 w-72 rounded-full bg-cyan/10 blur-3xl" />
         <div className="pointer-events-none absolute bottom-[-10rem] right-[-8rem] h-80 w-80 rounded-full bg-purple-500/10 blur-3xl" />
         <div className="relative">
-          <p className="section-label justify-center">Phase 3 ready</p>
+          <p className="section-label justify-center">Quantum command center</p>
           <h2 className="mt-3 text-3xl font-black sm:text-4xl">Run the command-center scan before launch day.</h2>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-400">
             Find blockers early, keep wording safe, and export a professional result your team can actually act on.

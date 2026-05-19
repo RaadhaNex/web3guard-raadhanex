@@ -36,9 +36,9 @@ export function WorkspaceDetailClient({ organizationId }: { organizationId: stri
         email: memberEmail,
         role: memberRole,
         status: "invited",
-        note: "Manual invite record only. No email is sent automatically.",
+        note: "Manual invite record only. Email delivery is not automated.",
       }, { headers: ctx.headers });
-      setMessage("Manual member invite record saved. No fake email invite was sent.");
+      setMessage("Manual member invite record saved. Email delivery was not automated.");
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save member invite");

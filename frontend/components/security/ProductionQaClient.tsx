@@ -8,7 +8,7 @@ function JsonBlock({ value }: { value: unknown }) { return <pre className="mono 
 export function ProductionQaClient() {
   const [status, setStatus] = useState<AnyObj | null>(null); const [checklist, setChecklist] = useState<AnyObj | null>(null); const [accounts, setAccounts] = useState<AnyObj | null>(null); const [error, setError] = useState<string | null>(null);
   useEffect(()=>{ Promise.all([apiGet<AnyObj>("/production-qa/status"), apiGet<AnyObj>("/production-qa/final-checklist"), apiGet<AnyObj>("/production-qa/account-setup")]).then(([a,b,c])=>{ setStatus(a); setChecklist(b); setAccounts(c); }).catch(e=>setError(e.message)); },[]);
-  return <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+  return <div className="quantum-module-screen mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
     <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Web3Guard AI</p>
     <h1 className="mt-3 text-3xl font-black sm:text-5xl">Final Production Launch QA</h1>
     <p className="mt-4 max-w-3xl text-slate-400">Final handoff map for running the MVP as a real platform. It clearly separates configured/live services from manual setup required.</p>

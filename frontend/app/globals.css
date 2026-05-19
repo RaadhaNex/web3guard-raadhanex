@@ -536,7 +536,7 @@ button:disabled, .btn-primary[aria-disabled="true"] { opacity: 0.45; cursor: not
 }
 
 /* ──────────────────────────────────────
-   Phase 3 Quantum UI extensions
+   Quantum UI extensions
 ────────────────────────────────────── */
 
 .holo-shell {
@@ -841,7 +841,7 @@ button:disabled, .btn-primary[aria-disabled="true"] { opacity: 0.45; cursor: not
 }
 
 /* ──────────────────────────────────────
-   Phase 4 Command UI extensions
+   Command UI extensions
 ────────────────────────────────────── */
 
 .command-hero {
@@ -972,4 +972,601 @@ button:disabled, .btn-primary[aria-disabled="true"] { opacity: 0.45; cursor: not
 
 @keyframes shimmer {
   100% { transform: translateX(100%); }
+}
+
+/* ──────────────────────────────────────
+   Final Quantum Consistency Layer
+────────────────────────────────────── */
+
+.command-page {
+  position: relative;
+  overflow: hidden;
+  min-height: calc(100vh - 56px);
+}
+.command-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(circle 520px at 6% 0%, rgba(6,182,212,0.075), transparent 70%),
+    radial-gradient(circle 420px at 94% 8%, rgba(139,92,246,0.065), transparent 72%),
+    linear-gradient(rgba(6,182,212,0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6,182,212,0.022) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 52px 52px, 52px 52px;
+}
+.command-page::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(3,7,18,0.08), rgba(3,7,18,0.74) 68%, #030712 100%);
+}
+
+.command-hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 32px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)),
+    radial-gradient(circle at 0% 0%, rgba(6,182,212,0.12), transparent 52%),
+    rgba(6,15,30,0.72);
+  box-shadow: 0 30px 110px rgba(0,0,0,0.50), 0 0 0 1px rgba(6,182,212,0.06);
+}
+.command-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent, rgba(6,182,212,0.06), transparent),
+    linear-gradient(rgba(6,182,212,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6,182,212,0.05) 1px, transparent 1px);
+  background-size: 100% 100%, 38px 38px, 38px 38px;
+  opacity: .55;
+  mask-image: radial-gradient(circle at 50% 0%, black, transparent 78%);
+  pointer-events: none;
+}
+
+.command-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.075);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.038), rgba(255,255,255,0.018));
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(18px);
+}
+.command-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(6,182,212,0.35), transparent);
+  pointer-events: none;
+}
+
+.command-table {
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.025);
+  box-shadow: var(--shadow-card);
+}
+.command-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.command-table th {
+  color: rgba(203,213,225,.92);
+  background: rgba(255,255,255,.04);
+  font-size: .72rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.command-table td,
+.command-table th {
+  border-bottom: 1px solid rgba(255,255,255,.065);
+}
+.command-table tr:hover td {
+  background: rgba(6,182,212,.035);
+}
+
+.safe-copy {
+  border: 1px solid rgba(245,158,11,.22);
+  background: rgba(245,158,11,.08);
+  color: #fde68a;
+  border-radius: 20px;
+}
+
+.empty-state {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  border: 1px dashed rgba(255,255,255,0.12);
+  border-radius: 24px;
+  background: rgba(255,255,255,0.025);
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 2rem;
+}
+
+.loading-line {
+  position: relative;
+  overflow: hidden;
+  min-height: 1rem;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.05);
+}
+.loading-line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(6,182,212,0.20), transparent);
+  animation: shimmerLine 1.45s ease-in-out infinite;
+}
+
+.module-grid-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(6,182,212,0.08), transparent 44%),
+    rgba(255,255,255,0.025);
+  box-shadow: var(--shadow-card);
+  transition: transform .22s ease, border-color .22s ease, background-color .22s ease;
+}
+.module-grid-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(6,182,212,0.28);
+  background-color: rgba(6,182,212,0.035);
+}
+
+.clean-link {
+  color: var(--cyan-text);
+  font-weight: 800;
+}
+.clean-link:hover { color: #fff; }
+
+@keyframes shimmerLine {
+  100% { transform: translateX(100%); }
+}
+
+@media (max-width: 640px) {
+  .command-hero { border-radius: 24px; }
+  .command-card { border-radius: 20px; }
+  .command-table { border-radius: 18px; }
+}
+
+/* ──────────────────────────────────────
+   Phase 6: Legacy module deep cleanup + dark compatibility
+   Converts remaining older module/admin/security pages into the Quantum UI system
+   without touching backend logic.
+────────────────────────────────────── */
+
+.quantum-module-screen {
+  position: relative;
+  min-height: calc(100vh - 56px);
+  isolation: isolate;
+}
+.quantum-module-screen::before {
+  content: '';
+  position: fixed;
+  inset: 56px 0 0;
+  z-index: -2;
+  background:
+    radial-gradient(circle 420px at 8% 12%, rgba(6,182,212,0.08), transparent 74%),
+    radial-gradient(circle 360px at 92% 8%, rgba(139,92,246,0.075), transparent 72%),
+    linear-gradient(rgba(6,182,212,0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6,182,212,0.018) 1px, transparent 1px);
+  background-size: auto, auto, 42px 42px, 42px 42px;
+  pointer-events: none;
+}
+.quantum-module-screen::after {
+  content: '';
+  position: fixed;
+  left: 50%;
+  top: 44%;
+  z-index: -1;
+  width: min(58vw, 38rem);
+  height: min(58vw, 38rem);
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(6,182,212,0.06), transparent 65%);
+  filter: blur(2px);
+  pointer-events: none;
+}
+.quantum-module-screen > p:first-child,
+.quantum-module-screen main > p:first-child,
+.quantum-module-screen section > p:first-child {
+  color: var(--cyan) !important;
+}
+.quantum-module-screen h1,
+.quantum-module-screen h2,
+.quantum-module-screen h3 {
+  color: var(--text-primary) !important;
+}
+.quantum-module-screen .card,
+.quantum-module-screen .glass-tile,
+.quantum-module-screen .rounded-3xl,
+.quantum-module-screen .rounded-\[2rem\] {
+  backdrop-filter: blur(18px);
+}
+.quantum-module-screen .card {
+  border-color: rgba(6,182,212,0.10);
+}
+.quantum-module-screen .card:hover {
+  border-color: rgba(6,182,212,0.22);
+}
+.quantum-module-screen pre {
+  border-color: rgba(6,182,212,0.12) !important;
+  background: rgba(0,0,0,0.34) !important;
+  color: #cbd5e1 !important;
+}
+.quantum-module-screen table {
+  color: var(--text-primary);
+}
+
+.module-hero-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(6,182,212,0.12);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(6,182,212,0.10), transparent 46%),
+    radial-gradient(circle at 100% 0%, rgba(139,92,246,0.08), transparent 42%),
+    rgba(8,15,30,0.72);
+  box-shadow: 0 24px 90px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.035);
+}
+.module-hero-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(6,182,212,0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6,182,212,0.045) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: linear-gradient(to bottom, black, transparent 80%);
+  opacity: .25;
+  pointer-events: none;
+}
+.module-hero-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.module-status-rail {
+  display: grid;
+  gap: .75rem;
+}
+.module-status-item {
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.028);
+  padding: 1rem;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
+}
+.module-status-item strong {
+  color: #fff;
+}
+
+/* Dark compatibility for older light Tailwind utility pages. Scoped by load order and intentional for this dark-first app. */
+.text-slate-950,
+.text-slate-900,
+.text-slate-800,
+.text-slate-700 {
+  color: #f8fafc !important;
+}
+.text-slate-600,
+.text-slate-500 {
+  color: #94a3b8 !important;
+}
+.text-slate-400 {
+  color: #cbd5e1 !important;
+}
+.bg-white,
+.bg-slate-50,
+.bg-slate-100 {
+  background-color: rgba(8,15,30,0.76) !important;
+}
+.border-slate-200,
+.border-slate-300,
+.border-white\/10 {
+  border-color: rgba(255,255,255,0.09) !important;
+}
+.bg-amber-50,
+.bg-yellow-50 {
+  background-color: rgba(245,158,11,0.10) !important;
+}
+.text-amber-900,
+.text-amber-950,
+.text-yellow-900 {
+  color: #fde68a !important;
+}
+.border-amber-200,
+.border-amber-300,
+.border-yellow-200,
+.border-yellow-300 {
+  border-color: rgba(245,158,11,0.26) !important;
+}
+.bg-rose-50,
+.bg-red-50 {
+  background-color: rgba(244,63,94,0.10) !important;
+}
+.text-rose-900,
+.text-red-900,
+.text-rose-800,
+.text-red-800 {
+  color: #fecdd3 !important;
+}
+.border-rose-200,
+.border-red-200 {
+  border-color: rgba(244,63,94,0.24) !important;
+}
+.bg-emerald-50,
+.bg-green-50 {
+  background-color: rgba(16,185,129,0.10) !important;
+}
+.text-emerald-900,
+.text-green-900,
+.text-emerald-800,
+.text-green-800 {
+  color: #bbf7d0 !important;
+}
+.border-emerald-200,
+.border-green-200 {
+  border-color: rgba(16,185,129,0.24) !important;
+}
+.bg-cyan-50,
+.bg-sky-50,
+.bg-cyan-100,
+.bg-sky-100 {
+  background-color: rgba(6,182,212,0.10) !important;
+}
+.text-cyan-900,
+.text-sky-900,
+.text-cyan-800,
+.text-sky-800,
+.text-cyan-700,
+.text-sky-700,
+.text-cyan-600,
+.text-sky-600 {
+  color: #67e8f9 !important;
+}
+.border-cyan-200,
+.border-sky-200,
+.border-cyan-300,
+.border-sky-300 {
+  border-color: rgba(6,182,212,0.28) !important;
+}
+
+.legacy-clean-card,
+.quantum-module-screen article,
+.quantum-module-screen details {
+  border-color: rgba(255,255,255,0.08) !important;
+  background: rgba(255,255,255,0.025) !important;
+  color: var(--text-primary);
+}
+.quantum-module-screen summary {
+  color: var(--text-primary);
+}
+.quantum-module-screen .btn-secondary,
+.quantum-module-screen .btn-primary {
+  min-height: 2.65rem;
+}
+.quantum-module-screen input[type="checkbox"] {
+  accent-color: var(--cyan);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quantum-module-screen::after { display: none; }
+}
+
+@media (max-width: 640px) {
+  .module-hero-panel { border-radius: 24px; }
+  .quantum-module-screen { overflow-x: hidden; }
+}
+
+/* ──────────────────────────────────────
+   Phase 8 Global UX / Command Layer
+────────────────────────────────────── */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 10000;
+  width: 100%;
+  height: 2px;
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--cyan), #8b5cf6, var(--cyan));
+  box-shadow: 0 0 18px rgba(6,182,212,.6);
+  pointer-events: none;
+}
+
+.preaudit-ribbon {
+  position: relative;
+  z-index: 20;
+  border-bottom: 1px solid rgba(6,182,212,0.07);
+  background: rgba(3,7,18,0.74);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.command-fab {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.8rem;
+  min-height: 2.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(6,182,212,0.22);
+  background: rgba(3,7,18,0.82);
+  color: var(--cyan-text);
+  box-shadow: 0 18px 70px rgba(0,0,0,.55), 0 0 32px rgba(6,182,212,.10);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transition: transform .18s ease, border-color .18s ease, background-color .18s ease;
+}
+.command-fab:hover {
+  transform: translateY(-2px);
+  border-color: rgba(6,182,212,0.38);
+  background: rgba(6,15,30,0.94);
+}
+
+.command-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: grid;
+  place-items: start center;
+  padding: clamp(4rem, 10vh, 7rem) 1rem 1rem;
+}
+.command-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background:
+    radial-gradient(circle 520px at 50% 8%, rgba(6,182,212,0.16), transparent 70%),
+    rgba(0,0,0,0.74);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.command-modal {
+  position: relative;
+  z-index: 1;
+  width: min(760px, 100%);
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid rgba(6,182,212,0.16);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015)),
+    rgba(6,15,30,0.96);
+  box-shadow: 0 34px 140px rgba(0,0,0,.78), 0 0 0 1px rgba(255,255,255,.035), 0 0 60px rgba(6,182,212,.10);
+}
+.command-modal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(6,182,212,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6,182,212,0.04) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: linear-gradient(to bottom, black, transparent 90%);
+  pointer-events: none;
+  opacity: .35;
+}
+.command-modal > * {
+  position: relative;
+  z-index: 1;
+}
+.command-search-row {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  padding: 1rem;
+}
+.command-search-input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  outline: none;
+  font: inherit;
+  font-weight: 700;
+}
+.command-search-input::placeholder {
+  color: rgba(148,163,184,.72);
+}
+.command-status-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding: .85rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.018);
+}
+.command-result-list {
+  display: grid;
+  gap: .45rem;
+  max-height: min(56vh, 520px);
+  overflow-y: auto;
+  padding: .85rem;
+}
+.command-result {
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.025);
+  padding: .85rem;
+  transition: border-color .16s ease, background-color .16s ease, transform .16s ease;
+}
+.command-result:hover {
+  transform: translateY(-1px);
+  border-color: rgba(6,182,212,0.26);
+  background: rgba(6,182,212,0.065);
+}
+.command-result-icon {
+  display: grid;
+  place-items: center;
+  width: 2.65rem;
+  height: 2.65rem;
+  flex: 0 0 auto;
+  border-radius: 14px;
+  border: 1px solid rgba(6,182,212,0.18);
+  background: rgba(6,182,212,0.08);
+  color: var(--cyan-text);
+  font-size: .72rem;
+  font-weight: 900;
+}
+.command-empty {
+  border: 1px dashed rgba(255,255,255,0.12);
+  border-radius: 20px;
+  padding: 2rem;
+  text-align: center;
+  background: rgba(255,255,255,0.02);
+}
+
+#main-content {
+  min-height: 55vh;
+}
+
+@media (max-width: 640px) {
+  .command-fab {
+    right: .75rem;
+    bottom: .75rem;
+    min-width: 3.35rem;
+    min-height: 2.35rem;
+    font-size: .75rem;
+  }
+  .command-overlay {
+    align-items: stretch;
+    padding-top: 4.5rem;
+  }
+  .command-modal {
+    border-radius: 24px;
+  }
+  .command-result {
+    align-items: flex-start;
+  }
+  .preaudit-ribbon div {
+    line-height: 1.7;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-progress,
+  .command-fab,
+  .command-result {
+    transition: none !important;
+  }
 }

@@ -7,7 +7,7 @@ const columns = [
     links: [
       { label: "Free Scanner", href: "/scanner/unified-url" },
       { label: "All Scanners", href: "/scanner" },
-      { label: "Pricing", href: "/pricing" },
+      { label: "Pricing Status", href: "/pricing" },
       { label: "Dashboard", href: "/dashboard" },
     ],
   },
@@ -21,7 +21,7 @@ const columns = [
     ],
   },
   {
-    title: "Company",
+    title: "Trust",
     links: [
       { label: "Security", href: "/security" },
       { label: "Privacy", href: "/privacy" },
@@ -46,13 +46,13 @@ export function Footer() {
             </Link>
 
             <p className="mt-4 max-w-xs text-xs leading-6 text-slate-400">
-              AI-assisted Web3 launch security review before expensive audits.
+              Evidence-first Web3 launch readiness scanner for founders and developers preparing before formal audits.
             </p>
 
             <div className="mt-4 flex flex-wrap gap-2">
               {[
                 { tone: "bg-emerald-400", text: "Scanners live" },
-                { tone: "bg-amber-300", text: "Payments coming" },
+                { tone: "bg-amber-300", text: "Payments deferred" },
                 { tone: "bg-slate-400", text: "Pre-audit only" },
               ].map(({ tone, text }) => (
                 <span key={text} className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.07] bg-white/[0.03] px-2.5 py-1 text-[11px] font-semibold text-slate-400">
@@ -85,7 +85,7 @@ export function Footer() {
 
         <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-6">
           <p className="text-xs text-slate-600">© {new Date().getFullYear()} {brand.product} by {brand.company}.</p>
-          <p className="text-xs text-slate-600">Not a certified audit. Preliminary review only.</p>
+          <p className="text-xs text-slate-600">Preliminary review only. Not a certified audit.</p>
         </div>
       </div>
     </footer>

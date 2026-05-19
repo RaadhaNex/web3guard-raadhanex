@@ -80,7 +80,7 @@ export function MonitoringLiteClient() {
     finally { setLoading(false); }
   }
 
-  return <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+  return <div className="quantum-module-screen mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
     <div className="max-w-4xl">
       <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Web3Guard AI</p>
       <h1 className="mt-3 text-3xl font-black sm:text-5xl">Monitoring Lite</h1>
