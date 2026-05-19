@@ -6,7 +6,8 @@ const visibleNav = [
   { href: "/scanner/unified-url", label: "URL Scan" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/report/professional", label: "Reports" },
-  { href: "/pricing", label: "Pricing" },
+  { href: "/launch-readiness", label: "Beta Ready" },
+  { href: "/free-tools", label: "Free Tools" },
 ];
 
 const moreGroups = [
@@ -59,6 +60,11 @@ const moreGroups = [
       { href: "/feature-status", label: "Feature Status" },
       { href: "/methodology", label: "Methodology" },
       { href: "/sample-reports", label: "Samples" },
+      { href: "/limitations", label: "Limitations" },
+      { href: "/security", label: "Security" },
+      { href: "/privacy", label: "Privacy" },
+      { href: "/terms", label: "Terms" },
+      { href: "/changelog", label: "Changelog" },
       { href: "/trust", label: "Trust Policy" },
       { href: "/learning", label: "Learning" },
       { href: "/launch-pack", label: "Launch Pack" },
@@ -69,8 +75,9 @@ const moreGroups = [
 const mobileQuickNav = [
   { href: "/scanner/unified-url", label: "Scan" },
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/pricing", label: "Pricing" },
+  { href: "/free-tools", label: "Free Tools" },
   { href: "/report/professional", label: "Reports" },
+  { href: "/launch-readiness", label: "Beta Ready" },
 ];
 
 function MoreMenu({ compact = false }: { compact?: boolean }) {

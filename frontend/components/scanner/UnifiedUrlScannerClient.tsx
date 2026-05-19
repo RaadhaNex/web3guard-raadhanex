@@ -291,8 +291,21 @@ function buildInlineMarkdownReport(report: Record<string, unknown>) {
     "## Executive summary",
     String(report.executive_summary || "No executive summary provided."),
     "",
-    "## Real bugs / findings with fix hints",
+    "## Split readiness scores",
   ];
+
+  const scoreSplit = (report.score_split || {}) as Record<string, any>;
+  scoreSplitCards(scoreSplit).forEach((item) => {
+    lines.push(
+      `- **${String(item.label)}**: ${typeof item.score === "number" ? item.score : "Not assessed"} — ${String(item.status || "Not assessed")}`,
+      `  - Evidence basis: ${String(item.source || "Not provided")}`
+    );
+  });
+
+  lines.push(
+    "",
+    "## Real bugs / findings with fix hints",
+  );
 
   if (findings.length) {
     findings.forEach((finding, index) => {
@@ -328,6 +341,54 @@ function buildInlineMarkdownReport(report: Record<string, unknown>) {
   return lines.join("\n");
 }
 
+
+function buildScoreSplit(result: UnifiedUrlScanResponse) {
+  if (result.score_split) return result.score_split;
+
+  const byModule = new Map(result.module_cards.map((card) => [card.module, card]));
+  const moduleEntry = (module: string, label: string, source: string) => {
+    const card = byModule.get(module);
+    const assessed = Boolean(card?.assessed);
+    return {
+      label,
+      score: assessed ? card?.score ?? null : null,
+      status: card?.status || "Not assessed",
+      risk_label: card?.risk_label || "Not assessed",
+      source: assessed ? source : "Not Assessed — required evidence was not provided.",
+    };
+  };
+  const total = result.module_cards.length || 1;
+  const assessed = result.module_cards.filter((card) => card.assessed).length;
+  const missing = result.module_cards.reduce((count, card) => count + (card.required_input?.length || 0), 0);
+  const evidenceScore = Math.max(0, Math.min(100, Math.round((assessed / total) * 100 - Math.min(missing * 2, 24))));
+  return {
+    website_surface_score: moduleEntry("website", "Website Surface Score", "Passive public URL evidence: HTTP/HTTPS, headers, HTML hints, robots/sitemap/policy signals."),
+    contract_rule_score: moduleEntry("contract", "Contract Rule Score", "Pasted Solidity or verified explorer source analyzed by local rules. External tools remain separate."),
+    launch_evidence_score: {
+      label: "Launch Evidence Score",
+      score: evidenceScore,
+      status: missing ? "Evidence needed" : "Evidence complete",
+      risk_label: missing ? "Evidence gap" : "Evidence present",
+      source: `${assessed}/${total} modules assessed; ${missing} required evidence item(s) still listed.`,
+    },
+    overall_launch_confidence: {
+      label: "Overall Launch Confidence",
+      score: result.overall_score ?? result.available_score ?? null,
+      status: result.overall_score == null ? "Partial assessed confidence" : "Full assessed confidence",
+      risk_label: result.risk_label || "Not assessed",
+      source: "Uses all weighted modules only when all are assessed. Otherwise uses assessed-module available score and marks confidence as partial.",
+    },
+    no_full_audit_score: result.overall_score == null,
+    note: "These are launch-readiness scores, not a certified audit score, penetration-test score, or guarantee of security.",
+  };
+}
+
+function scoreSplitCards(scoreSplit: Record<string, any>) {
+  return ["website_surface_score", "contract_rule_score", "launch_evidence_score", "overall_launch_confidence"]
+    .map((key) => ({ key, ...(scoreSplit[key] || {}) }))
+    .filter((item) => item.label);
+}
+
 function buildInlineReportFromResult(result: UnifiedUrlScanResponse) {
   const combined = (result.combined_report || {}) as Record<string, any>;
   const realFindings = (result.priority_actions || []).map((item) => ({
@@ -359,6 +420,8 @@ function buildInlineReportFromResult(result: UnifiedUrlScanResponse) {
     limitations: card.limitations || [],
   }));
 
+  const scoreSplit = buildScoreSplit(result);
+
   const moduleMatrix = result.module_cards.map((card) => ({
     label: card.label,
     module: card.module,
@@ -383,6 +446,7 @@ function buildInlineReportFromResult(result: UnifiedUrlScanResponse) {
       risk_label: result.risk_label || combined.combined?.risk_label || "Not assessed",
     },
     coverage: result.coverage || combined.coverage,
+    score_split: scoreSplit,
     module_matrix: moduleMatrix,
     priority_action_plan: result.priority_actions || [],
     top_findings: realFindings,
@@ -419,6 +483,7 @@ function buildInlineReportFromResult(result: UnifiedUrlScanResponse) {
     website_url: result.website_url,
     combined: report.combined,
     coverage: report.coverage,
+    score_split: report.score_split,
     module_matrix: report.module_matrix,
     priority_action_plan: report.priority_action_plan,
     top_findings: report.top_findings,
@@ -917,12 +982,13 @@ export function UnifiedUrlScannerClient() {
   }
 
   const cards = result?.module_cards ? sortModuleCards(result.module_cards) : [];
+  const splitCards = result ? scoreSplitCards(buildScoreSplit(result)) : [];
   const requiredInputs = result?.module_cards.flatMap((card) =>
     (card.required_input || []).map((item) => ({ label: card.label, item }))
   ) || [];
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950">
+    <main className="min-h-screen bg-[linear-gradient(180deg,#05070d,#0f172a_38%,#f8fafc_38%)] text-slate-950">
       {fieldPrompt ? (
         <div className="fixed right-4 top-24 z-50 w-[calc(100%-2rem)] max-w-md rounded-2xl border border-red-200 bg-white p-4 text-sm font-semibold text-red-700 shadow-xl">
           <div className="flex items-start justify-between gap-3">
@@ -1290,6 +1356,27 @@ export function UnifiedUrlScannerClient() {
                       <p className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">{result.safe_public_summary}</p>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Split readiness scores</p>
+                    <h3 className="mt-2 text-2xl font-black text-slate-950">No misleading full audit score</h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">Website Surface Score, Contract Rule Score, Launch Evidence Score, and Overall Launch Confidence are separated so missing evidence remains visible.</p>
+                  </div>
+                  <div className="rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-xs font-black text-yellow-900">Pre-audit readiness only</div>
+                </div>
+                <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  {splitCards.map((item) => (
+                    <div key={item.key} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-500">{item.label}</p>
+                      <p className={`mt-2 text-3xl font-black ${scoreTone(item.score)}`}>{typeof item.score === "number" ? item.score : "Not assessed"}</p>
+                      <p className="mt-2 text-sm font-bold text-slate-800">{item.status}</p>
+                      <p className="mt-2 text-xs leading-5 text-slate-600">{item.source}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
 

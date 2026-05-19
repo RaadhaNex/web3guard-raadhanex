@@ -1,126 +1,71 @@
 import Link from "next/link";
 import { brand } from "@/lib/constants";
 
-const topFindings = [
-  { sev: "critical", rule: "WG-SOL-OVFL-001", text: "Integer overflow — pre-0.8.0" },
-  { sev: "critical", rule: "WG-SOL-ARBTRF",   text: "Arbitrary transferFrom vector" },
-  { sev: "high",     rule: "WG-SOL-REENT-003", text: "Cross-function reentrancy" },
-  { sev: "high",     rule: "WG-SOL-GOV-001",  text: "Governance flash loan risk" },
-  { sev: "medium",   rule: "WG-SOL-PRICE-001", text: "Spot price manipulation" },
+const signals = [
+  { label: "Critical", value: "Fix before launch", cls: "border-risk-red/30 bg-risk-red/10 text-red-200" },
+  { label: "Warning", value: "Evidence needed", cls: "border-risk-yellow/30 bg-risk-yellow/10 text-yellow-100" },
+  { label: "Pass", value: "Control present", cls: "border-risk-green/30 bg-risk-green/10 text-green-100" },
 ];
 
-const sevCls: Record<string, string> = {
-  critical: "sev-critical", high: "sev-high", medium: "sev-medium",
-};
+const matrix = [
+  ["Website Surface", "82", "Headers + policy evidence"],
+  ["Contract Rules", "Not Assessed", "Paste Solidity / verified source"],
+  ["Launch Evidence", "43", "Wallet/Admin evidence needed"],
+  ["Overall Confidence", "Partial", "Not a full audit score"],
+];
 
 export function Hero() {
   return (
-    <section className="grid-bg relative overflow-hidden border-b border-white/[0.07]">
-      {/* Background glow */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div style={{ position: "absolute", top: -100, left: -100, width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(34,211,238,0.07) 0%, transparent 70%)" }} />
-        <div style={{ position: "absolute", top: -50, right: -100, width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(96,165,250,0.05) 0%, transparent 70%)" }} />
-      </div>
-
-      <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-8 lg:py-28">
-
-        {/* Left */}
+    <section className="w3g-hero relative overflow-hidden border-b border-white/10">
+      <div className="pointer-events-none absolute inset-0 w3g-cyber-grid" />
+      <div className="pointer-events-none absolute left-1/2 top-[-12rem] h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-risk-red/10 blur-3xl" />
+      <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-28">
         <div>
-          {/* Badge */}
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan/20 bg-cyan/[0.06] px-3.5 py-1.5">
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22d3ee", display: "inline-block", flexShrink: 0, boxShadow: "0 0 6px #22d3ee" }} />
-            <span className="text-xs font-semibold text-cyan">India&apos;s first full-surface Web3 security platform</span>
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3.5 py-1.5 shadow-soft">
+            <span className="h-2 w-2 rounded-full bg-risk-green shadow-[0_0_18px_rgba(34,197,94,.8)]" />
+            <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-200">Public beta · real-only security readiness</span>
           </div>
-
-          <h1 className="max-w-2xl text-4xl font-black leading-tight tracking-tight text-white sm:text-5xl lg:text-[3.4rem]">
-            Find security risks in your
-            <span style={{ background: "linear-gradient(135deg,#22d3ee 0%,#60a5fa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", display: "block" }}>
-              Web3 project before launch.
-            </span>
+          <h1 className="max-w-4xl text-4xl font-black leading-tight tracking-tight text-white sm:text-6xl lg:text-[4.25rem]">
+            Futuristic Web3 launch security,
+            <span className="block bg-gradient-to-r from-white via-slate-300 to-risk-yellow bg-clip-text text-transparent">without fake audit claims.</span>
           </h1>
-
-          <p className="mt-5 max-w-lg text-base leading-7 text-slate-400">
-            Smart contract scanner with <strong className="text-white font-semibold">53 security rules</strong>, website scanner, dApp review, wallet flow check, and admin OpSec audit — all in one platform. Hindi support. From ₹999.
+          <p className="mt-6 max-w-2xl text-base leading-8 text-slate-300">
+            Scan websites, Solidity, public repos, wallet UX evidence, and founder/admin OpSec readiness. Missing providers or tools show <strong className="text-white">Tool Not Installed</strong>, <strong className="text-white">Needs API Key</strong>, or <strong className="text-white">Not Assessed</strong>.
           </p>
-
-          {/* Trust signals */}
-          <div className="mt-6 flex flex-wrap gap-2">
-            {["53 rules", "6 surfaces", "Inline fix code", "Hindi support", "Pre-audit only"].map(t => (
-              <span key={t} className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-xs font-medium text-slate-300">
-                {t}
-              </span>
-            ))}
+          <div className="mt-7 flex flex-wrap gap-2">
+            {["No private keys", "No wallet signing", "No exploit automation", "Payment deferred", "Pre-audit readiness only"].map((item) => <span key={item} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-bold text-slate-300">{item}</span>)}
           </div>
-
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/scanner/unified-url" className="btn-primary" style={{ padding: "0.75rem 1.75rem", fontSize: "0.9375rem" }}>
-              Start Free Scan
-              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M2 7.5h11M8.5 3l4.5 4.5L8.5 12"/></svg>
-            </Link>
-            <Link href="/sample-reports" className="btn-secondary" style={{ padding: "0.75rem 1.75rem", fontSize: "0.9375rem" }}>
-              View Sample Report
-            </Link>
+          <div className="mt-9 flex flex-wrap gap-3">
+            <Link href="/scanner/unified-url" className="btn-primary">Start public beta scan →</Link>
+            <Link href="/free-tools" className="btn-secondary">Open free tools</Link>
+            <Link href="/methodology" className="btn-secondary">Methodology</Link>
           </div>
-
-          <p className="mt-5 text-xs text-slate-500">{brand.disclaimer}</p>
+          <p className="mt-5 max-w-xl text-xs leading-5 text-slate-500">{brand.disclaimer} Payment/Razorpay/UPI stays pending until the final verified payment phase.</p>
         </div>
 
-        {/* Right — Scanner output preview */}
-        <div className="card overflow-hidden border-cyan/[0.15]">
-          {/* Scanner header */}
-          <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-3">
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1.5">
-                <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#ff5f57", display: "block" }} />
-                <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#febc2e", display: "block" }} />
-                <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#28c840", display: "block" }} />
-              </div>
-              <span className="mono text-xs text-slate-500">Web3Guard AI — Scan Results</span>
+        <div className="w3g-orbit-card relative rounded-[2rem] border border-white/10 bg-[#07101f]/90 p-5 shadow-2xl">
+          <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-risk-red/10 via-transparent to-risk-green/10" />
+          <div className="relative">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div><p className="text-xs font-black uppercase tracking-[0.22em] text-risk-yellow">Launch confidence snapshot</p><p className="mt-1 text-sm text-slate-400">CertiK-style due diligence snapshot, Web3Guard wording</p></div>
+              <span className="rounded-full border border-risk-yellow/30 bg-risk-yellow/10 px-3 py-1 text-xs font-black text-yellow-100">Partial</span>
             </div>
-            <span className="rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-400">Score: 12 · Critical Risk</span>
-          </div>
-
-          {/* Score ring + breakdown */}
-          <div className="flex items-center gap-5 border-b border-white/[0.07] px-5 py-4">
-            {/* Mini ring */}
-            <div style={{ position: "relative", width: 72, height: 72, flexShrink: 0 }}>
-              <svg width="72" height="72" viewBox="0 0 72 72">
-                <circle cx="36" cy="36" r="28" fill="none" stroke="rgba(148,163,184,0.12)" strokeWidth="7" />
-                <circle cx="36" cy="36" r="28" fill="none" stroke="#ef4444" strokeWidth="7"
-                  strokeLinecap="round"
-                  strokeDasharray={`${(12/100)*175.9} 175.9`}
-                  transform="rotate(-90 36 36)" />
-              </svg>
-              <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontSize: "1.25rem", fontWeight: 900, color: "#ef4444", lineHeight: 1 }}>12</span>
-                <span style={{ fontSize: "0.55rem", color: "#64748b" }}>/100</span>
-              </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {matrix.map(([label, value, note]) => (
+                <div key={label} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <p className="text-xs text-slate-400">{label}</p>
+                  <p className={`mt-1 text-2xl font-black ${value === "Not Assessed" ? "text-risk-yellow" : value === "Partial" ? "text-slate-100" : "text-white"}`}>{value}</p>
+                  <p className="mt-2 text-xs leading-5 text-slate-500">{note}</p>
+                </div>
+              ))}
             </div>
-            <div>
-              <p className="text-xs font-semibold text-red-400">Critical Launch Risk</p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                <span className="sev-critical">3 Critical</span>
-                <span className="sev-high">2 High</span>
-                <span className="sev-medium">1 Medium</span>
-              </div>
-              <p className="mt-1.5 text-xs text-slate-500">Contract · Website · Admin</p>
+            <div className="mt-5 space-y-2">
+              {signals.map((signal) => <div key={signal.label} className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-sm ${signal.cls}`}><span className="font-black">{signal.label}</span><span>{signal.value}</span></div>)}
             </div>
-          </div>
-
-          {/* Findings list */}
-          <div className="divide-y divide-white/[0.05] px-1 pb-1">
-            {topFindings.map(({ sev, rule, text }) => (
-              <div key={rule} className="flex items-center gap-3 px-4 py-2.5">
-                <span className={sevCls[sev] ?? "sev-info"}>{sev}</span>
-                <span className="mono text-xs text-slate-500 shrink-0">{rule}</span>
-                <span className="text-xs text-slate-300 truncate">{text}</span>
-                <span className="ml-auto shrink-0 rounded bg-green-500/10 px-1.5 py-0.5 text-xs text-green-400">Fix ↗</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t border-white/[0.07] px-5 py-3 text-center">
-            <p className="text-xs text-slate-500">Sample output — real scans use your code</p>
+            <div className="mt-5 rounded-2xl border border-white/10 bg-black/40 p-4">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-risk-green">Developer testing readiness</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">Foundry · Echidna · Slither · Aderyn · Mythril status stays honest: real output only, otherwise Tool Not Installed / Worker Required.</p>
+            </div>
           </div>
         </div>
       </div>

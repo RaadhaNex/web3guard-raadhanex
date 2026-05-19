@@ -1,63 +1,40 @@
-const penalties = [
-  ["Critical", "-25", "Fund loss, takeover, mint abuse, or major launch-blocking risk"],
-  ["High", "-15", "Serious issue needing fix or manual review"],
-  ["Medium", "-8", "Important readiness risk that should be fixed before launch"],
-  ["Low", "-3", "Recommended launch hardening improvement"],
-  ["Info", "-1", "Best-practice note or transparency improvement"],
+import { BlockedClaimsBox, TrustCard, TrustHero } from "@/components/ui/TrustPage";
+
+const splits = [
+  ["Website Surface Score", "Public URL passive evidence: HTTPS, headers, robots/sitemap/policy signals, HTML/Web3 hints. No login or exploit testing."],
+  ["Contract Rule Score", "Pasted Solidity or verified explorer source analyzed by the local rule engine. Slither/Aderyn/Mythril stay separate unless real tools run."],
+  ["Launch Evidence Score", "Evidence completeness: website, contract, dApp, API, wallet, admin OpSec, GitHub inputs. Missing evidence reduces confidence rather than being guessed."],
+  ["Overall Launch Confidence", "A readiness confidence label from assessed modules only. It is not a full audit score and not a guarantee of security."],
 ];
 
-const weights = [
-  ["Smart Contract", "35%"],
-  ["Website Surface", "15%"],
-  ["dApp Frontend", "15%"],
-  ["API Backend", "15%"],
-  ["Wallet Flow", "10%"],
-  ["Admin OpSec", "10%"],
-];
-
-const labels = [
-  ["90–100", "Launch Ready with Minor Notes"],
-  ["75–89", "Low Risk, Fix Recommended"],
-  ["60–74", "Medium Risk, Fix Before Launch"],
-  ["40–59", "High Risk, Manual Review Recommended"],
-  ["0–39", "Critical Launch Risk"],
+const severities = [
+  ["Critical", "Fund loss, takeover, mint abuse, signer compromise, or launch-blocking risk."],
+  ["High", "Serious issue that should be fixed or manually reviewed before public launch."],
+  ["Medium", "Important readiness risk, missing control, or evidence gap."],
+  ["Low", "Hardening recommendation or production hygiene improvement."],
+  ["Info", "Transparency, documentation, or contextual note."],
 ];
 
 export default function MethodologyPage() {
   return (
-    <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-      <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan">Methodology</p>
-      <h1 className="mt-3 max-w-4xl text-4xl font-black sm:text-5xl">How Web3Guard AI scores launch readiness.</h1>
-      <p className="mt-4 max-w-3xl text-slate-400">
-        Each module starts at 100. Findings reduce score by severity and confidence. Overall readiness uses weighted scoring across contract, website, dApp, API, wallet flow, and founder/admin OpSec.
-      </p>
-
-      <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="card overflow-hidden">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-white/[0.04] text-slate-200"><tr><th className="p-4">Severity</th><th className="p-4">Penalty</th><th className="p-4">Meaning</th></tr></thead>
-            <tbody>{penalties.map((row) => <tr key={row[0]} className="border-t border-white/10"><td className="p-4 font-bold">{row[0]}</td><td className="p-4 mono">{row[1]}</td><td className="p-4 text-slate-400">{row[2]}</td></tr>)}</tbody>
-          </table>
+    <main className="min-h-screen bg-ink text-white">
+      <TrustHero eyebrow="Methodology" title="Evidence-first launch readiness scoring." text="The scoring model separates assessed evidence from missing modules so Web3Guard AI does not show a misleading full audit score." />
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="grid gap-5 lg:grid-cols-4">
+          {splits.map(([title, text]) => <TrustCard key={title} title={title}><p>{text}</p></TrustCard>)}
         </div>
-        <div className="card p-6">
-          <h2 className="text-2xl font-black">Module weights</h2>
-          <div className="mt-5 space-y-3">
-            {weights.map(([module, weight]) => (
-              <div key={module} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm">
-                <span className="font-bold">{module}</span><span className="mono text-cyan">{weight}</span>
-              </div>
-            ))}
-          </div>
+        <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_0.9fr]">
+          <TrustCard title="Severity meaning" tone="yellow">
+            <div className="space-y-3">
+              {severities.map(([sev, text]) => <div key={sev} className="rounded-2xl border border-white/10 bg-black/20 p-4"><strong className="text-white">{sev}</strong><p className="mt-1 text-slate-300">{text}</p></div>)}
+            </div>
+          </TrustCard>
+          <TrustCard title="Not Assessed rule" tone="green">
+            <p>Modules with no real input receive <strong>Not Assessed</strong>, not an invented score. Exported reports list these modules separately under evidence required. The available partial score can help prioritize fixes, but public wording must remain “pre-audit readiness reviewed”.</p>
+          </TrustCard>
         </div>
+        <div className="mt-6"><BlockedClaimsBox /></div>
       </div>
-
-      <div className="mt-8 grid gap-4 md:grid-cols-5">
-        {labels.map(([range, label]) => <div key={range} className="card p-5"><div className="mono text-cyan">{range}</div><p className="mt-2 text-sm font-bold text-slate-200">{label}</p></div>)}
-      </div>
-
-      <div className="mt-8 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
-        Scoring is preliminary readiness scoring, not a certified audit score. If a module is not provided, the report shows “Not assessed” and calculates available score separately.
-      </div>
-    </div>
+    </main>
   );
 }

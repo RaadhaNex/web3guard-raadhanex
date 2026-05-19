@@ -264,6 +264,24 @@ export type UnifiedModuleCard = {
   required_input: string[];
 };
 
+export type UnifiedScoreSplitItem = {
+  label: string;
+  score?: number | null;
+  status: string;
+  risk_label?: string;
+  source: string;
+};
+
+export type UnifiedScoreSplit = {
+  website_surface_score?: UnifiedScoreSplitItem;
+  contract_rule_score?: UnifiedScoreSplitItem;
+  launch_evidence_score?: UnifiedScoreSplitItem;
+  overall_launch_confidence?: UnifiedScoreSplitItem;
+  no_full_audit_score?: boolean;
+  note?: string;
+  [key: string]: UnifiedScoreSplitItem | boolean | string | undefined;
+};
+
 export type UnifiedUrlScanResponse = {
   report_id: string;
   generated_at: string;
@@ -277,6 +295,7 @@ export type UnifiedUrlScanResponse = {
   available_score?: number | null;
   overall_score?: number | null;
   risk_label?: string | null;
+  score_split?: UnifiedScoreSplit;
   coverage?: CombinedLaunchReport["coverage"];
   assessed_modules: string[];
   not_assessed_modules: string[];
