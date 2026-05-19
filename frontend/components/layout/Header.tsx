@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { AuthSessionButton } from "@/components/auth/AuthSessionButton";
 import KavachWingNavLogo from "@/components/brand/KavachWingNavLogo";
-import { brand } from "@/lib/constants";
 
 const primaryLinks = [
+  { href: "/", label: "Home" },
   { href: "/scanner/unified-url", label: "Scanner" },
   { href: "/results", label: "Results" },
   { href: "/report", label: "Report" },
@@ -46,12 +46,13 @@ export function Header() {
   return (
     <header className="site-header">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex min-w-0 items-center gap-3" aria-label="Web3Guard AI home" onClick={() => setOpen(false)}>
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-2 rounded-xl p-1 transition hover:bg-white/[0.04]"
+          aria-label="Open Web3Guard AI home"
+          onClick={() => setOpen(false)}
+        >
           <KavachWingNavLogo showText={false} />
-          <span className="hidden min-w-0 sm:block">
-            <span className="brand-product block truncate text-sm font-black tracking-[-0.02em]">{brand.product}</span>
-            <span className="brand-company block truncate text-[10px] font-semibold uppercase tracking-[0.18em]">by {brand.company}</span>
-          </span>
         </Link>
 
         <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex" aria-label="Main navigation">
@@ -102,7 +103,7 @@ export function Header() {
         <div className="mobile-panel lg:hidden">
           <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
             <div className="mb-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm text-slate-300">
-              Clean beta flow: scan → results → report → pricing. Advanced setup stays under More.
+              Home shows the Web3Guard overview. Main flow stays scan → results → report → pricing.
             </div>
           </div>
           <nav className="mx-auto grid max-w-7xl gap-2 px-4 pb-4 sm:grid-cols-2 sm:px-6" aria-label="Mobile navigation">

@@ -1,44 +1,38 @@
-# Apply Patch
+# How to Apply
 
-1. Take a backup or commit current state first.
-2. Extract this ZIP at the project root.
-3. Allow overwrite only for files included in this patch.
-4. Do not overwrite `.env`, secrets, database credentials, Vercel variables, or Render variables.
+From your project root, copy this patch over your existing project files.
 
-## Validate frontend
+## PowerShell example
 
-```bash
+```powershell
+cd C:\web\web3guard
+Expand-Archive -Path "$env:USERPROFILE\Downloads\web3guard_home_entry_ui_patch.zip" -DestinationPath "$env:TEMP\web3guard_home_entry_ui_patch" -Force
+robocopy "$env:TEMP\web3guard_home_entry_ui_patch" "C:\web\web3guard" /E
+```
+
+## Validate
+
+```powershell
 cd frontend
-npm ci --ignore-scripts
 npm run typecheck
 npm run build
 ```
 
-## Validate backend if backend was applied
-
-```bash
-cd backend
-python -m pytest tests/test_phase39_risk_intelligence.py -q
-```
-
 ## Push
 
-```bash
+```powershell
 git status
 git add .
-git commit -m "Polish clean beta UI and add risk intelligence"
+git commit -m "Add clean Home entry UI"
 git push origin main
 ```
 
-## After deployment check
-
+## Pages to check
 - `/`
 - `/scanner/unified-url`
 - `/results`
-- `/risk-intelligence`
 - `/report`
 - `/pricing`
 - `/docs`
-- `/advanced`
-- Backend `/risk-intelligence/status`
-- Backend `/risk-intelligence/taxonomy`
+- `/auth/login`
+```

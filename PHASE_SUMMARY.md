@@ -1,56 +1,25 @@
-# Web3Guard Clean Beta UI + Risk Intelligence Patch
+# Web3Guard Home Entry UI Patch
 
-## What this patch does
+## Goal
+Add a cleaner Home entry experience so new visitors land on a Web3-focused overview before scanning.
 
-This is the safe merged version of:
+## What changed
+- Added an explicit Home link to the main navigation.
+- Removed the “Web3Guard AI by RAADHANEX” text block from the header brand area.
+- Kept the header logo clickable and routed to `/` for Home.
+- Moved the Web3Guard AI by RAADHANEX identity into the Home hero section.
+- Added Web3-specific information blocks for website/dApp, smart contracts, API/admin, and dependencies.
+- Added a Home auth prompt that shows “Login to save reports” only when the visitor is not logged in.
+- If the visitor is already logged in, the Home login prompt does not render.
 
-1. Clean beta UI polish for first-user launch readiness.
-2. Phase 39 Advanced Risk Intelligence Engine.
+## Backend impact
+No backend files changed.
 
-It keeps the main product flow simple:
+## Env impact
+No env, secrets, database, payment, or scanner configuration changed.
 
-Scanner → Results → Report → Pricing → Docs
-
-Advanced/risk intelligence stays under More/Advanced and as a contextual link from Results.
-
-## Added
-
-- Backend risk intelligence service and router.
-- Backend tests for risk intelligence.
-- Frontend `/risk-intelligence` page and client.
-- Advanced tools link for Risk intelligence.
-- Documentation for Phase 39.
-
-## Preserved
-
-- Existing backend API architecture.
-- Existing scanner/report routes.
-- Clean beta UI polish.
-- Main visible nav stays simple.
-- No secrets/env/database changes.
-- No fake findings, fake scores, fake monitoring, fake payment success, or certified-audit claims.
-
-## Validation performed in dry-run
-
-Backend targeted tests:
-
-```bash
-cd backend
-python -m pytest tests/test_phase39_risk_intelligence.py -q
-```
-
-Result: `6 passed`.
-
-Frontend typecheck after dependency install:
-
-```bash
-cd frontend
-npm ci --ignore-scripts
-npm run typecheck
-```
-
-Result: passed.
-
-## Important note
-
-This engine is useful as a finding explainer / risk intelligence layer. It is not a replacement for real scanner execution. It only becomes strong when real evidence comes from Slither, Semgrep, OSV, CISA KEV, manual review, or imported scanner outputs.
+## Safety preserved
+- Pre-audit readiness wording remains visible.
+- No certified audit claim added.
+- No fake score/result/payment/monitoring added.
+- No private key, seed phrase, mnemonic, wallet signing, exploit automation, or unauthorized active scanning flow added.
