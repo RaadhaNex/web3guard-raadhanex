@@ -165,6 +165,20 @@ class Settings(BaseSettings):
     max_wallet_risk_api_scan_per_hour: int = 25
 
 
+    # Phase 28: Real provider live integration hub. Network calls are explicit and never faked.
+    provider_live_enabled: bool = True
+    provider_live_network_enabled: bool = True
+    provider_live_timeout_seconds: int = 12
+    provider_live_max_records: int = 25
+    provider_live_max_query_chars: int = 220
+    provider_live_advisory_sources_enabled: bool = False
+    osv_api_base: str = "https://api.osv.dev"
+    nvd_api_base: str = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+    nvd_api_key: str | None = None
+    github_advisory_api_base: str = "https://api.github.com"
+    cisa_kev_catalog_url: str = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+
+
     # Web3Guard Sentinel: monitoring + vulnerability intelligence core.
     sentinel_enabled: bool = True
     sentinel_live_ingestion_enabled: bool = False
