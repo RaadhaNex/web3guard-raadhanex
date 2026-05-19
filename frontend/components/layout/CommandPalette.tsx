@@ -36,6 +36,10 @@ const commands = [
       { label: "Responsible Use", href: "/responsible-use", keywords: "no exploit no private key no wallet signing" },
       { label: "Launch QA Board", href: "/launch-qa", keywords: "final ui qa mobile overflow checklist" },
       { label: "Production Deployment QA", href: "/production-deployment-qa", keywords: "vercel render supabase production deployment qa security headers robots sitemap live routes" },
+      { label: "Sentinel Monitoring", href: "/sentinel", keywords: "monitoring vulnerability intelligence admin user alerts advisories" },
+      { label: "Sentinel Intelligence", href: "/sentinel/intelligence", keywords: "nvd osv github advisory cisa kev indexed vulnerabilities risk mapping" },
+      { label: "Sentinel Admin Board", href: "/sentinel/admin", keywords: "admin intelligence source health public stats disclosure queue" },
+      { label: "Responsible Disclosure Draft", href: "/sentinel/disclosure", keywords: "responsible disclosure draft template contact security" },
     ],
   },
   {

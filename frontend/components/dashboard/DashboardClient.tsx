@@ -162,6 +162,7 @@ export function DashboardClient() {
           <Link className="btn-secondary" href="/dashboard/workflow">Workflow</Link>
           <Link className="btn-secondary" href="/dashboard/scans">Scans</Link>
           <Link className="btn-secondary" href="/dashboard/workspace">Workspace</Link>
+          <Link className="btn-secondary" href="/sentinel">Sentinel</Link>
           <Link className="btn-secondary" href="/dashboard/securescore">SecureScore</Link>
           <Link className="btn-secondary" href="/dashboard/findings">Findings</Link>
           <Link className="btn-primary" href="/scanner/unified-url">Run scan</Link>

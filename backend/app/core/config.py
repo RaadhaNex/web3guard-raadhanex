@@ -155,6 +155,20 @@ class Settings(BaseSettings):
     wallet_risk_api_timeout_seconds: int = 10
     max_wallet_risk_api_scan_per_hour: int = 25
 
+
+    # Web3Guard Sentinel: monitoring + vulnerability intelligence core.
+    sentinel_enabled: bool = True
+    sentinel_live_ingestion_enabled: bool = False
+    sentinel_user_monitoring_enabled: bool = True
+    sentinel_admin_intelligence_enabled: bool = True
+    sentinel_vulnerability_index_file: str = "app/data/db/sentinel_vulnerability_index.jsonl"
+    sentinel_matches_file: str = "app/data/db/sentinel_matches.jsonl"
+    sentinel_alerts_file: str = "app/data/db/sentinel_alerts.jsonl"
+    sentinel_disclosures_file: str = "app/data/db/sentinel_disclosures.jsonl"
+    sentinel_max_ingest_records: int = 250
+    sentinel_max_intel_items: int = 100
+    sentinel_max_alerts: int = 100
+
     # Monitoring Lite + Threat Intelligence Feed.
     monitoring_enabled: bool = False
     monitoring_rpc_enabled: bool = False
