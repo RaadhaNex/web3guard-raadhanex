@@ -40,6 +40,8 @@ const commands = [
       { label: "EON Risk Graph", href: "/eon", keywords: "risk graph fix plan evidence ledger next best action launch blockers" },
       { label: "Security Test Generator", href: "/security-tests", keywords: "foundry echidna slither aderyn semgrep tests properties defensive templates" },
       { label: "Sentinel Monitoring", href: "/sentinel", keywords: "monitoring vulnerability intelligence admin user alerts advisories" },
+      { label: "Continuous Monitoring Lite", href: "/continuous-monitoring", keywords: "scheduled recheck stale report website drift github monitoring alerts" },
+      { label: "Monitoring Admin Board", href: "/continuous-monitoring/admin", keywords: "admin monitoring due configs alerts scheduler snapshots" },
       { label: "Sentinel Intelligence", href: "/sentinel/intelligence", keywords: "nvd osv github advisory cisa kev indexed vulnerabilities risk mapping" },
       { label: "Sentinel Admin Board", href: "/sentinel/admin", keywords: "admin intelligence source health public stats disclosure queue" },
       { label: "Responsible Disclosure Draft", href: "/sentinel/disclosure", keywords: "responsible disclosure draft template contact security" },

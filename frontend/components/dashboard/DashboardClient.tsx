@@ -163,6 +163,7 @@ export function DashboardClient() {
           <Link className="btn-secondary" href="/dashboard/scans">Scans</Link>
           <Link className="btn-secondary" href="/dashboard/workspace">Workspace</Link>
           <Link className="btn-secondary" href="/sentinel">Sentinel</Link>
+          <Link className="btn-secondary" href="/continuous-monitoring">Monitoring</Link>
           <Link className="btn-secondary" href="/dashboard/securescore">SecureScore</Link>
           <Link className="btn-secondary" href="/dashboard/findings">Findings</Link>
           <Link className="btn-secondary" href="/eon">EON Risk Graph</Link>

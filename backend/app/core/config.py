@@ -169,6 +169,21 @@ class Settings(BaseSettings):
     sentinel_max_intel_items: int = 100
     sentinel_max_alerts: int = 100
 
+    # Continuous Monitoring Lite: opt-in scheduled/manual recheck model.
+    continuous_monitoring_enabled: bool = True
+    continuous_monitoring_network_enabled: bool = False
+    continuous_monitoring_github_enabled: bool = False
+    continuous_monitoring_scheduler_configured: bool = False
+    continuous_monitoring_configs_file: str = "app/data/db/continuous_monitoring_configs.jsonl"
+    continuous_monitoring_alerts_file: str = "app/data/db/continuous_monitoring_alerts.jsonl"
+    continuous_monitoring_events_file: str = "app/data/db/continuous_monitoring_events.jsonl"
+    continuous_monitoring_snapshots_file: str = "app/data/db/continuous_monitoring_snapshots.jsonl"
+    continuous_monitoring_stale_report_days: int = 30
+    continuous_monitoring_stale_scan_days: int = 14
+    continuous_monitoring_http_timeout_seconds: int = 8
+    max_continuous_monitoring_config_per_hour: int = 20
+    max_continuous_monitoring_recheck_per_hour: int = 20
+
     # Monitoring Lite + Threat Intelligence Feed.
     monitoring_enabled: bool = False
     monitoring_rpc_enabled: bool = False
