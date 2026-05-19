@@ -27,12 +27,15 @@ const coverage = ["Website", "dApp frontend", "API backend", "Smart contract", "
 export default function HomePage() {
   return (
     <>
-      <section className="video-inspired-home relative overflow-hidden border-b border-white/[0.07]">
+      <section className="cinematic-fullscreen-home relative isolate overflow-hidden border-b border-white/[0.07]">
         <div className="home-cinematic-bg" aria-hidden="true" />
         <div className="home-floating-beam home-floating-beam-one" aria-hidden="true" />
         <div className="home-floating-beam home-floating-beam-two" aria-hidden="true" />
+        <div className="home-hero-orb-full" aria-hidden="true">
+          <RiskSignalOrb variant="hero" />
+        </div>
 
-        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1fr_0.92fr] lg:px-8 lg:py-24">
+        <div className="home-hero-content mx-auto flex min-h-[calc(100svh-56px)] max-w-7xl items-center px-4 py-16 sm:px-6 lg:px-8">
           <div className="relative z-10 max-w-3xl">
             <div className="home-kicker">
               <span className="home-kicker-dot" />
@@ -41,7 +44,7 @@ export default function HomePage() {
             </div>
 
             <p className="mt-7 text-xs font-black uppercase tracking-[0.30em] text-cyan">{brand.company}</p>
-            <h1 className="mt-4 text-[clamp(2.65rem,7vw,5.9rem)] font-black leading-[0.88] tracking-[-0.085em] text-white">
+            <h1 className="mt-4 text-[clamp(2.8rem,8vw,7rem)] font-black leading-[0.84] tracking-[-0.09em] text-white">
               {brand.product}
               <span className="block home-hero-gradient">by {brand.company}</span>
             </h1>
@@ -56,7 +59,7 @@ export default function HomePage() {
               <Link href="/pricing" className="btn-secondary">View ₹999 pilot report</Link>
             </div>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <div className="mt-7 grid gap-3 sm:grid-cols-3">
               {safetyStates.map(([title, text]) => (
                 <div key={title} className="home-state-card">
                   <p>{title}</p>
@@ -69,14 +72,10 @@ export default function HomePage() {
               Pre-audit readiness only · Not a certified audit · No security guarantee · No private key or seed phrase collection · No wallet signing · No exploit automation
             </p>
           </div>
-
-          <div className="relative z-10 lg:pt-4">
-            <RiskSignalOrb />
-          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+      <section className="cinematic-section mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-4 md:grid-cols-4">
           {signalCards.map(([title, text]) => (
             <div key={title} className="home-glass-card group">
@@ -88,13 +87,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-14 sm:px-6 lg:px-8">
+      <section className="cinematic-section mx-auto max-w-7xl px-4 pb-14 sm:px-6 lg:px-8">
         <div className="grid gap-5 lg:grid-cols-[0.86fr_1.14fr]">
-          <div className="clean-panel p-6 sm:p-8">
+          <div className="clean-panel cinematic-panel p-6 sm:p-8">
             <p className="section-label">What users see first</p>
-            <h2 className="mt-4 text-3xl font-black tracking-[-0.06em] text-white">A premium Home screen before the scanner.</h2>
+            <h2 className="mt-4 text-3xl font-black tracking-[-0.06em] text-white">A premium full-screen Home before the scanner.</h2>
             <p className="mt-4 text-sm leading-7 text-slate-400">
-              New visitors now land on a clear Web3 overview. If they are not logged in, the page shows a login option to save reports. If they are already logged in, that login CTA stays hidden.
+              New visitors now land on a visual Web3 overview. If they are not logged in, the page shows a login option to save reports. If they are already logged in, that login CTA stays hidden.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
               {coverage.map((item) => (
@@ -105,7 +104,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="clean-panel p-6 sm:p-8">
+          <div className="clean-panel cinematic-panel p-6 sm:p-8">
             <p className="section-label">Core product journey</p>
             <div className="mt-5 grid gap-3 md:grid-cols-3">
               {launchSteps.map(([step, title, text]) => (
@@ -123,8 +122,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
-        <div className="home-final-cta">
+      <section className="cinematic-section mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
+        <div className="home-final-cta cinematic-panel">
           <div>
             <p className="section-label">First 10 users</p>
             <h2 className="mt-4 text-3xl font-black tracking-[-0.06em] text-white">Looks premium, stays honest.</h2>

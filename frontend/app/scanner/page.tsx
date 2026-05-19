@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RiskSignalOrb } from "@/components/home/RiskSignalOrb";
 
 const primaryModules = [
   {
@@ -56,22 +57,24 @@ const advancedModules = [
   ["Deep Analysis", "/scanner/deep-analysis", "Mythril, Manticore, and Echidna remain worker-required unless configured."],
 ];
 
-const trustNotes = [
-  "No private key collection",
-  "No wallet signing",
-  "No exploit automation",
-  "No fake pass",
-];
+const trustNotes = ["No private key collection", "No wallet signing", "No exploit automation", "No fake pass"];
+
+const resultStates = [
+  ["Assessed", "A real rule, provider, or uploaded evidence produced a check."],
+  ["Not Assessed", "No evidence was supplied or the provider/tool is not configured."],
+  ["Manual Review Required", "A human review is needed before launch decisions."],
+  ["Tool Not Installed", "Worker/runtime does not have the tool available."],
+] as const;
 
 export default function ScannerPage() {
   return (
-    <main className="relative overflow-hidden">
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+    <main className="cinematic-page-shell relative overflow-hidden">
+      <section className="cinematic-page-hero mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <div className="grid gap-8 lg:grid-cols-[0.95fr_0.85fr] lg:items-center">
           <div>
             <p className="section-label">Scanner</p>
-            <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-[-0.06em] sm:text-6xl">
-              Start with one readiness scan.
+            <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-[-0.07em] sm:text-6xl">
+              Start with one cinematic readiness scan.
             </h1>
             <p className="mt-5 max-w-3xl text-base leading-8 text-slate-300 sm:text-lg">
               Choose a module, supply evidence you own or are authorized to review, and get findings, missing checks, limitations, and export-ready output without unsafe audit claims.
@@ -88,29 +91,27 @@ export default function ScannerPage() {
             </div>
           </div>
 
-          <div className="clean-panel p-5 sm:p-6">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan">How results stay honest</p>
-            <div className="mt-5 grid gap-3">
-              {[
-                ["Assessed", "A real rule, provider, or uploaded evidence produced a check."],
-                ["Not Assessed", "No evidence was supplied or the provider/tool is not configured."],
-                ["Manual Review Required", "A human review is needed before launch decisions."],
-                ["Tool Not Installed", "Worker/runtime does not have the tool available."],
-              ].map(([title, text]) => (
-                <div key={title} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
-                  <p className="font-black text-white">{title}</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-400">{text}</p>
-                </div>
-              ))}
-            </div>
+          <div className="scanner-hero-orb hidden lg:block">
+            <RiskSignalOrb variant="compact" />
           </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {resultStates.map(([title, text]) => (
+            <div key={title} className="cinematic-mini-card p-4">
+              <p className="font-black text-white">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
+            </div>
+          ))}
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pb-14 sm:px-6 lg:px-8">
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {primaryModules.map((module) => (
-            <Link key={module.href} href={module.href} className="glass-tile group block p-6 transition hover:-translate-y-1">
+            <Link key={module.href} href={module.href} className="glass-tile cinematic-card group block p-6 transition hover:-translate-y-1">
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div className="grid h-12 w-12 place-items-center rounded-[14px] border border-cyan/25 bg-cyan/10 mono text-xs font-black text-cyan shadow-soft">
                   {module.icon}
@@ -125,7 +126,7 @@ export default function ScannerPage() {
         </div>
       </section>
 
-      <section className="border-y border-cyan/10 bg-cyan/[0.025]">
+      <section className="cinematic-band border-y border-cyan/10">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -139,7 +140,7 @@ export default function ScannerPage() {
           </div>
           <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {advancedModules.map(([title, href, text]) => (
-              <Link key={href} href={href} className="glass-tile p-5 transition hover:-translate-y-1 hover:border-cyan/25 hover:bg-cyan/[0.04]">
+              <Link key={href} href={href} className="glass-tile cinematic-card p-5 transition hover:-translate-y-1 hover:border-cyan/25 hover:bg-cyan/[0.04]">
                 <p className="text-base font-black text-white">{title}</p>
                 <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
               </Link>

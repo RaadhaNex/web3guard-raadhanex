@@ -5,6 +5,7 @@ const columns = [
   {
     title: "Core flow",
     links: [
+      { label: "Home", href: "/" },
       { label: "Scanner", href: "/scanner/unified-url" },
       { label: "Results", href: "/results" },
       { label: "Report", href: "/report" },
@@ -21,11 +22,11 @@ const columns = [
     ],
   },
   {
-    title: "Beta ops",
+    title: "More",
     links: [
       { label: "First 10 users", href: "/launch-pack" },
       { label: "Payment validation", href: "/payment-validation" },
-      { label: "Feature status", href: "/feature-status" },
+      { label: "Risk intelligence", href: "/risk-intelligence" },
       { label: "Advanced tools", href: "/advanced" },
     ],
   },
@@ -33,7 +34,7 @@ const columns = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-white/[0.07] bg-black/20">
+    <footer className="cinematic-footer border-t border-white/[0.07]">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
@@ -41,7 +42,7 @@ export function Footer() {
               <span className="brand-mark grid h-9 w-9 place-items-center rounded-[10px] text-[13px] font-black">W3</span>
               <span>
                 <span className="block text-sm font-black tracking-tight text-white">{brand.product}</span>
-                <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">by {brand.company}</span>
+                <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan/80">by {brand.company}</span>
               </span>
             </Link>
 

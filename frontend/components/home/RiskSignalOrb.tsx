@@ -7,9 +7,16 @@ const signalRows = [
   ["Founder OS", "Report, pricing, manual review", "No certified-audit claim"],
 ] as const;
 
-export function RiskSignalOrb() {
+type RiskSignalOrbProps = {
+  variant?: "card" | "hero" | "compact";
+};
+
+export function RiskSignalOrb({ variant = "card" }: RiskSignalOrbProps) {
+  const isHero = variant === "hero";
+  const isCompact = variant === "compact";
+
   return (
-    <div className="risk-orb-card" aria-label="Animated Web3Guard risk intelligence visual">
+    <div className={`risk-orb-card risk-orb-${variant}`} aria-label="Animated Web3Guard risk intelligence visual">
       <div className="risk-orb-header">
         <span className="risk-orb-live-dot" />
         <span>Founder Security OS</span>
@@ -43,23 +50,25 @@ export function RiskSignalOrb() {
           <Image
             src="/brand/kavachwing-emblem-transparent.png"
             alt="Web3Guard AI by RAADHANEX"
-            width={150}
-            height={150}
-            priority
+            width={180}
+            height={180}
+            priority={isHero}
           />
           <span className="risk-orb-core-label">RAADHANEX</span>
         </div>
       </div>
 
-      <div className="risk-orb-signal-list">
-        {signalRows.map(([label, title, state]) => (
-          <div key={label} className="risk-orb-signal-row">
-            <span>{label}</span>
-            <strong>{title}</strong>
-            <em>{state}</em>
-          </div>
-        ))}
-      </div>
+      {!isCompact ? (
+        <div className={`risk-orb-signal-list ${isHero ? "risk-orb-signal-list-hero" : ""}`}>
+          {signalRows.map(([label, title, state]) => (
+            <div key={label} className="risk-orb-signal-row">
+              <span>{label}</span>
+              <strong>{title}</strong>
+              <em>{state}</em>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

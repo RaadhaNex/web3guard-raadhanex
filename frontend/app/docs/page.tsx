@@ -23,10 +23,10 @@ export const metadata = {
 
 export default function DocsPage() {
   return (
-    <main className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-      <section className="clean-panel p-6 sm:p-8">
+    <main className="cinematic-page-shell mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+      <section className="cinematic-page-hero clean-panel cinematic-panel p-6 sm:p-8">
         <p className="section-label">Docs</p>
-        <h1 className="mt-3 max-w-4xl text-4xl font-black sm:text-5xl">Everything users need to trust the beta.</h1>
+        <h1 className="mt-3 max-w-4xl text-4xl font-black tracking-[-0.06em] sm:text-6xl">Everything users need to trust the beta.</h1>
         <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400 sm:text-base">
           Main navigation stays simple. Technical setup, advanced modules, provider status, and limitations stay organized here.
         </p>
@@ -42,7 +42,7 @@ export default function DocsPage() {
         </div>
         <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {coreDocs.map(([title, href, text]) => (
-            <Link key={href} href={href} className="glass-tile block p-5 transition hover:-translate-y-1">
+            <Link key={href} href={href} className="glass-tile cinematic-card block p-5 transition hover:-translate-y-1">
               <p className="text-lg font-black text-white">{title}</p>
               <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
               <p className="mt-4 text-xs font-bold text-cyan">Open →</p>
@@ -55,7 +55,7 @@ export default function DocsPage() {
         <p className="section-label">Setup and advanced</p>
         <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {setupDocs.map(([title, href, text]) => (
-            <Link key={href} href={href} className="glass-tile block p-5 transition hover:-translate-y-1">
+            <Link key={href} href={href} className="glass-tile cinematic-card block p-5 transition hover:-translate-y-1">
               <p className="text-lg font-black text-white">{title}</p>
               <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
               <p className="mt-4 text-xs font-bold text-cyan">Open →</p>

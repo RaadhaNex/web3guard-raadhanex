@@ -7,9 +7,9 @@ export const metadata = {
 
 export default function RiskIntelligencePage() {
   return (
-    <main className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-      <section className="clean-panel p-6 sm:p-8">
-        <p className="section-label">Phase 39 · Advanced Risk Intelligence Engine</p>
+    <main className="cinematic-page-shell mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+      <section className="cinematic-page-hero clean-panel cinematic-panel p-6 sm:p-8">
+        <p className="section-label">Advanced Risk Intelligence Engine</p>
         <h1 className="mt-3 max-w-4xl text-4xl font-black tracking-[-0.06em] text-white sm:text-6xl">
           Explain bugs like a security analyst, not a fake all-bug scanner.
         </h1>
@@ -18,7 +18,9 @@ export default function RiskIntelligencePage() {
         </p>
       </section>
 
-      <RiskIntelligenceClient />
+      <div className="mt-8 rounded-[28px] border border-white/[0.07] bg-black/20 p-1 shadow-[0_24px_90px_rgba(0,0,0,.35)]">
+        <RiskIntelligenceClient />
+      </div>
     </main>
   );
 }

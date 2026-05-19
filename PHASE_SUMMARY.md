@@ -1,33 +1,40 @@
-# Web3Guard AI — UI-3D Home Patch
+# Web3Guard AI — UI-3D Full Site Patch
 
 ## Goal
-Create a premium, video-inspired Web3Guard Home experience without touching backend, scanner execution, payments, env files, secrets, or database logic.
+Convert the clean beta UI into a fuller video-inspired cinematic dark SaaS experience while preserving Web3Guard AI by RAADHANEX branding and the honest pre-audit product boundary.
 
 ## What changed
-- Rebuilt `/` Home into a cinematic dark SaaS landing page inspired by the uploaded video style.
-- Added a lightweight animated risk-intelligence orb using only React markup + CSS, no heavy 3D dependency.
-- Kept Web3Guard AI by RAADHANEX branding visible and premium.
-- Kept top nav simple: Home, Scan, Price, More.
-- Kept Results, Report, Docs, Dashboard, Advanced, payment validation, feature status, and risk intelligence under More.
-- Added top-right animated Settings icon from the earlier brand/nav patch.
-- Preserved login behavior on Home: Login CTA shows when the user is signed out or Supabase browser auth is not configured; it hides when already signed in.
-- Preserved safety wording: pre-audit readiness only, not a certified audit, no security guarantee, no private key/seed phrase, no wallet signing, no exploit automation.
+- Home now uses a full-screen cinematic hero instead of a small orb/card layout.
+- Risk intelligence orb can render as hero, compact, or card variant.
+- Core public pages are aligned to the same premium 3D/glass design language:
+  - Home
+  - Scanner
+  - Results
+  - Report
+  - Pricing
+  - Docs
+  - More / Advanced
+  - Risk Intelligence
+- Header/nav state from previous branding patch is preserved:
+  - Home
+  - Scan
+  - Price
+  - More
+  - Settings icon
+  - Web3Guard AI by RAADHANEX branding
+- Footer updated to match the new cinematic/glass visual language.
+- Global CSS adds reusable cinematic panels/cards/backgrounds so older pages using card/glass/clean classes also look closer to the new theme.
 
-## Files touched
-Frontend only. No backend files changed.
+## Safety/product rules preserved
+- No fake result.
+- No fake score.
+- No fake payment success.
+- No certified audit claim.
+- No all-vulnerability-found claim.
+- No private key, seed phrase, or mnemonic collection.
+- No wallet signing.
+- No exploit automation.
+- Missing checks/tools/providers must remain visible as Not Assessed / Tool Not Installed / Needs API Key / Provider Not Configured / Manual Review Required.
 
-## Validation performed
-```bash
-cd frontend
-npm run typecheck
-```
-Result: passed.
-
-```bash
-cd frontend
-npm run build
-```
-Result: production build started and reached the optimized build phase, but the sandbox hit the 5-minute timeout. No TypeScript error was produced before timeout.
-
-## Notes
-This patch is intentionally CSS/lightweight for performance. It gives the premium 3D/glow feel without adding Three.js or other heavy animation libraries.
+## Backend impact
+No backend, env, database, payment, scanner engine, or provider code was touched.

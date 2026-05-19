@@ -2424,3 +2424,328 @@ button:disabled, .btn-primary[aria-disabled="true"] { opacity: 0.45; cursor: not
     transform: none;
   }
 }
+
+/* UI-3D Full Site Patch — video-inspired full-screen cinematic system. */
+.cinematic-page-shell {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle 880px at 90% 6%, rgba(124, 58, 237, 0.15), transparent 64%),
+    radial-gradient(circle 720px at 8% 12%, rgba(6, 182, 212, 0.11), transparent 68%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.0), rgba(2, 6, 23, 0.42));
+}
+
+.cinematic-page-shell::before {
+  content: "";
+  position: fixed;
+  inset: 56px 0 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(125, 211, 252, 0.026) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 211, 252, 0.026) 1px, transparent 1px),
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.035), transparent 26rem);
+  background-size: 64px 64px, 64px 64px, 100% 100%;
+  mask-image: linear-gradient(to bottom, black 0%, black 72%, transparent 100%);
+  opacity: 0.8;
+}
+
+.cinematic-section,
+.cinematic-page-hero {
+  position: relative;
+}
+
+.cinematic-page-hero::after,
+.cinematic-section::after {
+  content: "";
+  position: absolute;
+  right: 4%;
+  top: 10%;
+  z-index: -1;
+  width: min(34rem, 62vw);
+  height: min(34rem, 62vw);
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.08), rgba(124, 58, 237, 0.055) 38%, transparent 72%);
+  filter: blur(40px);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.cinematic-panel,
+.cinematic-card,
+.cinematic-mini-card,
+.cinematic-footer {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(125, 211, 252, 0.075), transparent 56%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.019)),
+    rgba(2, 6, 23, 0.64) !important;
+  border-color: rgba(255, 255, 255, 0.085) !important;
+  box-shadow:
+    0 24px 90px rgba(0, 0, 0, 0.36),
+    0 0 0 1px rgba(6, 182, 212, 0.026),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.cinematic-card,
+.cinematic-mini-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+}
+
+.cinematic-card::before,
+.cinematic-mini-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(125, 211, 252, 0.33), transparent);
+  pointer-events: none;
+}
+
+.cinematic-card::after,
+.cinematic-mini-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -28% -55% -28%;
+  height: 9rem;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.12), transparent 72%);
+  opacity: 0;
+  transition: opacity 220ms ease;
+  pointer-events: none;
+}
+
+.cinematic-card:hover,
+.cinematic-mini-card:hover {
+  border-color: rgba(125, 211, 252, 0.20) !important;
+  box-shadow:
+    0 28px 95px rgba(0, 0, 0, 0.42),
+    0 0 36px rgba(6, 182, 212, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
+}
+
+.cinematic-card:hover::after,
+.cinematic-mini-card:hover::after {
+  opacity: 1;
+}
+
+.cinematic-band {
+  background:
+    radial-gradient(circle at 15% 50%, rgba(6, 182, 212, 0.065), transparent 38%),
+    radial-gradient(circle at 92% 10%, rgba(124, 58, 237, 0.075), transparent 40%),
+    rgba(2, 6, 23, 0.46);
+}
+
+.cinematic-footer {
+  background:
+    radial-gradient(circle at 70% 0%, rgba(124, 58, 237, 0.10), transparent 42%),
+    radial-gradient(circle at 15% 0%, rgba(6, 182, 212, 0.08), transparent 46%),
+    rgba(2, 6, 23, 0.82) !important;
+}
+
+.cinematic-fullscreen-home {
+  min-height: calc(100svh - 56px);
+  background:
+    radial-gradient(circle 900px at 78% 34%, rgba(124, 58, 237, 0.28), transparent 70%),
+    radial-gradient(circle 760px at 14% 20%, rgba(6, 182, 212, 0.16), transparent 72%),
+    linear-gradient(135deg, #020617 0%, #050816 44%, #08051a 100%);
+}
+
+.home-hero-content {
+  position: relative;
+  z-index: 4;
+}
+
+.home-hero-orb-full {
+  position: absolute;
+  z-index: 2;
+  right: clamp(-20rem, -10vw, -7rem);
+  top: 50%;
+  width: min(62rem, 70vw);
+  min-width: 38rem;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.home-hero-orb-full::before {
+  content: "";
+  position: absolute;
+  inset: -16%;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(34, 211, 238, 0.13), transparent 34%),
+    radial-gradient(circle at 42% 54%, rgba(168, 85, 247, 0.17), transparent 46%);
+  filter: blur(46px);
+  animation: fullOrbAura 8s ease-in-out infinite alternate;
+}
+
+.risk-orb-hero {
+  width: 100%;
+  min-height: min(70rem, calc(100svh - 64px));
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0;
+  overflow: visible;
+}
+
+.risk-orb-hero::before {
+  display: none;
+}
+
+.risk-orb-hero .risk-orb-header {
+  position: absolute;
+  top: 14%;
+  left: 49%;
+  transform: translateX(-50%);
+  z-index: 8;
+  width: max-content;
+  max-width: 88%;
+  background: rgba(2, 6, 23, 0.55);
+  box-shadow: 0 18px 70px rgba(0, 0, 0, 0.28), 0 0 30px rgba(6, 182, 212, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.risk-orb-hero .risk-orb-stage {
+  min-height: min(63rem, calc(100svh - 56px));
+  transform: scale(1.08);
+}
+
+.risk-orb-hero .risk-orb-glow-one {
+  height: 28rem;
+  width: 28rem;
+  background: rgba(34, 211, 238, 0.24);
+}
+
+.risk-orb-hero .risk-orb-glow-two {
+  height: 24rem;
+  width: 24rem;
+  background: rgba(139, 92, 246, 0.32);
+}
+
+.risk-orb-hero .risk-orb-ring-one { height: 30rem; width: 30rem; }
+.risk-orb-hero .risk-orb-ring-two { height: 24rem; width: 24rem; }
+.risk-orb-hero .risk-orb-ring-three { height: 17rem; width: 17rem; }
+.risk-orb-hero .risk-orbit { height: 27rem; width: 27rem; animation-duration: 28s; }
+.risk-orb-hero .risk-orbit-two { height: 21rem; width: 21rem; animation-duration: 21s; }
+.risk-orb-hero .risk-orb-core { height: 16rem; width: 16rem; }
+
+.risk-orb-hero .risk-orbit-node {
+  background: rgba(2, 6, 23, 0.64);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.30), 0 0 24px rgba(6, 182, 212, 0.10);
+}
+
+.risk-orb-signal-list-hero {
+  position: absolute;
+  z-index: 9;
+  right: 3%;
+  bottom: 14%;
+  width: min(22rem, 42vw);
+}
+
+.risk-orb-compact {
+  border-radius: 34px;
+}
+
+.risk-orb-compact .risk-orb-stage {
+  min-height: 22rem;
+}
+
+.risk-orb-compact .risk-orb-header,
+.risk-orb-compact .risk-orb-signal-list {
+  display: none;
+}
+
+.scanner-hero-orb {
+  opacity: 0.96;
+  transform: perspective(900px) rotateY(-7deg);
+}
+
+@keyframes fullOrbAura {
+  from { transform: scale(0.96) translate3d(0, 0, 0); opacity: 0.72; }
+  to { transform: scale(1.06) translate3d(-1rem, 0.8rem, 0); opacity: 0.95; }
+}
+
+@media (max-width: 1180px) {
+  .home-hero-orb-full {
+    right: -28rem;
+    width: 58rem;
+    opacity: 0.78;
+  }
+
+  .home-hero-content::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    width: min(47rem, 100%);
+    border-radius: 34px;
+    background: linear-gradient(90deg, rgba(2, 6, 23, 0.62), rgba(2, 6, 23, 0.22), transparent);
+    filter: blur(4px);
+  }
+}
+
+@media (max-width: 768px) {
+  .cinematic-page-shell::before {
+    background-size: 84px 84px, 84px 84px, 100% 100%;
+    opacity: 0.54;
+  }
+
+  .cinematic-fullscreen-home {
+    min-height: auto;
+  }
+
+  .home-hero-content {
+    min-height: calc(100svh - 56px);
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+  }
+
+  .home-hero-orb-full {
+    left: 50%;
+    right: auto;
+    top: 16rem;
+    width: 39rem;
+    min-width: 39rem;
+    opacity: 0.34;
+    transform: translateX(-50%);
+  }
+
+  .risk-orb-hero {
+    min-height: 39rem;
+  }
+
+  .risk-orb-hero .risk-orb-stage {
+    min-height: 39rem;
+    transform: scale(0.82);
+  }
+
+  .risk-orb-hero .risk-orb-header,
+  .risk-orb-signal-list-hero {
+    display: none;
+  }
+
+  .home-state-card,
+  .home-glass-card,
+  .home-step-card,
+  .home-final-cta,
+  .cinematic-card,
+  .cinematic-mini-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .scanner-hero-orb {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-hero-orb-full::before {
+    animation: none !important;
+  }
+}

@@ -65,7 +65,7 @@ function badgeClass(tone: string) {
 
 export function PricingSection() {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+    <section className="cinematic-section mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="section-label">Plans</p>
@@ -79,7 +79,7 @@ export function PricingSection() {
 
       <div className="mt-10 grid gap-4 lg:grid-cols-3">
         {plans.map((plan) => (
-          <div key={plan.name} className={`card flex flex-col p-6 ${plan.live ? "card-glow" : "opacity-80"}`}>
+          <div key={plan.name} className={`card cinematic-card flex flex-col p-6 ${plan.live ? "card-glow" : "opacity-80"}`}>
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-xl font-black text-white">{plan.name}</h3>
               <span className={badgeClass(plan.tone)}>{plan.badge}</span>

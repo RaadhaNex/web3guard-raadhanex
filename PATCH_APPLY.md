@@ -1,46 +1,37 @@
 # How to Apply
 
-From your project root, copy the patch contents over your existing project.
+From project root, extract this ZIP over your existing project so these files replace the same paths.
 
-PowerShell example:
+## Validate frontend
 
-```powershell
-cd C:\web\web3guard
-Expand-Archive -Path "$env:USERPROFILE\Downloads\web3guard_ui3d_home_patch.zip" -DestinationPath "$env:TEMP\web3guard_ui3d_home_patch" -Force
-robocopy "$env:TEMP\web3guard_ui3d_home_patch" "C:\web\web3guard" /E
-```
-
-Then validate:
-
-```powershell
+```bash
 cd frontend
 npm run typecheck
 npm run build
 ```
 
-If backend was not touched, backend tests are not required for this patch. You can still run full checks if you want:
+## Backend
 
-```powershell
-cd ..\backend
-python -m pytest -q
-```
+Backend was not touched. Backend tests are not required for this UI-only patch.
 
-GitHub push:
+## Push
 
-```powershell
+```bash
 git status
 git add .
-git commit -m "Add cinematic UI 3D home"
+git commit -m "Apply full cinematic UI polish"
 git push origin main
 ```
 
-Pages to check after deploy:
+## Pages to check
 
-- `/`
-- `/scanner/unified-url`
-- `/pricing`
-- `/results`
-- `/report`
-- `/docs`
-- `/advanced`
-- `/settings/language`
+- /
+- /scanner
+- /scanner/unified-url
+- /results
+- /report
+- /pricing
+- /docs
+- /advanced
+- /risk-intelligence
+- /settings/language

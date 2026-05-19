@@ -17,12 +17,12 @@ export const metadata = {
 
 export default function ResultsPage() {
   return (
-    <main className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-      <section className="clean-panel p-6 sm:p-8">
+    <main className="cinematic-page-shell mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+      <section className="cinematic-page-hero clean-panel cinematic-panel p-6 sm:p-8">
         <p className="section-label">Results</p>
-        <h1 className="mt-3 max-w-4xl text-4xl font-black sm:text-5xl">Real results with visible gaps.</h1>
+        <h1 className="mt-3 max-w-4xl text-4xl font-black tracking-[-0.06em] sm:text-6xl">Real results with visible gaps.</h1>
         <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400 sm:text-base">
-          Use this page to understand how Web3Guard separates real findings, imported evidence, external advisories, missing tools, missing providers, and manual-review items.
+          Understand exactly what was assessed, what was not assessed, what needs a configured provider, and where manual review is still required.
         </p>
         <div className="mt-7 flex flex-wrap gap-3">
           <Link href="/scanner/unified-url" className="btn-primary">Run scanner →</Link>
@@ -34,14 +34,16 @@ export default function ResultsPage() {
 
       <section className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {states.map(([title, text]) => (
-          <div key={title} className="glass-tile p-5">
+          <div key={title} className="glass-tile cinematic-card p-5">
             <p className="text-lg font-black text-white">{title}</p>
             <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
           </div>
         ))}
       </section>
 
-      <ScannerResultsClient />
+      <div className="mt-8 rounded-[28px] border border-white/[0.07] bg-black/20 p-1 shadow-[0_24px_90px_rgba(0,0,0,.35)]">
+        <ScannerResultsClient />
+      </div>
     </main>
   );
 }

@@ -3,11 +3,11 @@ import { PricingSection } from "@/components/sections/PricingSection";
 
 export default function PricingPage() {
   return (
-    <>
-      <section className="mx-auto max-w-7xl px-4 pt-14 sm:px-6 lg:px-8">
-        <div className="clean-panel p-6 sm:p-8">
+    <main className="cinematic-page-shell">
+      <section className="cinematic-page-hero mx-auto max-w-7xl px-4 pt-14 sm:px-6 lg:px-8">
+        <div className="clean-panel cinematic-panel p-6 sm:p-8">
           <p className="section-label">Pricing</p>
-          <h1 className="mt-3 max-w-4xl text-4xl font-black sm:text-5xl">
+          <h1 className="mt-3 max-w-4xl text-4xl font-black tracking-[-0.06em] sm:text-6xl">
             Free scan first. ₹999 pilot report only after payment validation.
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400 sm:text-base">
@@ -27,6 +27,6 @@ export default function PricingPage() {
         </div>
       </section>
       <PricingSection />
-    </>
+    </main>
   );
 }
