@@ -5,13 +5,24 @@ import { AppChrome } from "@/components/layout/AppChrome";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+const siteUrl = "https://web3guard-raadhanex.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+
   title: {
-    default: "Web3Guard AI — Web3 Launch Readiness Scanner | RAADHANEX",
-    template: "%s | Web3Guard AI",
+    default: "KavachWing — Web3 Launch Readiness Scanner | RAADHANEX",
+    template: "%s | KavachWing",
   },
+
   description:
     "Evidence-first Web3 launch readiness scanner for websites, dApps, APIs, Solidity code, wallet UX, GitHub, and admin OpSec. Public beta. Pre-audit only; not a certified audit.",
+
+  applicationName: "KavachWing",
+  authors: [{ name: "RAADHANEX", url: siteUrl }],
+  creator: "RAADHANEX",
+  publisher: "RAADHANEX",
+
   keywords: [
     "web3 security readiness",
     "smart contract scanner",
@@ -23,32 +34,62 @@ export const metadata: Metadata = {
     "web3 launch security",
     "web3 security tool india",
     "bug bounty readiness",
+    "KavachWing",
+    "RAADHANEX",
   ],
-  authors: [{ name: "RAADHANEX", url: "https://web3guard.ai" }],
-  creator: "RAADHANEX",
-  metadataBase: new URL("https://web3guard-raadhanex.vercel.app"),
+
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png", sizes: "512x512" },
+      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+      {
+        url: "/brand/kavachwing-emblem-transparent.png",
+        type: "image/png",
+        sizes: "1024x1024",
+      },
+    ],
+    shortcut: "/favicon.ico",
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: "https://web3guard-raadhanex.vercel.app",
-    siteName: "Web3Guard AI",
-    title: "Web3Guard AI — Web3 Launch Readiness Scanner",
+    url: siteUrl,
+    siteName: "KavachWing",
+    title: "KavachWing — Web3 Launch Readiness Scanner",
     description:
       "Check launch readiness across websites, dApps, APIs, Solidity code, wallet UX, GitHub, and admin OpSec. Public beta. Pre-audit only; not a certified audit.",
-    images: [{ url: "/og-image.svg", width: 1200, height: 630, alt: "Web3Guard AI — Web3 launch readiness scanner" }],
+    images: [
+      {
+        url: "/brand/kavachwing-hero.png",
+        width: 1200,
+        height: 630,
+        alt: "KavachWing — Web3 launch readiness scanner by RAADHANEX",
+      },
+    ],
   },
+
   twitter: {
     card: "summary_large_image",
-    title: "Web3Guard AI — Web3 Launch Readiness Scanner",
-    description: "Evidence-first public beta scanner for Web3 launch readiness. Pre-audit only; not a certified audit.",
-    images: ["/og-image.svg"],
+    title: "KavachWing — Web3 Launch Readiness Scanner",
+    description:
+      "Evidence-first public beta scanner for Web3 launch readiness. Pre-audit only; not a certified audit.",
+    images: ["/brand/kavachwing-hero.png"],
     creator: "@raadhanex",
   },
+
   robots: {
     index: true,
     follow: true,
-    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+    },
   },
+
   themeColor: [
     { media: "(prefers-color-scheme: dark)", color: "#030712" },
     { media: "(prefers-color-scheme: light)", color: "#030712" },
