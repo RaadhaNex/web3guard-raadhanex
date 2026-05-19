@@ -2960,3 +2960,304 @@ button:disabled, .btn-primary[aria-disabled="true"] { opacity: 0.45; cursor: not
     transform: none;
   }
 }
+
+/* UI-3D Scroll Animation Patch — scroll-driven cinematic motion like the reference video. */
+.motion-enhanced .scroll-motion-ready {
+  opacity: 0;
+  translate: 0 34px;
+  scale: 0.985;
+  rotate: x 4deg;
+  filter: blur(7px);
+  transform-style: preserve-3d;
+  transition:
+    opacity 760ms cubic-bezier(0.16, 1, 0.3, 1),
+    translate 760ms cubic-bezier(0.16, 1, 0.3, 1),
+    scale 760ms cubic-bezier(0.16, 1, 0.3, 1),
+    rotate 760ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 760ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    background-color 220ms ease;
+  transition-delay: var(--motion-delay, 0ms);
+  will-change: opacity, translate, scale, rotate, filter;
+}
+
+.motion-enhanced .scroll-motion-ready.scroll-motion-visible {
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+  rotate: x 0deg;
+  filter: blur(0);
+}
+
+.motion-enhanced .home-hero-orb-full.scroll-motion-ready {
+  opacity: 0;
+  scale: 0.94;
+  filter: blur(10px) saturate(1.08);
+}
+
+.motion-enhanced .home-hero-orb-full.scroll-motion-visible {
+  opacity: 0.94;
+  scale: 1;
+  filter: blur(0) saturate(1.08);
+}
+
+.home-hero-orb-full[data-parallax] {
+  transform: translate(-50%, calc(-50% + var(--parallax-y, 0px))) !important;
+}
+
+.home-hero-copy[data-parallax] {
+  transform: translateY(calc(0.6rem + var(--parallax-y, 0px))) !important;
+}
+
+.tilt-card {
+  transform-style: preserve-3d;
+  perspective: 900px;
+}
+
+.motion-enhanced .tilt-card.scroll-motion-visible:hover {
+  translate: 0 -8px;
+  scale: 1.012;
+  border-color: rgba(125, 211, 252, 0.24) !important;
+  box-shadow:
+    0 34px 110px rgba(0, 0, 0, 0.48),
+    0 0 42px rgba(6, 182, 212, 0.10),
+    0 0 64px rgba(139, 92, 246, 0.08) !important;
+}
+
+.cinematic-section {
+  position: relative;
+}
+
+.cinematic-section::before {
+  content: "";
+  position: absolute;
+  inset: 6% auto auto 50%;
+  height: 16rem;
+  width: 16rem;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.08), transparent 68%);
+  opacity: 0;
+  filter: blur(28px);
+  pointer-events: none;
+  transition: opacity 760ms ease;
+}
+
+.motion-enhanced .cinematic-section.scroll-motion-visible::before {
+  opacity: 1;
+}
+
+.scroll-story-section {
+  min-height: 120vh;
+}
+
+.scroll-story-grid {
+  display: grid;
+  gap: 2rem;
+}
+
+.scroll-story-sticky {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(6, 182, 212, 0.12), transparent 34%),
+    radial-gradient(circle at 80% 18%, rgba(139, 92, 246, 0.14), transparent 34%),
+    rgba(2, 6, 23, 0.54);
+  box-shadow: 0 30px 110px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  padding: 1.5rem;
+  backdrop-filter: blur(20px);
+}
+
+.scroll-story-sticky::after {
+  content: "";
+  position: absolute;
+  inset: auto -20% -45% -20%;
+  height: 14rem;
+  background: conic-gradient(from 90deg, transparent, rgba(6, 182, 212, 0.16), rgba(139, 92, 246, 0.13), transparent);
+  filter: blur(36px);
+  opacity: 0.68;
+  animation: scrollStoryGlow 9s linear infinite;
+}
+
+.scroll-story-pulse {
+  position: relative;
+  z-index: 2;
+  margin-top: 2rem;
+  display: flex;
+  gap: 0.7rem;
+}
+
+.scroll-story-pulse span {
+  display: block;
+  height: 0.55rem;
+  flex: 1;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(6, 182, 212, 0.16), rgba(139, 92, 246, 0.28));
+  box-shadow: 0 0 24px rgba(6, 182, 212, 0.10);
+  animation: scrollStoryPulse 1.7s ease-in-out infinite;
+}
+
+.scroll-story-pulse span:nth-child(2) { animation-delay: 180ms; }
+.scroll-story-pulse span:nth-child(3) { animation-delay: 360ms; }
+
+.scroll-story-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.scroll-story-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 13rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 30px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.072), rgba(255, 255, 255, 0.024)),
+    rgba(2, 6, 23, 0.64);
+  box-shadow: 0 26px 90px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  padding: 1.35rem;
+  backdrop-filter: blur(18px);
+}
+
+.scroll-story-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.075) 36%, transparent 68%),
+    radial-gradient(circle at 18% 0%, rgba(6, 182, 212, 0.14), transparent 34%),
+    radial-gradient(circle at 100% 92%, rgba(139, 92, 246, 0.11), transparent 38%);
+  transform: translateX(-120%);
+  transition: transform 900ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.scroll-story-card.scroll-motion-visible::before {
+  transform: translateX(0);
+}
+
+.scroll-story-card-top {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.scroll-story-card-top span {
+  display: grid;
+  height: 2.55rem;
+  width: 2.55rem;
+  place-items: center;
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  border-radius: 16px;
+  background: rgba(6, 182, 212, 0.09);
+  color: #67e8f9;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.74rem;
+  font-weight: 950;
+  box-shadow: 0 0 28px rgba(6, 182, 212, 0.10);
+}
+
+.scroll-story-card-top strong {
+  flex: 1;
+  color: #f8fafc;
+  font-size: 1.15rem;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+  text-align: right;
+}
+
+.scroll-story-card p {
+  position: relative;
+  z-index: 2;
+  margin-top: 1.1rem;
+  color: rgba(203, 213, 225, 0.78);
+  font-size: 0.92rem;
+  line-height: 1.75;
+}
+
+@keyframes scrollStoryGlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes scrollStoryPulse {
+  0%, 100% { opacity: 0.36; transform: scaleX(0.82); }
+  50% { opacity: 1; transform: scaleX(1); }
+}
+
+@media (min-width: 1024px) {
+  .scroll-story-grid {
+    grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+    align-items: start;
+  }
+
+  .scroll-story-sticky {
+    position: sticky;
+    top: 6.2rem;
+    min-height: 28rem;
+    padding: 2.1rem;
+  }
+
+  .scroll-story-stack {
+    gap: 1.25rem;
+    padding-top: 3rem;
+    padding-bottom: 8rem;
+  }
+
+  .scroll-story-card {
+    min-height: 15rem;
+    padding: 1.7rem;
+  }
+
+  .scroll-story-card:nth-child(2) { margin-left: 4rem; }
+  .scroll-story-card:nth-child(3) { margin-right: 4rem; }
+  .scroll-story-card:nth-child(4) { margin-left: 2rem; }
+}
+
+@media (max-width: 768px) {
+  .motion-enhanced .scroll-motion-ready {
+    translate: 0 22px;
+    rotate: none;
+    filter: blur(4px);
+  }
+
+  .home-hero-copy[data-parallax] {
+    transform: none !important;
+  }
+
+  .home-hero-orb-full[data-parallax] {
+    transform: translateX(-50%) !important;
+  }
+
+  .scroll-story-section {
+    min-height: auto;
+  }
+
+  .scroll-story-sticky,
+  .scroll-story-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-motion-ready,
+  .scroll-motion-visible,
+  .tilt-card,
+  .scroll-story-card,
+  .scroll-story-sticky {
+    opacity: 1 !important;
+    translate: none !important;
+    scale: none !important;
+    rotate: none !important;
+    filter: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}

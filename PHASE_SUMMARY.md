@@ -1,40 +1,31 @@
-# Web3Guard AI — UI-3D Full Site Patch
+# Web3Guard AI — Scroll Animated UI Patch
 
 ## Goal
-Convert the clean beta UI into a fuller video-inspired cinematic dark SaaS experience while preserving Web3Guard AI by RAADHANEX branding and the honest pre-audit product boundary.
+Make the Web3Guard AI UI behave closer to the uploaded reference video: cinematic dark 3D feel, centered hero orb, scroll-driven card reveals, sticky storytelling cards, glow/lift motion, and animated depth across existing UI cards.
 
 ## What changed
-- Home now uses a full-screen cinematic hero instead of a small orb/card layout.
-- Risk intelligence orb can render as hero, compact, or card variant.
-- Core public pages are aligned to the same premium 3D/glass design language:
-  - Home
-  - Scanner
-  - Results
-  - Report
-  - Pricing
-  - Docs
-  - More / Advanced
-  - Risk Intelligence
-- Header/nav state from previous branding patch is preserved:
-  - Home
-  - Scan
-  - Price
-  - More
-  - Settings icon
-  - Web3Guard AI by RAADHANEX branding
-- Footer updated to match the new cinematic/glass visual language.
-- Global CSS adds reusable cinematic panels/cards/backgrounds so older pages using card/glass/clean classes also look closer to the new theme.
+- Added a client-side `ScrollMotionController` using IntersectionObserver.
+- Existing cards/panels now reveal on scroll with staggered lift, blur removal, scale, and depth.
+- Added lightweight parallax for the Home hero orb and copy.
+- Added a sticky "Scroll intelligence" Home section with animated stacked cards.
+- Kept Home hero orb centered and cinematic.
+- Preserved simplified top navigation: Home, Scan, Price, More.
+- Preserved Settings inside the icon/account dropdown instead of a separate text button.
+- Kept safety copy and no-certified-audit wording.
 
-## Safety/product rules preserved
-- No fake result.
-- No fake score.
-- No fake payment success.
-- No certified audit claim.
-- No all-vulnerability-found claim.
-- No private key, seed phrase, or mnemonic collection.
-- No wallet signing.
-- No exploit automation.
-- Missing checks/tools/providers must remain visible as Not Assessed / Tool Not Installed / Needs API Key / Provider Not Configured / Manual Review Required.
+## What was not changed
+- Backend API logic was not touched.
+- Scanner engine was not touched.
+- Payment/Razorpay logic was not touched.
+- Env/secrets/database were not touched.
+- No fake score, fake result, fake monitoring, fake audit claim, wallet signing, private key collection, or exploit automation was added.
 
-## Backend impact
-No backend, env, database, payment, scanner engine, or provider code was touched.
+## Validation run
+```bash
+cd frontend
+npm run typecheck
+```
+
+Result: passed.
+
+`npm run build` started the optimized production build but timed out in the sandbox before completion; no code error appeared before timeout.

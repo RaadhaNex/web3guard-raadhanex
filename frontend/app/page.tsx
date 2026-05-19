@@ -22,6 +22,13 @@ const launchSteps = [
   ["03", "Export report", "Use the report flow after validation; keep limitations and non-audit wording visible."],
 ] as const;
 
+const scrollStory = [
+  ["01", "Website surface", "Landing page, HTTPS, policy pages, phishing copy, ownership evidence, and launch trust gaps."],
+  ["02", "dApp + wallet UX", "Connect flow, risky approval copy, signature warnings, unsupported chains, and user-confusion risk."],
+  ["03", "Code + dependency signals", "Solidity source, Slither/Semgrep state, OSV/CISA signals, and tool availability shown honestly."],
+  ["04", "Report path", "Assessed, Not Assessed, Manual Review, Needs API Key, and Tool Not Installed stay visible."],
+] as const;
+
 const coverage = ["Website", "dApp frontend", "API backend", "Smart contract", "Wallet UX", "GitHub", "Dependencies", "Admin OpSec"] as const;
 
 export default function HomePage() {
@@ -31,12 +38,12 @@ export default function HomePage() {
         <div className="home-cinematic-bg" aria-hidden="true" />
         <div className="home-floating-beam home-floating-beam-one" aria-hidden="true" />
         <div className="home-floating-beam home-floating-beam-two" aria-hidden="true" />
-        <div className="home-hero-orb-full" aria-hidden="true">
+        <div className="home-hero-orb-full" aria-hidden="true" data-parallax="0.035" data-scroll-motion>
           <RiskSignalOrb variant="hero" />
         </div>
 
         <div className="home-hero-content mx-auto flex min-h-[calc(100svh-56px)] max-w-7xl items-center px-4 py-16 sm:px-6 lg:px-8">
-          <div className="home-hero-copy relative z-10 max-w-[34rem]">
+          <div className="home-hero-copy relative z-10 max-w-[34rem]" data-scroll-motion data-parallax="-0.018">
             <div className="home-kicker">
               <span className="home-kicker-dot" />
               <span>India-first Founder Security OS</span>
@@ -77,13 +84,42 @@ export default function HomePage() {
 
       <section className="cinematic-section mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-4 md:grid-cols-4">
-          {signalCards.map(([title, text]) => (
-            <div key={title} className="home-glass-card group">
+          {signalCards.map(([title, text], index) => (
+            <div key={title} className="home-glass-card group tilt-card" style={{ ["--card-index" as string]: index }}>
               <span className="home-card-line" />
               <p>{title}</p>
               <small>{text}</small>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="scroll-story-section cinematic-section mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
+        <div className="scroll-story-grid">
+          <div className="scroll-story-sticky" data-scroll-motion>
+            <p className="section-label">Scroll intelligence</p>
+            <h2 className="mt-4 text-3xl font-black tracking-[-0.06em] text-white sm:text-5xl">Cards should move like the reference video.</h2>
+            <p className="mt-4 max-w-xl text-sm leading-7 text-slate-400">
+              As users scroll, Web3Guard now reveals each readiness layer with cinematic lift, glow, depth, and staggered motion instead of static cards.
+            </p>
+            <div className="scroll-story-pulse" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+
+          <div className="scroll-story-stack">
+            {scrollStory.map(([step, title, text], index) => (
+              <article key={step} className="scroll-story-card tilt-card" style={{ ["--card-index" as string]: index }}>
+                <div className="scroll-story-card-top">
+                  <span>{step}</span>
+                  <strong>{title}</strong>
+                </div>
+                <p>{text}</p>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 

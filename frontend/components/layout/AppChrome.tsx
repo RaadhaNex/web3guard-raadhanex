@@ -16,6 +16,11 @@ const ScrollProgress = dynamic(
   { ssr: false, loading: () => null }
 );
 
+const ScrollMotionController = dynamic(
+  () => import("@/components/motion/ScrollMotionController").then((mod) => mod.ScrollMotionController),
+  { ssr: false, loading: () => null }
+);
+
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
@@ -31,6 +36,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   return (
     <>
       <ScrollProgress />
+      <ScrollMotionController />
       <Header />
       <PreAuditRibbon />
       <main id="main-content">{children}</main>

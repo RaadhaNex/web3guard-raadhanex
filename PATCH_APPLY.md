@@ -1,37 +1,36 @@
 # How to Apply
 
-From project root, extract this ZIP over your existing project so these files replace the same paths.
+Apply this patch over your current Web3Guard project root.
 
-## Validate frontend
+## PowerShell example
+```powershell
+cd C:\web\web3guard
+Expand-Archive -Path "$env:USERPROFILE\Downloads\web3guard_scroll_animated_ui_patch.zip" -DestinationPath "$env:TEMP\web3guard_scroll_patch" -Force
+robocopy "$env:TEMP\web3guard_scroll_patch" "C:\web\web3guard" /E
+```
 
-```bash
+## Validate
+```powershell
 cd frontend
 npm run typecheck
 npm run build
 ```
 
-## Backend
-
-Backend was not touched. Backend tests are not required for this UI-only patch.
-
 ## Push
-
-```bash
+```powershell
 git status
 git add .
-git commit -m "Apply full cinematic UI polish"
+git commit -m "Add scroll animated cinematic UI"
 git push origin main
 ```
 
 ## Pages to check
-
-- /
-- /scanner
-- /scanner/unified-url
-- /results
-- /report
-- /pricing
-- /docs
-- /advanced
-- /risk-intelligence
-- /settings/language
+- `/`
+- `/scanner`
+- `/scanner/unified-url`
+- `/results`
+- `/report`
+- `/pricing`
+- `/docs`
+- `/advanced`
+- `/risk-intelligence`
