@@ -1,509 +1,31 @@
+
 "use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { API_BASE, apiGet, apiPost } from "@/lib/api";
 import { getCurrentUserId, getSessionToken } from "@/lib/supabase";
-import type { ProjectRecord, ScanHistoryRecord, UnifiedModuleCard, UnifiedUrlScanResponse } from "@/lib/types";
+import type {
+  ProjectRecord,
+  ScanHistoryRecord,
+  Severity,
+  UnifiedModuleCard,
+  UnifiedScoreSplit,
+  UnifiedScoreSplitItem,
+  UnifiedUrlScanResponse,
+} from "@/lib/types";
 import { SeverityBadge } from "@/components/ui/SeverityBadge";
 
-const moduleOrder = [
-  "website",
-  "dapp",
-  "api",
-  "contract",
-  "wallet",
-  "admin_opsec",
-  "github",
-];
-
 const scanStages = [
-  "Checking login session",
-  "Validating target URL",
-  "Running passive website checks",
-  "Checking API / GitHub / contract inputs",
-  "Building evidence-based result",
-  "Preparing fix guidance",
+  "Session check",
+  "URL validation",
+  "Passive website review",
+  "Optional evidence mapping",
+  "Readiness scoring",
+  "Report package",
 ];
 
-function statusClass(status: string) {
-  const lowered = status.toLowerCase();
-
-  if (lowered.startsWith("live")) {
-    return "border-emerald-400/40 bg-emerald-500/10 text-emerald-700";
-  }
-
-  if (lowered.includes("manual") || lowered.includes("input")) {
-    return "border-amber-400/40 bg-amber-500/10 text-amber-800";
-  }
-
-  if (lowered.includes("not assessed")) {
-    return "border-slate-300 bg-slate-100 text-slate-700";
-  }
-
-  return "border-cyan-400/40 bg-cyan-500/10 text-cyan-700";
-}
-
-function scoreTone(score?: number | null) {
-  if (typeof score !== "number") return "text-slate-500";
-  if (score >= 85) return "text-emerald-600";
-  if (score >= 65) return "text-amber-600";
-  return "text-rose-600";
-}
-
-function normaliseUrl(value: string) {
-  const clean = value.trim();
-
-  if (!clean) return "";
-
-  if (clean.startsWith("http://") || clean.startsWith("https://")) {
-    return clean;
-  }
-
-  return `https://${clean}`;
-}
-
-function safeJsonStringify(value: unknown) {
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return String(value);
-  }
-}
-
-function makeJsonSafe<T>(value: T): T {
-  const seen = new WeakSet<object>();
-
-  return JSON.parse(
-    JSON.stringify(value, (_key, current) => {
-      if (typeof current === "object" && current !== null) {
-        if (seen.has(current)) return "[Circular]";
-        seen.add(current);
-      }
-
-      return current;
-    })
-  ) as T;
-}
-
-function readableClientError(error: unknown) {
-  if (!error) return "Unknown error. Please check backend logs.";
-
-  if (error instanceof Error) {
-    if (error.message === "[object Object]") {
-      return "Backend returned a structured error object, but the old API client could not format it. Replace frontend/lib/api.ts with the fixed version in this patch, then re-run the scan.";
-    }
-
-    return error.message;
-  }
-
-  if (typeof error === "string") {
-    if (error === "[object Object]") {
-      return "Backend returned a structured error object. Replace frontend/lib/api.ts with the fixed version in this patch.";
-    }
-
-    return error;
-  }
-
-  if (typeof error === "object") {
-    const record = error as Record<string, unknown>;
-
-    if (typeof record.message === "string") return record.message;
-    if (typeof record.error === "string") return record.error;
-    if (typeof record.detail === "string") return record.detail;
-
-    if (record.detail) return readableClientError(record.detail);
-    if (record.msg) return readableClientError(record.msg);
-
-    return safeJsonStringify(error);
-  }
-
-  return String(error);
-}
-
-function getActionFixGuide(title: string, module?: string) {
-  const text = `${title} ${module || ""}`.toLowerCase();
-
-  if (text.includes("content-security-policy") || text.includes("csp")) {
-    return {
-      file: "frontend/next.config.mjs",
-      why:
-        "CSP reduces XSS impact by controlling which scripts, frames, images, and connections are allowed.",
-      fix:
-        "Add a Content-Security-Policy header in Next.js headers(). Allow only your domain, Supabase, backend API, and Razorpay if enabled.",
-      verify:
-        "Run curl -I https://your-domain.com and confirm Content-Security-Policy is present.",
-    };
-  }
-
-  if (text.includes("rate limit")) {
-    return {
-      file: "backend middleware / scan routers",
-      why:
-        "Without rate limits, scan endpoints can be abused and your Render/Supabase quota can be exhausted.",
-      fix:
-        "Enforce per-user and per-IP limits for URL scan, GitHub scan, contract scan, and payment/order endpoints.",
-      verify:
-        "Send repeated requests and confirm the API returns 429 after the configured limit.",
-    };
-  }
-
-  if (text.includes("webhook")) {
-    return {
-      file: "backend/app/routers/payments.py",
-      why:
-        "Payment status must not be trusted unless the Razorpay webhook signature is verified.",
-      fix:
-        "Verify X-Razorpay-Signature using the raw request body and RAZORPAY_WEBHOOK_SECRET before marking payment as paid.",
-      verify:
-        "Use Razorpay test webhook and confirm invalid signatures are rejected.",
-    };
-  }
-
-  if (text.includes("bola") || text.includes("idor")) {
-    return {
-      file: "backend project/report/scan detail endpoints",
-      why:
-        "BOLA/IDOR allows one logged-in user to access another user's project, scan, or report.",
-      fix:
-        "For every object endpoint, verify JWT user id matches record.user_id before returning data.",
-      verify:
-        "Login as user A and try to open user B's project/report id. It should return 403/404.",
-    };
-  }
-
-  if (text.includes("api docs") || text.includes("docs exposure")) {
-    return {
-      file: "backend/main.py",
-      why:
-        "Public /docs, /redoc, and /openapi.json can expose API structure in production.",
-      fix:
-        "Disable docs in production or protect them behind admin authentication.",
-      verify:
-        "Open /docs on production. It should be unavailable or protected.",
-    };
-  }
-
-  if (text.includes("auth")) {
-    return {
-      file: "Supabase Auth + frontend auth pages",
-      why:
-        "Launch dashboards must prove signup, email confirmation, login, logout, and protected routes work correctly.",
-      fix:
-        "Test Supabase URL config, /auth/callback, dashboard protection, and logout session clearing.",
-      verify:
-        "Logout, then open /dashboard. It should require login and must not create a fake session.",
-    };
-  }
-
-  return {
-    file: "Manual review required",
-    why:
-      "This finding needs project-specific context before it can be safely auto-fixed.",
-    fix:
-      "Document the current setup, owner, data flow, and risk. Then add a specific control or checklist evidence.",
-    verify:
-      "Re-run the scan and confirm the finding is resolved or marked as manually accepted.",
-  };
-}
-
-function moduleFixGuide(card: UnifiedModuleCard) {
-  const module = card.module.toLowerCase();
-
-  if (module === "wallet") {
-    return "Add a wallet-flow checklist: connect wallet UX, transaction preview, phishing warning, chain mismatch handling, and no seed/private-key collection.";
-  }
-
-  if (module === "admin_opsec") {
-    return "Add admin OpSec evidence: MFA, role separation, treasury multisig, timelock, key storage policy, and break-glass procedure.";
-  }
-
-  if (module === "contract") {
-    return "Paste Solidity source or provide a verified testnet/mainnet contract address. Missing contract input stays Not assessed.";
-  }
-
-  if (module === "dapp") {
-    return "Provide dApp source/GitHub repo and wallet-flow proof for deeper frontend scoring.";
-  }
-
-  if (module === "api") {
-    return "Expose only intended API endpoints, add rate limits, auth checks, and production docs protection.";
-  }
-
-  if (module === "github") {
-    return "Review exposed secrets, CI permissions, dependency hygiene, and branch protection settings.";
-  }
-
-  return "Review evidence, fix the listed gaps, then re-run the scan.";
-}
-
-
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
-
-async function postBlob(path: string, payload: unknown, accept: string) {
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: accept },
-    body: JSON.stringify(makeJsonSafe(payload)),
-  });
-
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(detail || `Export failed with ${response.status}`);
-  }
-
-  return response.blob();
-}
-
-function fixGuideForFinding(title: string, module?: string) {
-  const guide = getActionFixGuide(title, module);
-  return {
-    where_to_fix: guide.file,
-    why_it_matters: guide.why,
-    how_to_fix: guide.fix,
-    verify: guide.verify,
-  };
-}
-
-function buildInlineMarkdownReport(report: Record<string, unknown>) {
-  const findings = Array.isArray(report.top_findings) ? (report.top_findings as Array<Record<string, unknown>>) : [];
-  const evidenceRequired = Array.isArray(report.evidence_required) ? (report.evidence_required as Array<Record<string, unknown>>) : [];
-  const matrix = Array.isArray(report.module_matrix) ? (report.module_matrix as Array<Record<string, unknown>>) : [];
-
-  const lines = [
-    `# ${String(report.project_name || "Web3Guard Launch Surface Report")}`,
-    "",
-    `Report ID: ${String(report.report_id || "not-generated")}`,
-    `Verification hash: ${String(report.report_hash || "not-available")}`,
-    "",
-    "## Important note",
-    "This is generated from real scanner/checklist/passive data only. Missing modules remain Not assessed. This is not a certified audit.",
-    "",
-    "## Executive summary",
-    String(report.executive_summary || "No executive summary provided."),
-    "",
-    "## Split readiness scores",
-  ];
-
-  const scoreSplit = (report.score_split || {}) as Record<string, any>;
-  scoreSplitCards(scoreSplit).forEach((item) => {
-    lines.push(
-      `- **${String(item.label)}**: ${typeof item.score === "number" ? item.score : "Not assessed"} — ${String(item.status || "Not assessed")}`,
-      `  - Evidence basis: ${String(item.source || "Not provided")}`
-    );
-  });
-
-  lines.push(
-    "",
-    "## Real bugs / findings with fix hints",
-  );
-
-  if (findings.length) {
-    findings.forEach((finding, index) => {
-      const fix = (finding.fix_guidance || {}) as Record<string, unknown>;
-      lines.push(
-        `${index + 1}. **${String(finding.severity || "info").toUpperCase()} — ${String(finding.title || "Finding")}**`,
-        `   - Module: ${String(finding.module || "unknown")}`,
-        `   - Recommendation: ${String(finding.recommendation || "Review and fix before launch.")}`,
-        `   - Where to fix: ${String(fix.where_to_fix || "Manual review required")}`,
-        `   - How to fix: ${String(fix.how_to_fix || "Apply project-specific fix and re-run scan.")}`,
-        `   - Verify: ${String(fix.verify || "Re-run scan after the fix.")}`
-      );
-    });
-  } else {
-    lines.push("No real assessed-module bugs were detected in the current scan payload.");
-  }
-
-  lines.push("", "## Evidence required / Not assessed modules");
-  if (evidenceRequired.length) {
-    evidenceRequired.forEach((item) => {
-      lines.push(`- **${String(item.module_label || item.module || "Module")}**: ${String(item.required_input || "Missing evidence")}`);
-    });
-  } else {
-    lines.push("No missing evidence was listed.");
-  }
-
-  lines.push("", "## Module matrix");
-  matrix.forEach((row) => {
-    lines.push(`- ${String(row.label || row.module || "Module")}: ${row.score ?? "Not assessed"} · ${String(row.status || "Not assessed")}`);
-  });
-
-  lines.push("", "## Disclaimer", String(report.disclaimer || "Not a certified audit."));
-  return lines.join("\n");
-}
-
-
-function buildScoreSplit(result: UnifiedUrlScanResponse) {
-  if (result.score_split) return result.score_split;
-
-  const byModule = new Map(result.module_cards.map((card) => [card.module, card]));
-  const moduleEntry = (module: string, label: string, source: string) => {
-    const card = byModule.get(module);
-    const assessed = Boolean(card?.assessed);
-    return {
-      label,
-      score: assessed ? card?.score ?? null : null,
-      status: card?.status || "Not assessed",
-      risk_label: card?.risk_label || "Not assessed",
-      source: assessed ? source : "Not Assessed — required evidence was not provided.",
-    };
-  };
-  const total = result.module_cards.length || 1;
-  const assessed = result.module_cards.filter((card) => card.assessed).length;
-  const missing = result.module_cards.reduce((count, card) => count + (card.required_input?.length || 0), 0);
-  const evidenceScore = Math.max(0, Math.min(100, Math.round((assessed / total) * 100 - Math.min(missing * 2, 24))));
-  return {
-    website_surface_score: moduleEntry("website", "Website Surface Score", "Passive public URL evidence: HTTP/HTTPS, headers, HTML hints, robots/sitemap/policy signals."),
-    contract_rule_score: moduleEntry("contract", "Contract Rule Score", "Pasted Solidity or verified explorer source analyzed by local rules. External tools remain separate."),
-    launch_evidence_score: {
-      label: "Launch Evidence Score",
-      score: evidenceScore,
-      status: missing ? "Evidence needed" : "Evidence complete",
-      risk_label: missing ? "Evidence gap" : "Evidence present",
-      source: `${assessed}/${total} modules assessed; ${missing} required evidence item(s) still listed.`,
-    },
-    overall_launch_confidence: {
-      label: "Overall Launch Confidence",
-      score: result.overall_score ?? result.available_score ?? null,
-      status: result.overall_score == null ? "Partial assessed confidence" : "Full assessed confidence",
-      risk_label: result.risk_label || "Not assessed",
-      source: "Uses all weighted modules only when all are assessed. Otherwise uses assessed-module available score and marks confidence as partial.",
-    },
-    no_full_audit_score: result.overall_score == null,
-    note: "These are launch-readiness scores, not a certified audit score, penetration-test score, or guarantee of security.",
-  };
-}
-
-function scoreSplitCards(scoreSplit: Record<string, any>) {
-  return ["website_surface_score", "contract_rule_score", "launch_evidence_score", "overall_launch_confidence"]
-    .map((key) => ({ key, ...(scoreSplit[key] || {}) }))
-    .filter((item) => item.label);
-}
-
-function buildInlineReportFromResult(result: UnifiedUrlScanResponse) {
-  const combined = (result.combined_report || {}) as Record<string, any>;
-  const realFindings = (result.priority_actions || []).map((item) => ({
-    severity: item.severity,
-    module: item.module,
-    title: item.title,
-    confidence: "medium",
-    recommendation: item.recommended_action,
-    business_impact: item.business_impact || "Fix before launch if this affects production users or funds.",
-    fix_guidance: fixGuideForFinding(item.title, item.module),
-  }));
-
-  const evidenceRequired = result.module_cards.flatMap((card) =>
-    (card.required_input || []).map((input) => ({
-      module: card.module,
-      module_label: card.label,
-      status: card.status,
-      required_input: input,
-      next_step: moduleFixGuide(card),
-    }))
-  );
-
-  const evidenceSummary = result.module_cards.map((card) => ({
-    module: card.module,
-    module_label: card.label,
-    status: card.status,
-    score: card.score ?? null,
-    evidence: card.evidence || [],
-    limitations: card.limitations || [],
-  }));
-
-  const scoreSplit = buildScoreSplit(result);
-
-  const moduleMatrix = result.module_cards.map((card) => ({
-    label: card.label,
-    module: card.module,
-    weight_percent: card.assessed ? "assessed-only" : "not-scored",
-    score: card.score ?? null,
-    risk_label: card.risk_label || card.status || "Not assessed",
-    assessed: Boolean(card.assessed || card.score !== null),
-    status: card.status || "Not assessed",
-    evidence: (card.evidence || []).slice(0, 4).join(" | ") || "No evidence provided",
-  }));
-
-  const report: Record<string, unknown> = {
-    ...combined,
-    report_id: result.report_id || combined.report_id,
-    report_hash: combined.report_hash,
-    generated_at: result.generated_at || combined.generated_at,
-    project_name: result.project_name || combined.project_name || result.website_url,
-    combined: {
-      ...(combined.combined || {}),
-      overall_score: result.overall_score ?? null,
-      available_score: result.available_score ?? null,
-      risk_label: result.risk_label || combined.combined?.risk_label || "Not assessed",
-    },
-    coverage: result.coverage || combined.coverage,
-    score_split: scoreSplit,
-    module_matrix: moduleMatrix,
-    priority_action_plan: result.priority_actions || [],
-    top_findings: realFindings,
-    evidence_required: evidenceRequired,
-    evidence_summary: evidenceSummary,
-    executive_summary:
-      result.safe_public_summary ||
-      combined.executive_summary ||
-      "Preliminary launch-surface report generated from real scanner evidence.",
-    risk_narrative:
-      result.realness_rule ||
-      combined.risk_narrative ||
-      "Only assessed modules receive scores. Missing modules remain Not assessed.",
-    limitations: [
-      result.disclaimer,
-      "URL-only scans are partial by design.",
-      "Missing modules remain Not assessed and are not fake-scored.",
-      "This is not a certified audit, penetration test, or guarantee of security.",
-    ].filter(Boolean),
-    before_launch_checklist: combined.before_launch_checklist || [],
-    package_recommendation: combined.package_recommendation || {
-      package: "Complete missing evidence before public launch decisions",
-      reason: "Report confidence depends on assessed modules and real evidence.",
-    },
-    disclaimer: result.disclaimer || combined.disclaimer,
-  };
-
-  report.markdown_report = buildInlineMarkdownReport(report);
-  report.json_export = {
-    report_id: report.report_id,
-    report_hash: report.report_hash,
-    generated_at: report.generated_at,
-    project_name: report.project_name,
-    website_url: result.website_url,
-    combined: report.combined,
-    coverage: report.coverage,
-    score_split: report.score_split,
-    module_matrix: report.module_matrix,
-    priority_action_plan: report.priority_action_plan,
-    top_findings: report.top_findings,
-    evidence_required: report.evidence_required,
-    evidence_summary: report.evidence_summary,
-    limitations: report.limitations,
-    disclaimer: report.disclaimer,
-  };
-  return makeJsonSafe(report);
-}
-
-function sortModuleCards(cards: UnifiedModuleCard[]) {
-  return [...cards].sort((a, b) => {
-    const aIndex = moduleOrder.indexOf(a.module);
-    const bIndex = moduleOrder.indexOf(b.module);
-
-    return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
-  });
-}
-
+const moduleOrder = ["website", "dapp", "api", "contract", "wallet", "admin_opsec", "github"];
 
 const projectTypeOptions = [
   "Website / dApp Frontend",
@@ -536,16 +58,93 @@ const chainOptions = [
 ];
 
 type ProjectMode = "new" | "existing";
+type ExportFormat = "pdf" | "html" | "markdown" | "json";
+
+type FixGuide = {
+  where_to_fix: string;
+  why_it_matters: string;
+  how_to_fix: string;
+  verify: string;
+};
+
+function normaliseUrl(value: string) {
+  const clean = value.trim();
+  if (!clean) return "";
+  if (clean.startsWith("http://") || clean.startsWith("https://")) return clean;
+  return `https://${clean}`;
+}
+
+function safeJsonStringify(value: unknown) {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+function makeJsonSafe<T>(value: T): T {
+  const seen = new WeakSet<object>();
+  return JSON.parse(
+    JSON.stringify(value, (_key, current) => {
+      if (typeof current === "object" && current !== null) {
+        if (seen.has(current)) return "[Circular]";
+        seen.add(current);
+      }
+      return current;
+    })
+  ) as T;
+}
+
+function readableClientError(error: unknown) {
+  if (!error) return "Unknown error. Please check the backend logs.";
+  if (error instanceof Error) return error.message === "[object Object]" ? "Backend returned a structured error. Check the required fields and server logs." : error.message;
+  if (typeof error === "string") return error === "[object Object]" ? "Backend returned a structured error." : error;
+  if (typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    if (typeof record.message === "string") return record.message;
+    if (typeof record.error === "string") return record.error;
+    if (typeof record.detail === "string") return record.detail;
+    if (record.detail) return readableClientError(record.detail);
+    return safeJsonStringify(error);
+  }
+  return String(error);
+}
 
 function formatDateTime(value?: string | null) {
   if (!value) return "Not available";
-
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
 
-  return date.toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
+function scoreTone(score?: number | null) {
+  if (typeof score !== "number") return "text-slate-400";
+  if (score >= 85) return "text-emerald-300";
+  if (score >= 65) return "text-amber-300";
+  return "text-red-300";
+}
+
+function riskBadgeClass(label?: string | null) {
+  const value = String(label || "").toLowerCase();
+  if (value.includes("critical") || value.includes("high")) return "badge-red";
+  if (value.includes("medium") || value.includes("evidence") || value.includes("manual")) return "badge-amber";
+  if (value.includes("low") || value.includes("pass") || value.includes("safe")) return "badge-green";
+  return "badge-cyan";
+}
+
+function statusBadgeClass(status?: string | null) {
+  const value = String(status || "").toLowerCase();
+  if (value.includes("live") || value.includes("assessed") || value.includes("complete")) return "badge-green";
+  if (value.includes("manual") || value.includes("input") || value.includes("needed")) return "badge-amber";
+  if (value.includes("not assessed") || value.includes("not installed") || value.includes("key")) return "badge";
+  return "badge-cyan";
+}
+
+function sortModuleCards(cards: UnifiedModuleCard[]) {
+  return [...cards].sort((a, b) => {
+    const aIndex = moduleOrder.indexOf(a.module);
+    const bIndex = moduleOrder.indexOf(b.module);
+    return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
   });
 }
 
@@ -555,8 +154,7 @@ function getHistoryPayload(scan: ScanHistoryRecord) {
 
 function getHistoryWebsite(scan: ScanHistoryRecord) {
   const payload = getHistoryPayload(scan);
-  const website = typeof payload.website_url === "string" ? payload.website_url : "";
-  return website || "No URL stored";
+  return typeof payload.website_url === "string" && payload.website_url ? payload.website_url : "URL not stored";
 }
 
 function looksLikeUnifiedResult(payload: Record<string, unknown>): payload is UnifiedUrlScanResponse {
@@ -564,6 +162,417 @@ function looksLikeUnifiedResult(payload: Record<string, unknown>): payload is Un
     typeof payload.website_url === "string" &&
       typeof payload.report_id === "string" &&
       Array.isArray(payload.module_cards)
+  );
+}
+
+function moduleFixGuide(card: UnifiedModuleCard) {
+  const module = card.module.toLowerCase();
+  if (module === "wallet") return "Add wallet-flow evidence: transaction preview, chain mismatch handling, clear approval copy, and no seed/private-key requests.";
+  if (module === "admin_opsec") return "Add admin evidence: MFA, multisig, timelock, role separation, signer policy, and break-glass procedure.";
+  if (module === "contract") return "Paste Solidity source or provide verified contract evidence. Without source, code review remains Not Assessed.";
+  if (module === "dapp") return "Provide frontend source or GitHub repo plus wallet-flow proof for deeper dApp scoring.";
+  if (module === "api") return "Provide API base URL or docs and verify auth, rate limits, CORS, webhook signature checks, and object authorization.";
+  if (module === "github") return "Provide a public GitHub repo and review secrets, branch protection, CI permissions, and dependency hygiene.";
+  return "Review the listed evidence gaps, add the missing proof, and run the scanner again.";
+}
+
+function fixGuideForFinding(title: string, module?: string): FixGuide {
+  const text = `${title} ${module || ""}`.toLowerCase();
+  if (text.includes("content-security-policy") || text.includes("csp")) {
+    return {
+      where_to_fix: "frontend/next.config.mjs or hosting security headers",
+      why_it_matters: "A strong CSP reduces the blast radius of script injection and compromised third-party assets.",
+      how_to_fix: "Add a Content-Security-Policy header that allows only trusted script, frame, image, connect, and style sources.",
+      verify: "Run curl -I against production and confirm Content-Security-Policy is present.",
+    };
+  }
+  if (text.includes("rate limit")) {
+    return {
+      where_to_fix: "backend middleware and public scan/API routes",
+      why_it_matters: "Rate limits protect your public infrastructure, scanner quotas, and authenticated dashboards from abuse.",
+      how_to_fix: "Apply per-IP and per-user limits to scanner, auth-adjacent, report, and API endpoints.",
+      verify: "Send repeated requests and confirm excessive calls return HTTP 429.",
+    };
+  }
+  if (text.includes("webhook")) {
+    return {
+      where_to_fix: "backend payment or integration webhook route",
+      why_it_matters: "Webhook events must be signature-verified before changing trust, billing, or launch status.",
+      how_to_fix: "Verify provider signature using the raw request body and configured webhook secret before storing state.",
+      verify: "Replay a request with an invalid signature and confirm it is rejected.",
+    };
+  }
+  if (text.includes("bola") || text.includes("idor")) {
+    return {
+      where_to_fix: "project, scan, report, and dashboard detail endpoints",
+      why_it_matters: "Object-level authorization bugs can expose one customer’s reports or project details to another account.",
+      how_to_fix: "Verify every object belongs to the authenticated user or organization before returning data.",
+      verify: "Use two accounts and confirm cross-account object IDs return 403 or 404.",
+    };
+  }
+  if (text.includes("docs exposure") || text.includes("api docs")) {
+    return {
+      where_to_fix: "backend/main.py and deployment configuration",
+      why_it_matters: "Public docs can reveal production routes, payload shapes, and admin-only surfaces.",
+      how_to_fix: "Disable public docs in production or protect them with admin authentication.",
+      verify: "Open /docs, /redoc, and /openapi.json on production and confirm the intended protection.",
+    };
+  }
+  return {
+    where_to_fix: "Manual review required",
+    why_it_matters: "This item depends on project-specific architecture and launch context.",
+    how_to_fix: "Document the affected flow, add the missing control or evidence, then re-run the scanner.",
+    verify: "Re-test the exact flow and confirm the finding is resolved or explicitly accepted as risk.",
+  };
+}
+
+function buildScoreSplit(result: UnifiedUrlScanResponse): UnifiedScoreSplit {
+  if (result.score_split) return result.score_split;
+  const byModule = new Map(result.module_cards.map((card) => [card.module, card]));
+  const moduleEntry = (module: string, label: string, source: string): UnifiedScoreSplitItem => {
+    const card = byModule.get(module);
+    const assessed = Boolean(card?.assessed);
+    return {
+      label,
+      score: assessed ? card?.score ?? null : null,
+      status: card?.status || "Not Assessed",
+      risk_label: card?.risk_label || "Not Assessed",
+      source: assessed ? source : "Not Assessed — required evidence was not provided.",
+    };
+  };
+  const total = result.module_cards.length || 1;
+  const assessed = result.module_cards.filter((card) => card.assessed).length;
+  const missing = result.module_cards.reduce((sum, card) => sum + (card.required_input?.length || 0), 0);
+  const evidenceScore = Math.max(0, Math.min(100, Math.round((assessed / total) * 100 - Math.min(missing * 2, 24))));
+  return {
+    website_surface_score: moduleEntry("website", "Website Surface Score", "Passive public URL evidence such as HTTPS, headers, HTML hints, and policy signals."),
+    contract_rule_score: moduleEntry("contract", "Contract Rule Score", "Solidity source or verified address evidence analyzed by local rules."),
+    launch_evidence_score: {
+      label: "Launch Evidence Score",
+      score: evidenceScore,
+      status: missing ? "Evidence needed" : "Evidence complete",
+      risk_label: missing ? "Evidence gap" : "Evidence present",
+      source: `${assessed}/${total} modules assessed; ${missing} required evidence item(s) still listed.`,
+    },
+    overall_launch_confidence: {
+      label: "Overall Launch Confidence",
+      score: result.overall_score ?? result.available_score ?? null,
+      status: result.overall_score == null ? "Partial assessed confidence" : "Full assessed confidence",
+      risk_label: result.risk_label || "Not Assessed",
+      source: "Uses assessed modules only when evidence is present; missing modules stay outside confidence.",
+    },
+    no_full_audit_score: result.overall_score == null,
+    note: "Launch-readiness scores are not a certified audit score, penetration-test score, or security guarantee.",
+  };
+}
+
+function scoreSplitCards(scoreSplit: UnifiedScoreSplit) {
+  return ["website_surface_score", "contract_rule_score", "launch_evidence_score", "overall_launch_confidence"]
+    .map((key) => ({ key, ...((scoreSplit[key] as UnifiedScoreSplitItem | undefined) || {}) }))
+    .filter((item) => item.label);
+}
+
+function buildInlineMarkdownReport(report: Record<string, unknown>) {
+  const findings = Array.isArray(report.top_findings) ? (report.top_findings as Array<Record<string, unknown>>) : [];
+  const evidenceRequired = Array.isArray(report.evidence_required) ? (report.evidence_required as Array<Record<string, unknown>>) : [];
+  const matrix = Array.isArray(report.module_matrix) ? (report.module_matrix as Array<Record<string, unknown>>) : [];
+  const split = scoreSplitCards((report.score_split || {}) as UnifiedScoreSplit);
+
+  const lines = [
+    `# ${String(report.project_name || "Web3Guard Launch Readiness Report")}`,
+    "",
+    `Report ID: ${String(report.report_id || "not-generated")}`,
+    `Verification hash: ${String(report.report_hash || "not-available")}`,
+    "",
+    "## Important note",
+    "This report is generated from supplied or passive evidence only. Missing modules remain Not Assessed. This is not a certified audit.",
+    "",
+    "## Executive summary",
+    String(report.executive_summary || "Evidence-first launch readiness summary."),
+    "",
+    "## Split readiness scores",
+  ];
+
+  split.forEach((item) => {
+    lines.push(`- **${String(item.label)}**: ${typeof item.score === "number" ? item.score : "Not Assessed"} — ${String(item.status || "Not Assessed")}`);
+    lines.push(`  - Evidence basis: ${String(item.source || "Not provided")}`);
+  });
+
+  lines.push("", "## Findings and fix hints");
+  if (findings.length) {
+    findings.forEach((finding, index) => {
+      const fix = (finding.fix_guidance || {}) as Record<string, unknown>;
+      lines.push(
+        `${index + 1}. **${String(finding.severity || "info").toUpperCase()} — ${String(finding.title || "Finding")}**`,
+        `   - Module: ${String(finding.module || "unknown")}`,
+        `   - Recommendation: ${String(finding.recommendation || "Review before launch.")}`,
+        `   - Where to fix: ${String(fix.where_to_fix || "Manual review required")}`,
+        `   - How to fix: ${String(fix.how_to_fix || "Apply project-specific fix.")}`,
+        `   - Verify: ${String(fix.verify || "Re-run scan after the fix.")}`
+      );
+    });
+  } else {
+    lines.push("No findings were detected in the assessed modules of this scan payload.");
+  }
+
+  lines.push("", "## Evidence required / Not Assessed modules");
+  if (evidenceRequired.length) {
+    evidenceRequired.forEach((item) => {
+      lines.push(`- **${String(item.module_label || item.module || "Module")}**: ${String(item.required_input || "Missing evidence")}`);
+    });
+  } else {
+    lines.push("No missing evidence was listed.");
+  }
+
+  lines.push("", "## Module matrix");
+  matrix.forEach((row) => {
+    lines.push(`- ${String(row.label || row.module || "Module")}: ${row.score ?? "Not Assessed"} · ${String(row.status || "Not Assessed")}`);
+  });
+
+  lines.push("", "## Disclaimer", String(report.disclaimer || "Not a certified audit."));
+  return lines.join("\n");
+}
+
+function buildInlineReportFromResult(result: UnifiedUrlScanResponse) {
+  const combined = (result.combined_report || {}) as Record<string, unknown>;
+  const realFindings = (result.priority_actions || []).map((item) => ({
+    severity: item.severity,
+    module: item.module,
+    title: item.title,
+    confidence: "medium",
+    recommendation: item.recommended_action,
+    business_impact: item.business_impact || "Fix before production launch if this affects users, funds, or admin control.",
+    fix_guidance: fixGuideForFinding(item.title, item.module),
+  }));
+
+  const evidenceRequired = result.module_cards.flatMap((card) =>
+    (card.required_input || []).map((input) => ({
+      module: card.module,
+      module_label: card.label,
+      status: card.status,
+      required_input: input,
+      next_step: moduleFixGuide(card),
+    }))
+  );
+
+  const scoreSplit = buildScoreSplit(result);
+  const moduleMatrix = result.module_cards.map((card) => ({
+    label: card.label,
+    module: card.module,
+    weight_percent: card.assessed ? "assessed-only" : "not-scored",
+    score: card.score ?? null,
+    risk_label: card.risk_label || card.status || "Not Assessed",
+    assessed: Boolean(card.assessed || card.score !== null),
+    status: card.status || "Not Assessed",
+    evidence: (card.evidence || []).slice(0, 4).join(" | ") || "No evidence provided",
+  }));
+
+  const report: Record<string, unknown> = {
+    ...combined,
+    report_id: result.report_id || combined.report_id,
+    report_hash: (combined as Record<string, unknown>).report_hash,
+    generated_at: result.generated_at || combined.generated_at,
+    project_name: result.project_name || combined.project_name || result.website_url,
+    combined: {
+      ...(((combined as Record<string, unknown>).combined || {}) as Record<string, unknown>),
+      overall_score: result.overall_score ?? null,
+      available_score: result.available_score ?? null,
+      risk_label: result.risk_label || "Not Assessed",
+    },
+    coverage: result.coverage || combined.coverage,
+    score_split: scoreSplit,
+    module_matrix: moduleMatrix,
+    priority_action_plan: result.priority_actions || [],
+    top_findings: realFindings,
+    evidence_required: evidenceRequired,
+    evidence_summary: result.module_cards.map((card) => ({
+      module: card.module,
+      module_label: card.label,
+      status: card.status,
+      score: card.score ?? null,
+      evidence: card.evidence || [],
+      limitations: card.limitations || [],
+    })),
+    executive_summary: result.safe_public_summary || combined.executive_summary || "Preliminary launch-surface report generated from scanner evidence.",
+    risk_narrative: result.realness_rule || combined.risk_narrative || "Only assessed modules receive scores. Missing modules remain Not Assessed.",
+    limitations: [
+      result.disclaimer,
+      "URL-only scans are partial by design.",
+      "Missing modules remain Not Assessed.",
+      "This is not a certified audit, penetration test, or guarantee of security.",
+    ].filter(Boolean),
+    before_launch_checklist: combined.before_launch_checklist || [],
+    package_recommendation: combined.package_recommendation || {
+      package: "Complete missing evidence before public launch decisions",
+      reason: "Report confidence depends on assessed modules and supplied evidence.",
+    },
+    disclaimer: result.disclaimer || combined.disclaimer,
+  };
+
+  report.markdown_report = buildInlineMarkdownReport(report);
+  report.json_export = {
+    report_id: report.report_id,
+    report_hash: report.report_hash,
+    generated_at: report.generated_at,
+    project_name: report.project_name,
+    website_url: result.website_url,
+    combined: report.combined,
+    coverage: report.coverage,
+    score_split: report.score_split,
+    module_matrix: report.module_matrix,
+    priority_action_plan: report.priority_action_plan,
+    top_findings: report.top_findings,
+    evidence_required: report.evidence_required,
+    evidence_summary: report.evidence_summary,
+    limitations: report.limitations,
+    disclaimer: report.disclaimer,
+  };
+  return makeJsonSafe(report);
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function postBlob(path: string, payload: unknown, accept: string) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: accept },
+    body: JSON.stringify(makeJsonSafe(payload)),
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(detail || `Export failed with ${response.status}`);
+  }
+  return response.blob();
+}
+
+function CardShell({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <section className={`card p-5 sm:p-6 ${className}`}>{children}</section>;
+}
+
+function FieldLabel({ label, required, children, helper }: { label: string; required?: boolean; children: React.ReactNode; helper?: string }) {
+  return (
+    <label className="block text-sm font-bold text-slate-200">
+      {label} {required ? <span className="text-red-300">*</span> : null}
+      <div className="mt-2">{children}</div>
+      {helper ? <span className="mt-1 block text-xs font-medium text-slate-500">{helper}</span> : null}
+    </label>
+  );
+}
+
+function ScoreOrb({ score, label }: { score?: number | null; label: string }) {
+  const numeric = typeof score === "number" ? Math.max(0, Math.min(100, score)) : null;
+  const circumference = 251;
+  const dash = numeric == null ? circumference : circumference - (numeric / 100) * circumference;
+  return (
+    <div className="relative grid place-items-center">
+      <svg viewBox="0 0 96 96" className="h-32 w-32 -rotate-90">
+        <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="8" />
+        <circle
+          cx="48"
+          cy="48"
+          r="40"
+          fill="none"
+          stroke="url(#scoreGradient)"
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={dash}
+          className="transition-all duration-700"
+        />
+        <defs>
+          <linearGradient id="scoreGradient" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#ef4444" />
+            <stop offset="55%" stopColor="#facc15" />
+            <stop offset="100%" stopColor="#22c55e" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="absolute text-center">
+        <p className={`text-4xl font-black ${scoreTone(numeric)}`}>{numeric == null ? "—" : numeric}</p>
+        <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function SplitScoreCard({ item }: { item: ReturnType<typeof scoreSplitCards>[number] }) {
+  return (
+    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm font-black text-white">{item.label}</p>
+        <span className={`badge ${riskBadgeClass(item.risk_label || item.status)}`}>{typeof item.score === "number" ? item.score : "N/A"}</span>
+      </div>
+      <p className="mt-2 text-xs font-bold text-slate-400">{item.status || "Not Assessed"}</p>
+      <p className="mt-3 text-xs leading-5 text-slate-500">{item.source || "Evidence basis not supplied."}</p>
+    </div>
+  );
+}
+
+function FindingCard({ action }: { action: UnifiedUrlScanResponse["priority_actions"][number] }) {
+  const severity = (action.severity || "info") as Severity;
+  const guide = fixGuideForFinding(action.title, action.module);
+  return (
+    <details className="group rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 open:border-cyan/20 open:bg-cyan/[0.035]">
+      <summary className="flex cursor-pointer list-none flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <SeverityBadge severity={severity} />
+          <h3 className="mt-2 text-base font-black text-white">{action.title}</h3>
+          <p className="mt-2 text-sm leading-6 text-slate-400">{action.recommended_action}</p>
+        </div>
+        <span className="badge badge-cyan shrink-0">{action.module_label || action.module}</span>
+      </summary>
+      <div className="mt-4 grid gap-3 border-t border-white/[0.07] pt-4 md:grid-cols-2">
+        {[
+          ["Where to fix", guide.where_to_fix],
+          ["Why it matters", guide.why_it_matters],
+          ["Fix direction", guide.how_to_fix],
+          ["Verify", guide.verify],
+        ].map(([title, text]) => (
+          <div key={title} className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
+            <p className="mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan">{title}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">{text}</p>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function ModuleCard({ card }: { card: UnifiedModuleCard }) {
+  const assessed = Boolean(card.assessed || card.score !== null);
+  return (
+    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-base font-black text-white">{card.label}</p>
+          <p className="mt-1 text-xs font-semibold text-slate-500">{card.module}</p>
+        </div>
+        <span className={`badge ${statusBadgeClass(card.status)}`}>{assessed ? card.score ?? "—" : "Not Assessed"}</span>
+      </div>
+      <p className={`mt-3 text-sm font-bold ${scoreTone(card.score)}`}>{card.risk_label || card.status || "Not Assessed"}</p>
+      {card.evidence?.length ? (
+        <ul className="mt-3 space-y-2 text-xs leading-5 text-slate-400">
+          {card.evidence.slice(0, 3).map((item) => <li key={item}>• {item}</li>)}
+        </ul>
+      ) : (
+        <p className="mt-3 text-xs leading-5 text-slate-500">No evidence was available for this module in the current scan.</p>
+      )}
+      {card.required_input?.length ? (
+        <div className="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
+          <p className="font-black">Evidence needed</p>
+          <p className="mt-1">{card.required_input[0]}</p>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -582,10 +591,10 @@ export function UnifiedUrlScannerClient() {
   const [solidityCode, setSolidityCode] = useState("");
   const [authorized, setAuthorized] = useState(false);
   const [realOnly, setRealOnly] = useState(true);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const [authLoading, setAuthLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [scanHistory, setScanHistory] = useState<ScanHistoryRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -595,94 +604,75 @@ export function UnifiedUrlScannerClient() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [stageIndex, setStageIndex] = useState(0);
-
   const [error, setError] = useState<string | null>(null);
   const [fieldPrompt, setFieldPrompt] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveLoading, setSaveLoading] = useState(false);
   const [result, setResult] = useState<UnifiedUrlScanResponse | null>(null);
-  const [codeEditorOpen, setCodeEditorOpen] = useState(false);
   const [exportStatus, setExportStatus] = useState<string | null>(null);
 
-  const currentStage = scanStages[Math.min(stageIndex, scanStages.length - 1)];
   const selectedProject = projects.find((project) => project.id === selectedProjectId) || null;
   const selectedHistory = scanHistory.find((scan) => scan.id === selectedHistoryId) || null;
+  const currentStage = scanStages[Math.min(stageIndex, scanStages.length - 1)];
 
-  const resolvedProjectType = useMemo(() => {
-    if (projectType === "Other") return customProjectType.trim() || "Other";
-    return projectType.trim() || projectTypeOptions[0];
-  }, [customProjectType, projectType]);
-
-  const resolvedChain = useMemo(() => {
-    if (chain === "Other") return customChain.trim() || "Other";
-    return chain.trim() || "Web only";
-  }, [chain, customChain]);
+  const resolvedProjectType = useMemo(() => projectType === "Other" ? customProjectType.trim() || "Other" : projectType.trim(), [customProjectType, projectType]);
+  const resolvedChain = useMemo(() => chain === "Other" ? customChain.trim() || "Other" : chain.trim() || "Web only", [chain, customChain]);
 
   const missingRequiredFields = useMemo(() => {
     const missing: string[] = [];
-
     if (!projectName.trim()) missing.push("Project name");
     if (!websiteUrl.trim()) missing.push("Website / dApp URL");
     if (projectMode === "existing" && !selectedProjectId) missing.push("Existing project");
     if (projectType === "Other" && !customProjectType.trim()) missing.push("Custom project type");
-    if (!authorized) missing.push("authorization confirmation");
-    if (!realOnly) missing.push("real-only acknowledgement");
-
+    if (!authorized) missing.push("Authorization confirmation");
+    if (!realOnly) missing.push("Evidence-only acknowledgement");
     return missing;
   }, [authorized, customProjectType, projectMode, projectName, projectType, realOnly, selectedProjectId, websiteUrl]);
 
-  const canRunScan = useMemo(() => {
-    return !loading && !authLoading;
-  }, [authLoading, loading]);
+  const canRunScan = !loading && !authLoading;
+  const cards = result?.module_cards ? sortModuleCards(result.module_cards) : [];
+  const scoreSplit = result ? buildScoreSplit(result) : null;
+  const splitCards = scoreSplit ? scoreSplitCards(scoreSplit) : [];
+  const requiredInputs = result?.module_cards.flatMap((card) => (card.required_input || []).map((item) => ({ label: card.label, item, guide: moduleFixGuide(card) }))) || [];
 
   function setKnownProjectType(value?: string | null) {
     if (!value) return;
-
     if (projectTypeOptions.includes(value)) {
       setProjectType(value);
       setCustomProjectType("");
-      return;
+    } else {
+      setProjectType("Other");
+      setCustomProjectType(value);
     }
-
-    setProjectType("Other");
-    setCustomProjectType(value);
   }
 
   function setKnownChain(value?: string | null) {
     if (!value) return;
-
     if (chainOptions.includes(value)) {
       setChain(value);
       setCustomChain("");
-      return;
+    } else {
+      setChain("Other");
+      setCustomChain(value);
     }
-
-    setChain("Other");
-    setCustomChain(value);
   }
 
   async function loadWorkspaceQuickData() {
     if (!isLoggedIn) return;
-
     setHistoryLoading(true);
     setHistoryError(null);
-
     try {
       const userId = await getCurrentUserId();
       const token = await getSessionToken();
       const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
       const queryUser = encodeURIComponent(userId);
-
       const [projectData, scanData] = await Promise.all([
         apiGet<{ projects: ProjectRecord[] }>(`/projects?user_id=${queryUser}&limit=100`, { headers }),
         apiGet<{ scans: ScanHistoryRecord[] }>(`/scan-history?user_id=${queryUser}&limit=30`, { headers }),
       ]);
-
       setProjects(projectData.projects || []);
       setScanHistory(
-        (scanData.scans || []).filter((scan) =>
-          scan.module === "unified_url" || looksLikeUnifiedResult(getHistoryPayload(scan) as Record<string, unknown>)
-        )
+        (scanData.scans || []).filter((scan) => scan.module === "unified_url" || looksLikeUnifiedResult(getHistoryPayload(scan) as Record<string, unknown>))
       );
     } catch (err) {
       setHistoryError(readableClientError(err));
@@ -694,17 +684,15 @@ export function UnifiedUrlScannerClient() {
   function applyProject(projectId: string) {
     setSelectedProjectId(projectId);
     setProjectMode(projectId ? "existing" : "new");
-
     const project = projects.find((item) => item.id === projectId);
     if (!project) return;
-
     setProjectName(project.name || "");
     setWebsiteUrl(project.website_url || "");
     setKnownChain(project.chain);
     setKnownProjectType(project.project_type);
     setContractAddress(project.contract_address || "");
     setGithubRepoUrl(project.github_repo_url || "");
-    setSaveMessage("Existing project loaded. Run a fresh scan or choose a saved scan history item.");
+    setSaveMessage("Existing project loaded. Run a fresh scan or load a saved result.");
   }
 
   function startNewProject() {
@@ -718,89 +706,58 @@ export function UnifiedUrlScannerClient() {
     setSelectedHistoryId(scanId);
     setError(null);
     setExportStatus(null);
-
     const scan = scanHistory.find((item) => item.id === scanId);
     if (!scan) return;
-
     const payload = getHistoryPayload(scan) as Record<string, unknown>;
     const historyWebsite = typeof payload.website_url === "string" ? payload.website_url : "";
-    const historyProjectName =
-      scan.project_name || (typeof payload.project_name === "string" ? payload.project_name : "");
-    const historyProjectType = typeof payload.project_type === "string" ? payload.project_type : null;
-    const historyChain = typeof payload.chain === "string" ? payload.chain : null;
-
+    const historyProjectName = scan.project_name || (typeof payload.project_name === "string" ? payload.project_name : "");
     if (historyWebsite) setWebsiteUrl(historyWebsite);
     if (historyProjectName) setProjectName(historyProjectName);
-    setKnownProjectType(historyProjectType);
-    setKnownChain(historyChain);
-
+    setKnownProjectType(typeof payload.project_type === "string" ? payload.project_type : null);
+    setKnownChain(typeof payload.chain === "string" ? payload.chain : null);
     if (scan.project_id) {
       setSelectedProjectId(scan.project_id);
       setProjectMode("existing");
     }
-
     if (looksLikeUnifiedResult(payload)) {
       setResult(payload);
-      setSaveMessage(`Loaded saved scan from ${formatDateTime(scan.created_at)}. You can export it or re-run a fresh scan.`);
-      return;
+      setSaveMessage(`Loaded saved scan from ${formatDateTime(scan.created_at)}.`);
+    } else {
+      setSaveMessage(`Loaded saved inputs from ${formatDateTime(scan.created_at)}. Run a fresh scan for a new result.`);
     }
-
-    setSaveMessage(`Loaded history inputs from ${formatDateTime(scan.created_at)}. Run scan to generate a fresh result.`);
   }
 
   useEffect(() => {
     let mounted = true;
-
     async function checkAuth() {
       setAuthLoading(true);
-
       try {
         await getCurrentUserId();
-
-        if (mounted) {
-          setIsLoggedIn(true);
-        }
+        if (mounted) setIsLoggedIn(true);
       } catch {
-        if (mounted) {
-          setIsLoggedIn(false);
-        }
+        if (mounted) setIsLoggedIn(false);
       } finally {
-        if (mounted) {
-          setAuthLoading(false);
-        }
+        if (mounted) setAuthLoading(false);
       }
     }
-
     void checkAuth();
-
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
   useEffect(() => {
     if (!isLoggedIn) return;
     void loadWorkspaceQuickData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn]);
 
   useEffect(() => {
     if (!loading) return;
-
     setProgress(8);
     setStageIndex(0);
-
     const timer = window.setInterval(() => {
-      setProgress((value) => {
-        if (value >= 92) return value;
-        return value + 7;
-      });
-
-      setStageIndex((value) => {
-        if (value >= scanStages.length - 2) return value;
-        return value + 1;
-      });
+      setProgress((value) => (value >= 92 ? value : value + 7));
+      setStageIndex((value) => (value >= scanStages.length - 2 ? value : value + 1));
     }, 800);
-
     return () => window.clearInterval(timer);
   }, [loading]);
 
@@ -812,21 +769,18 @@ export function UnifiedUrlScannerClient() {
     setExportStatus(null);
 
     if (!isLoggedIn) {
-      setError("Login required. Please login before running a real scan.");
+      setError("Login is required before running a saved evidence-based scan.");
       return;
     }
-
     if (missingRequiredFields.length) {
-      const message = `Please fill required fields: ${missingRequiredFields.join(", ")}.`;
+      const message = `Please complete: ${missingRequiredFields.join(", ")}.`;
       setFieldPrompt(message);
       setError(message);
       return;
     }
-
     const cleanWebsiteUrl = normaliseUrl(websiteUrl);
-
     if (!cleanWebsiteUrl) {
-      const message = "Please enter a valid website / dApp URL.";
+      const message = "Enter a valid website or dApp URL.";
       setFieldPrompt(message);
       setError(message);
       return;
@@ -834,12 +788,10 @@ export function UnifiedUrlScannerClient() {
 
     setWebsiteUrl(cleanWebsiteUrl);
     setLoading(true);
-
     try {
       const userId = await getCurrentUserId();
       const token = await getSessionToken();
       const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-
       const data = await apiPost<UnifiedUrlScanResponse>(
         "/scan/unified-url",
         {
@@ -857,7 +809,6 @@ export function UnifiedUrlScannerClient() {
         },
         { headers }
       );
-
       setStageIndex(scanStages.length - 1);
       setProgress(100);
       setResult(data);
@@ -866,52 +817,41 @@ export function UnifiedUrlScannerClient() {
       setProgress(0);
       setStageIndex(0);
     } finally {
-      setTimeout(() => {
-        setLoading(false);
-      }, 350);
+      window.setTimeout(() => setLoading(false), 350);
     }
   }
 
   async function saveUnifiedScanToDashboard() {
     if (!result) return;
-
     setSaveLoading(true);
     setSaveMessage(null);
     setError(null);
-
     try {
       const userId = await getCurrentUserId();
       const token = await getSessionToken();
       const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
       let projectId = projectMode === "existing" ? selectedProjectId : "";
-
       if (!projectId) {
         const projectResponse = await apiPost<{ project: { id: string } }>(
           "/projects",
           {
             user_id: userId,
-            name: projectName.trim() || result.project_name || "Unified URL Scan",
+            name: projectName.trim() || result.project_name || "Unified Launch Scan",
             website_url: websiteUrl,
             chain: resolvedChain,
             contract_address: contractAddress || null,
             github_repo_url: githubRepoUrl || null,
             project_type: resolvedProjectType,
-            description:
-              "Created from unified URL launch scanner. Only actually assessed modules were scored.",
+            description: "Created from the unified launch scanner. Only assessed evidence contributes to scoring.",
           },
           { headers }
         );
-
         projectId = projectResponse.project.id;
         setSelectedProjectId(projectId);
         setProjectMode("existing");
       }
 
-      const criticalHigh =
-        result.priority_actions?.filter(
-          (item) => item.severity === "critical" || item.severity === "high"
-        ).length || 0;
-
+      const criticalHigh = result.priority_actions?.filter((item) => item.severity === "critical" || item.severity === "high").length || 0;
       await apiPost(
         "/scan-history",
         {
@@ -922,22 +862,14 @@ export function UnifiedUrlScannerClient() {
           score: result.available_score ?? null,
           risk_label: result.risk_label,
           report_id: result.report_id,
-          findings_count: result.module_cards.reduce(
-            (sum, card) => sum + (card.findings_count || 0),
-            0
-          ),
+          findings_count: result.module_cards.reduce((sum, card) => sum + (card.findings_count || 0), 0),
           critical_high_count: criticalHigh,
           status: "saved_from_unified_url_scanner",
           payload: result,
         },
         { headers }
       );
-
-      setSaveMessage(
-        projectMode === "existing"
-          ? "Scan saved under the selected project. It will now appear in History with date/time."
-          : "Scan saved to dashboard and a new project was created. It will now appear in History."
-      );
+      setSaveMessage(projectMode === "existing" ? "Scan saved under the selected project." : "Scan saved and a new project record was created.");
       await loadWorkspaceQuickData();
     } catch (err) {
       setError(readableClientError(err));
@@ -946,533 +878,374 @@ export function UnifiedUrlScannerClient() {
     }
   }
 
-  async function exportCurrentReport(format: "pdf" | "html" | "markdown" | "json") {
+  async function exportCurrentReport(format: ExportFormat) {
     if (!result) return;
-
     setExportStatus(`Preparing ${format.toUpperCase()} export from this scan result...`);
     setError(null);
-
     try {
       const report = buildInlineReportFromResult(result);
       const baseName = String(report.report_id || "web3guard-launch-report");
-
-      if (format === "pdf") {
-        const blob = await postBlob("/report/export/pdf", { report }, "application/pdf");
-        downloadBlob(blob, `${baseName}.pdf`);
-      } else if (format === "html") {
-        const blob = await postBlob("/report/export/html", { report }, "text/html");
-        downloadBlob(blob, `${baseName}.html`);
-      } else if (format === "markdown") {
-        const blob = await postBlob("/report/export/markdown", { report }, "text/markdown");
-        downloadBlob(blob, `${baseName}.md`);
-      } else {
-        const blob = await postBlob("/report/export/json", { report }, "application/json");
-        downloadBlob(blob, `${baseName}.json`);
-      }
-
-      setExportStatus(`${format.toUpperCase()} downloaded from the current real scan result. Missing modules remain Not assessed.`);
+      const accept = format === "pdf" ? "application/pdf" : format === "html" ? "text/html" : format === "markdown" ? "text/markdown" : "application/json";
+      const blob = await postBlob(`/report/export/${format}`, { report }, accept);
+      downloadBlob(blob, `${baseName}.${format === "markdown" ? "md" : format}`);
+      setExportStatus(`${format.toUpperCase()} export downloaded. Not Assessed modules remain clearly separated.`);
     } catch (err) {
       setExportStatus(null);
       setError(readableClientError(err));
     }
   }
 
-  function copyCodeToClipboard() {
-    void navigator.clipboard.writeText(solidityCode || "");
-  }
-
-  const cards = result?.module_cards ? sortModuleCards(result.module_cards) : [];
-  const splitCards = result ? scoreSplitCards(buildScoreSplit(result)) : [];
-  const requiredInputs = result?.module_cards.flatMap((card) =>
-    (card.required_input || []).map((item) => ({ label: card.label, item }))
-  ) || [];
-
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#05070d,#0f172a_38%,#f8fafc_38%)] text-slate-950">
-      {fieldPrompt ? (
-        <div className="fixed right-4 top-24 z-50 w-[calc(100%-2rem)] max-w-md rounded-2xl border border-red-200 bg-white p-4 text-sm font-semibold text-red-700 shadow-xl">
-          <div className="flex items-start justify-between gap-3">
-            <span>{fieldPrompt}</span>
-            <button type="button" className="text-red-400 transition hover:text-red-700" onClick={() => setFieldPrompt(null)}>×</button>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="max-w-3xl">
-              <div className="inline-flex rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-green-700">
-                Real-only URL scanner
-              </div>
-              <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">Scan, fix, export</h1>
-              <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
-                Select an old project or create a new one, run a passive scan, view real bugs with fix hints, and export PDF/HTML/Markdown/JSON on the same page.
+    <main className="relative overflow-hidden">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="grid gap-6 lg:grid-cols-[0.78fr_1.22fr]">
+          <aside className="space-y-5 lg:sticky lg:top-20 lg:self-start">
+            <CardShell className="card-glow">
+              <p className="section-label">Unified scanner</p>
+              <h1 className="mt-3 text-3xl font-black sm:text-5xl">Launch evidence console</h1>
+              <p className="mt-4 text-sm leading-7 text-slate-400">
+                Start with a URL, then add optional evidence for contracts, API, GitHub, wallet, and admin controls. The report separates assessed evidence from missing modules.
               </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setCodeEditorOpen((value) => !value)}
-                className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-900 transition hover:border-yellow-400 hover:bg-yellow-50"
-              >
-                {codeEditorOpen ? "Close editor" : "Code editor"}
-              </button>
-              <button
-                type="button"
-                onClick={() => void loadWorkspaceQuickData()}
-                disabled={!isLoggedIn || historyLoading}
-                className="rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-bold text-green-700 transition hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {historyLoading ? "Refreshing..." : "Refresh history"}
-              </button>
-              {!authLoading && !isLoggedIn ? (
-                <Link href="/auth/login" className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 transition hover:bg-red-100">
-                  Login required
-                </Link>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Session</p>
+                  <p className="mt-1 text-sm font-black text-white">{authLoading ? "Checking..." : isLoggedIn ? "Logged in" : "Login required"}</p>
+                </div>
+                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Output</p>
+                  <p className="mt-1 text-sm font-black text-white">PDF · HTML · MD · JSON</p>
+                </div>
+              </div>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <span className="badge badge-cyan">Pre-audit only</span>
+                <span className="badge badge-amber">No wallet signing</span>
+                <span className="badge">Not a certified audit</span>
+              </div>
+              {!isLoggedIn && !authLoading ? (
+                <Link href="/auth/login" className="btn-primary mt-6 w-full">Log in to run scan</Link>
               ) : null}
-            </div>
-          </div>
+            </CardShell>
 
-          <div className="mt-5 grid gap-3 text-sm sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="font-black text-slate-950">Evidence only</p>
-              <p className="mt-1 text-xs leading-5 text-slate-600">Missing modules stay Not assessed, never fake-scored.</p>
-            </div>
-            <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
-              <p className="font-black text-yellow-900">Passive checks</p>
-              <p className="mt-1 text-xs leading-5 text-yellow-800">No exploit automation, wallet signing, or secrets collection.</p>
-            </div>
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
-              <p className="font-black text-red-800">Not a certified audit</p>
-              <p className="mt-1 text-xs leading-5 text-red-700">Use it for launch readiness and pre-audit cleanup.</p>
-            </div>
-          </div>
-        </section>
-
-        {codeEditorOpen ? (
-          <section className="mt-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-yellow-700">Code editor</p>
-                <h2 className="mt-1 text-2xl font-black text-slate-950">Paste Solidity source</h2>
-                <p className="mt-1 text-sm text-slate-600">This editor does not execute code. It only sends source to the passive rule-based scanner.</p>
-              </div>
-              <button
-                type="button"
-                onClick={copyCodeToClipboard}
-                className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-900 transition hover:bg-slate-50"
-              >
-                Copy code
-              </button>
-            </div>
-            <textarea
-              className="mt-4 min-h-[320px] w-full rounded-2xl border border-slate-300 bg-slate-950 p-4 font-mono text-xs leading-5 text-slate-100 outline-none placeholder:text-slate-500 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100"
-              value={solidityCode}
-              onChange={(event) => setSolidityCode(event.target.value)}
-              placeholder="Paste Solidity source here for real rule-based scanning."
-            />
-          </section>
-        ) : null}
-
-        <section className="mt-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Setup</p>
-              <h2 className="mt-1 text-2xl font-black text-slate-950">Project details</h2>
-              <p className="mt-2 text-sm text-slate-600">Fields marked <span className="font-black text-red-600">*</span> are required.</p>
-            </div>
-            {selectedHistory ? (
-              <div className="rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-xs font-bold text-yellow-900">
-                Last selected: {formatDateTime(selectedHistory.created_at)}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="mt-5 grid gap-4 lg:grid-cols-3">
-            <label className="block text-sm font-bold text-slate-800">
-              Scan history
-              <select
-                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-black focus:ring-4 focus:ring-slate-100"
-                value={selectedHistoryId}
-                onChange={(event) => applyHistory(event.target.value)}
-                disabled={!isLoggedIn || historyLoading}
-              >
-                <option value="">Select previous saved scan</option>
-                {scanHistory.map((scan) => (
-                  <option key={scan.id} value={scan.id}>
-                    {scan.project_name || getHistoryWebsite(scan)} · {formatDateTime(scan.created_at)}
-                  </option>
-                ))}
-              </select>
-              <span className="mt-1 block text-xs font-medium text-slate-500">Reuse old URL/result with last scan date and time.</span>
-            </label>
-
-            <label className="block text-sm font-bold text-slate-800">
-              Project mode
-              <select
-                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-black focus:ring-4 focus:ring-slate-100"
-                value={projectMode}
-                onChange={(event) => {
-                  const value = event.target.value as ProjectMode;
-                  if (value === "new") startNewProject();
-                  else setProjectMode("existing");
-                }}
-              >
-                <option value="new">Create new project</option>
-                <option value="existing">Use existing project</option>
-              </select>
-            </label>
-
-            <label className="block text-sm font-bold text-slate-800">
-              Existing project {projectMode === "existing" ? <span className="text-red-600">*</span> : null}
-              <select
-                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-black focus:ring-4 focus:ring-slate-100 disabled:bg-slate-100 disabled:text-slate-400"
-                value={selectedProjectId}
-                onChange={(event) => applyProject(event.target.value)}
-                disabled={projectMode !== "existing" || !isLoggedIn || !projects.length}
-              >
-                <option value="">Select project</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name} · {formatDateTime(project.updated_at || project.created_at)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          {historyError ? (
-            <p className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 p-3 text-sm font-semibold text-yellow-900">
-              Could not load history/projects: {historyError}
-            </p>
-          ) : null}
-
-          <div className="mt-5 grid gap-4 lg:grid-cols-12">
-            <label className="block text-sm font-bold text-slate-800 lg:col-span-5">
-              Website / dApp URL <span className="text-red-600">*</span>
-              <input
-                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-black focus:ring-4 focus:ring-slate-100"
-                value={websiteUrl}
-                onChange={(event) => setWebsiteUrl(event.target.value)}
-                placeholder="https://yourproject.com"
-              />
-            </label>
-
-            <label className="block text-sm font-bold text-slate-800 lg:col-span-3">
-              Project name <span className="text-red-600">*</span>
-              <input
-                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-black focus:ring-4 focus:ring-slate-100"
-                value={projectName}
-                onChange={(event) => setProjectName(event.target.value)}
-                placeholder="My Web3 Project"
-              />
-            </label>
-
-            <label className="block text-sm font-bold text-slate-800 lg:col-span-4">
-              Project type <span className="text-red-600">*</span>
-              <select
-                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-black focus:ring-4 focus:ring-slate-100"
-                value={projectType}
-                onChange={(event) => setProjectType(event.target.value)}
-              >
-                {projectTypeOptions.map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-            </label>
-
-            {projectType === "Other" ? (
-              <label className="block text-sm font-bold text-slate-800 lg:col-span-3">
-                Custom project type <span className="text-red-600">*</span>
-                <input
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-black focus:ring-4 focus:ring-slate-100"
-                  value={customProjectType}
-                  onChange={(event) => setCustomProjectType(event.target.value)}
-                  placeholder="Example: RWA, DePIN"
-                />
-              </label>
-            ) : null}
-
-            <label className="block text-sm font-bold text-slate-800 lg:col-span-3">
-              Chain
-              <select
-                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-black focus:ring-4 focus:ring-slate-100"
-                value={chain}
-                onChange={(event) => setChain(event.target.value)}
-              >
-                {chainOptions.map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-            </label>
-
-            {chain === "Other" ? (
-              <label className="block text-sm font-bold text-slate-800 lg:col-span-3">
-                Custom chain
-                <input
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-black focus:ring-4 focus:ring-slate-100"
-                  value={customChain}
-                  onChange={(event) => setCustomChain(event.target.value)}
-                  placeholder="Example: Sui, Aptos"
-                />
-              </label>
-            ) : null}
-
-            <label className="block text-sm font-bold text-slate-800 lg:col-span-3">
-              Contract address optional
-              <input
-                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-black focus:ring-4 focus:ring-slate-100"
-                value={contractAddress}
-                onChange={(event) => setContractAddress(event.target.value)}
-                placeholder="0x..."
-              />
-            </label>
-
-            <label className="block text-sm font-bold text-slate-800 lg:col-span-3">
-              API base URL optional
-              <input
-                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-black focus:ring-4 focus:ring-slate-100"
-                value={apiBaseUrl}
-                onChange={(event) => setApiBaseUrl(event.target.value)}
-                placeholder="https://api.yourproject.com"
-              />
-            </label>
-
-            <label className="block text-sm font-bold text-slate-800 lg:col-span-3">
-              GitHub repo optional
-              <input
-                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-black focus:ring-4 focus:ring-slate-100"
-                value={githubRepoUrl}
-                onChange={(event) => setGithubRepoUrl(event.target.value)}
-                placeholder="https://github.com/team/project"
-              />
-            </label>
-          </div>
-
-          <div className="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 md:grid-cols-2">
-            <label className="flex gap-3 font-medium">
-              <input
-                type="checkbox"
-                checked={authorized}
-                onChange={(event) => setAuthorized(event.target.checked)}
-              />
-              <span>I own this project or have authorization to run passive checks. <span className="font-black text-red-600">*</span></span>
-            </label>
-
-            <label className="flex gap-3 font-medium">
-              <input
-                type="checkbox"
-                checked={realOnly}
-                onChange={(event) => setRealOnly(event.target.checked)}
-              />
-              <span>I understand missing modules will be marked Not assessed. <span className="font-black text-red-600">*</span></span>
-            </label>
-          </div>
-
-          {missingRequiredFields.length ? (
-            <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">
-              Required pending: {missingRequiredFields.join(", ")}
-            </p>
-          ) : null}
-
-          {loading ? (
-            <div className="mt-5 rounded-2xl border border-green-200 bg-green-50 p-4">
-              <div className="flex items-center justify-between gap-4">
-                <p className="text-sm font-black text-green-800">{currentStage}</p>
-                <p className="text-sm font-bold text-green-700">{progress}%</p>
-              </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-green-100">
-                <div className="h-full rounded-full bg-green-600 transition-all duration-500" style={{ width: `${progress}%` }} />
-              </div>
-            </div>
-          ) : null}
-
-          {error ? (
-            <p className="mt-4 whitespace-pre-wrap rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
-              {error}
-            </p>
-          ) : null}
-
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <button
-              className="w3g-action-dark rounded-2xl border border-slate-950 bg-slate-950 px-6 py-4 text-sm font-black text-white shadow-sm transition hover:bg-slate-800 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500 disabled:shadow-none disabled:opacity-100"
-              onClick={runScan}
-              disabled={!canRunScan}
-            >
-              {loading ? "Scanning..." : missingRequiredFields.length ? "Fill required fields" : "Run URL Scan"}
-            </button>
-            <p className="text-xs leading-5 text-slate-500">Scan will not run until every required <span className="font-black text-red-600">*</span> field is completed.</p>
-          </div>
-        </section>
-
-        <section className="mt-6 space-y-5">
-          {!result ? (
-            <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
-              <p className="text-sm font-black uppercase tracking-[0.18em] text-slate-400">No result yet</p>
-              <h2 className="mt-3 text-2xl font-black text-slate-950">Run a scan or select history</h2>
-              <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                Results, bug hints, missing evidence, and export buttons will appear here directly after the scan.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                <div className="grid gap-5 lg:grid-cols-[240px_1fr]">
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Assessed score</p>
-                    <p className={`mt-2 text-6xl font-black ${scoreTone(result.available_score)}`}>{result.available_score ?? "N/A"}</p>
-                    <p className="mt-2 text-sm font-bold text-slate-700">{result.risk_label || "Not assessed"}</p>
-                    <div className="mt-4 grid gap-2 text-xs font-bold">
-                      <span className="rounded-full border border-green-200 bg-green-50 px-3 py-2 text-green-700">{result.live_module_count} live/limited module(s)</span>
-                      <span className="rounded-full border border-yellow-200 bg-yellow-50 px-3 py-2 text-yellow-800">{result.priority_actions?.length || 0} action(s)</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <h2 className="text-2xl font-black text-slate-950">Scan report</h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">Export is generated from this real scan result. Missing modules remain Not assessed.</p>
-                      </div>
-                      <button type="button" disabled={saveLoading} onClick={saveUnifiedScanToDashboard} className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-900 transition hover:bg-slate-50 disabled:opacity-50">
-                        {saveLoading ? "Saving..." : projectMode === "existing" && selectedProjectId ? "Save under project" : "Save + create project"}
-                      </button>
-                    </div>
-
-                    <div className="mt-5 flex flex-wrap gap-3">
-                      <button type="button" className="w3g-action-danger rounded-full bg-red-600 px-5 py-3 text-sm font-black text-white transition hover:bg-red-700" onClick={() => exportCurrentReport("pdf")}>Download PDF</button>
-                      <button type="button" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-900 transition hover:bg-slate-50" onClick={() => exportCurrentReport("html")}>HTML</button>
-                      <button type="button" className="rounded-full border border-green-200 bg-green-50 px-5 py-3 text-sm font-black text-green-700 transition hover:bg-green-100" onClick={() => exportCurrentReport("markdown")}>Markdown</button>
-                      <button type="button" className="rounded-full border border-yellow-200 bg-yellow-50 px-5 py-3 text-sm font-black text-yellow-900 transition hover:bg-yellow-100" onClick={() => exportCurrentReport("json")}>JSON</button>
-                    </div>
-
-                    {saveMessage ? <p className="mt-4 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-700">{saveMessage}</p> : null}
-                    {exportStatus ? <p className="mt-4 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-700">{exportStatus}</p> : null}
-
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      <p className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">{result.realness_rule}</p>
-                      <p className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">{result.safe_public_summary}</p>
-                    </div>
-                  </div>
+            <CardShell>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan">Workspace</p>
+                  <h2 className="mt-1 text-xl font-black text-white">Projects & history</h2>
                 </div>
+                <button className="btn-secondary !px-3 !py-2 text-xs" type="button" onClick={() => void loadWorkspaceQuickData()} disabled={!isLoggedIn || historyLoading}>
+                  Refresh
+                </button>
+              </div>
+              <div className="mt-4 space-y-4">
+                <FieldLabel label="Scan history" helper="Load a previous unified scan or reuse saved inputs.">
+                  <select className="select" value={selectedHistoryId} onChange={(event) => applyHistory(event.target.value)} disabled={!isLoggedIn || historyLoading}>
+                    <option value="">Select saved scan</option>
+                    {scanHistory.map((scan) => (
+                      <option key={scan.id} value={scan.id}>{scan.project_name || getHistoryWebsite(scan)} · {formatDateTime(scan.created_at)}</option>
+                    ))}
+                  </select>
+                </FieldLabel>
+                <FieldLabel label="Project mode">
+                  <select className="select" value={projectMode} onChange={(event) => { const value = event.target.value as ProjectMode; if (value === "new") startNewProject(); else setProjectMode("existing"); }}>
+                    <option value="new">Create new project</option>
+                    <option value="existing">Use existing project</option>
+                  </select>
+                </FieldLabel>
+                <FieldLabel label="Existing project" required={projectMode === "existing"}>
+                  <select className="select" value={selectedProjectId} onChange={(event) => applyProject(event.target.value)} disabled={projectMode !== "existing" || !isLoggedIn || !projects.length}>
+                    <option value="">Select project</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>{project.name} · {formatDateTime(project.updated_at || project.created_at)}</option>
+                    ))}
+                  </select>
+                </FieldLabel>
+              </div>
+              {selectedProject ? <p className="mt-4 rounded-xl border border-cyan/15 bg-cyan/10 p-3 text-xs text-cyan-50">Loaded: {selectedProject.name}</p> : null}
+              {selectedHistory ? <p className="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/10 p-3 text-xs text-amber-100">Last selected: {formatDateTime(selectedHistory.created_at)}</p> : null}
+              {historyError ? <p className="mt-3 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-xs text-red-100">{historyError}</p> : null}
+            </CardShell>
+          </aside>
+
+          <div className="space-y-6">
+            <CardShell className="card-glow">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="section-label">Required setup</p>
+                  <h2 className="mt-2 text-2xl font-black text-white">Project input</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">Required fields keep the report traceable and prevent misleading empty scans.</p>
+                </div>
+                <span className={`badge ${missingRequiredFields.length ? "badge-amber" : "badge-green"}`}>
+                  {missingRequiredFields.length ? `${missingRequiredFields.length} item(s) needed` : "Ready"}
+                </span>
               </div>
 
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Split readiness scores</p>
-                    <h3 className="mt-2 text-2xl font-black text-slate-950">No misleading full audit score</h3>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">Website Surface Score, Contract Rule Score, Launch Evidence Score, and Overall Launch Confidence are separated so missing evidence remains visible.</p>
-                  </div>
-                  <div className="rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-xs font-black text-yellow-900">Pre-audit readiness only</div>
+              <div className="mt-6 grid gap-4 lg:grid-cols-12">
+                <div className="lg:col-span-5">
+                  <FieldLabel label="Website / dApp URL" required>
+                    <input className="input" value={websiteUrl} onChange={(event) => setWebsiteUrl(event.target.value)} placeholder="https://yourproject.com" />
+                  </FieldLabel>
                 </div>
-                <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  {splitCards.map((item) => (
-                    <div key={item.key} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-xs font-black uppercase tracking-wide text-slate-500">{item.label}</p>
-                      <p className={`mt-2 text-3xl font-black ${scoreTone(item.score)}`}>{typeof item.score === "number" ? item.score : "Not assessed"}</p>
-                      <p className="mt-2 text-sm font-bold text-slate-800">{item.status}</p>
-                      <p className="mt-2 text-xs leading-5 text-slate-600">{item.source}</p>
+                <div className="lg:col-span-3">
+                  <FieldLabel label="Project name" required>
+                    <input className="input" value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="My Web3 Project" />
+                  </FieldLabel>
+                </div>
+                <div className="lg:col-span-4">
+                  <FieldLabel label="Project type" required>
+                    <select className="select" value={projectType} onChange={(event) => setProjectType(event.target.value)}>
+                      {projectTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                  </FieldLabel>
+                </div>
+                {projectType === "Other" ? (
+                  <div className="lg:col-span-4">
+                    <FieldLabel label="Custom project type" required>
+                      <input className="input" value={customProjectType} onChange={(event) => setCustomProjectType(event.target.value)} placeholder="Example: RWA, DePIN" />
+                    </FieldLabel>
+                  </div>
+                ) : null}
+                <div className="lg:col-span-4">
+                  <FieldLabel label="Chain">
+                    <select className="select" value={chain} onChange={(event) => setChain(event.target.value)}>
+                      {chainOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                  </FieldLabel>
+                </div>
+                {chain === "Other" ? (
+                  <div className="lg:col-span-4">
+                    <FieldLabel label="Custom chain">
+                      <input className="input" value={customChain} onChange={(event) => setCustomChain(event.target.value)} placeholder="Example: Sui, Aptos" />
+                    </FieldLabel>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="mt-6 rounded-2xl border border-white/[0.07] bg-white/[0.03]">
+                <button type="button" onClick={() => setAdvancedOpen((value) => !value)} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left">
+                  <div>
+                    <p className="text-sm font-black text-white">Optional evidence</p>
+                    <p className="mt-1 text-xs text-slate-500">Add more inputs for stronger launch confidence.</p>
+                  </div>
+                  <span className="badge badge-cyan">{advancedOpen ? "Hide" : "Add evidence"}</span>
+                </button>
+                {advancedOpen ? (
+                  <div className="grid gap-4 border-t border-white/[0.07] p-5 lg:grid-cols-3">
+                    <FieldLabel label="Contract address">
+                      <input className="input" value={contractAddress} onChange={(event) => setContractAddress(event.target.value)} placeholder="0x..." />
+                    </FieldLabel>
+                    <FieldLabel label="API base URL">
+                      <input className="input" value={apiBaseUrl} onChange={(event) => setApiBaseUrl(event.target.value)} placeholder="https://api.yourproject.com" />
+                    </FieldLabel>
+                    <FieldLabel label="GitHub repo URL">
+                      <input className="input" value={githubRepoUrl} onChange={(event) => setGithubRepoUrl(event.target.value)} placeholder="https://github.com/org/repo" />
+                    </FieldLabel>
+                    <div className="lg:col-span-3">
+                      <FieldLabel label="Solidity source" helper="Optional. Used only for passive rule-based review.">
+                        <textarea className="textarea" value={solidityCode} onChange={(event) => setSolidityCode(event.target.value)} placeholder="Paste Solidity source here for local rule checks." />
+                      </FieldLabel>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="mt-6 grid gap-3 rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4 text-sm leading-6 text-amber-50">
+                <label className="flex gap-3">
+                  <input type="checkbox" className="mt-1" checked={authorized} onChange={(event) => setAuthorized(event.target.checked)} />
+                  <span>I own this project or have permission to review the supplied evidence. <strong>*</strong></span>
+                </label>
+                <label className="flex gap-3">
+                  <input type="checkbox" className="mt-1" checked={realOnly} onChange={(event) => setRealOnly(event.target.checked)} />
+                  <span>I understand unavailable modules will be marked Not Assessed. <strong>*</strong></span>
+                </label>
+              </div>
+
+              {fieldPrompt ? <p className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100">{fieldPrompt}</p> : null}
+
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <button type="button" onClick={() => void runScan()} disabled={!canRunScan} className="btn-primary sm:w-auto">
+                  {loading ? "Scanning evidence..." : "Run Unified Scan →"}
+                </button>
+                <Link href="/limitations" className="btn-secondary sm:w-auto">Read limitations</Link>
+                <p className="text-xs leading-5 text-slate-500">Scanner performs passive checks and supplied-evidence analysis only.</p>
+              </div>
+            </CardShell>
+
+            {loading ? (
+              <CardShell>
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="section-label">Scan running</p>
+                    <h2 className="mt-2 text-2xl font-black text-white">{currentStage}</h2>
+                    <p className="mt-2 text-sm text-slate-400">Building a traceable report from current evidence.</p>
+                  </div>
+                  <ScoreOrb score={progress} label="progress" />
+                </div>
+                <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/[0.06]">
+                  <div className="h-full rounded-full bg-gradient-to-r from-cyan via-blue-500 to-purple-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+                </div>
+                <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                  {scanStages.map((stage, index) => (
+                    <div key={stage} className={`rounded-xl border p-3 text-xs font-bold ${index <= stageIndex ? "border-cyan/25 bg-cyan/10 text-cyan-50" : "border-white/[0.07] bg-white/[0.03] text-slate-500"}`}>
+                      {stage}
                     </div>
                   ))}
                 </div>
-              </div>
+              </CardShell>
+            ) : null}
 
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {cards.map((card) => (
-                  <div key={card.module} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <h3 className="font-black text-slate-950">{card.label}</h3>
-                      <span className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(card.status)}`}>{card.status}</span>
+            {error ? (
+              <CardShell className="border-red-400/25 bg-red-500/10">
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-red-200">Action needed</p>
+                <p className="mt-3 text-sm leading-6 text-red-100">{error}</p>
+              </CardShell>
+            ) : null}
+
+            {saveMessage ? (
+              <CardShell className="border-emerald-400/20 bg-emerald-400/10">
+                <p className="text-sm font-black text-emerald-100">{saveMessage}</p>
+              </CardShell>
+            ) : null}
+
+            {!result && !loading ? (
+              <CardShell>
+                <p className="section-label">What you will get</p>
+                <div className="mt-5 grid gap-4 md:grid-cols-3">
+                  {[
+                    ["Split confidence", "Website, contract, evidence, and overall launch confidence are separated."],
+                    ["Fix guidance", "Findings include where to fix, why it matters, and how to verify."],
+                    ["Export-ready", "Download PDF, HTML, Markdown, and JSON from the same scan result."],
+                  ].map(([title, text]) => (
+                    <div key={title} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+                      <p className="font-black text-white">{title}</p>
+                      <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
                     </div>
-                    <p className="mt-3 text-sm text-slate-600">Score: <span className="font-black text-slate-950">{card.score ?? "Not assessed"}</span></p>
+                  ))}
+                </div>
+              </CardShell>
+            ) : null}
 
-                    {!!card.evidence?.length ? (
-                      <div className="mt-4">
-                        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Evidence</p>
-                        <ul className="mt-2 space-y-1 text-xs text-slate-600">
-                          {card.evidence.slice(0, 4).map((item, index) => <li key={`${card.module}-evidence-${index}`}>• {item}</li>)}
-                        </ul>
+            {result ? (
+              <div className="space-y-6">
+                <CardShell className="card-glow">
+                  <div className="grid gap-6 lg:grid-cols-[auto_1fr] lg:items-center">
+                    <ScoreOrb score={result.overall_score ?? result.available_score ?? null} label="confidence" />
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`badge ${riskBadgeClass(result.risk_label)}`}>{result.risk_label || "Not Assessed"}</span>
+                        <span className="badge badge-cyan">Report {result.report_id}</span>
+                        <span className="badge">{formatDateTime(result.generated_at)}</span>
                       </div>
-                    ) : null}
-
-                    {!!card.required_input?.length ? (
-                      <div className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 p-3">
-                        <p className="text-xs font-black uppercase tracking-wide text-yellow-900">Needed for real score</p>
-                        <ul className="mt-2 space-y-1 text-xs text-yellow-900/90">
-                          {card.required_input.map((item, index) => <li key={`${card.module}-required-${index}`}>• {item}</li>)}
-                        </ul>
-                      </div>
-                    ) : null}
-
-                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                      <p className="text-xs font-black uppercase tracking-wide text-slate-500">Fix direction</p>
-                      <p className="mt-2 text-xs leading-5 text-slate-600">{moduleFixGuide(card)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {!!result.priority_actions?.length ? (
-                <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                  <h3 className="text-2xl font-black text-slate-950">Bugs / findings with fix guidance</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">Real assessed findings only. Each item includes where to fix, why it matters, how to fix, and how to verify.</p>
-                  <div className="mt-4 space-y-3">
-                    {result.priority_actions.slice(0, 12).map((item) => {
-                      const guide = getActionFixGuide(item.title, item.module);
-                      return (
-                        <div key={`${item.step}-${item.title}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                          <div className="flex flex-wrap items-center gap-3">
-                            <SeverityBadge severity={item.severity} />
-                            <p className="font-black text-slate-950">{item.title}</p>
-                          </div>
-                          <p className="mt-2 text-sm text-slate-700">{item.recommended_action}</p>
-                          <div className="mt-4 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
-                            <div className="rounded-xl border border-slate-200 bg-white p-3"><p className="font-black text-slate-500">Where to fix</p><p className="mt-1 text-slate-800">{guide.file}</p></div>
-                            <div className="rounded-xl border border-slate-200 bg-white p-3"><p className="font-black text-slate-500">Why it matters</p><p className="mt-1 text-slate-800">{guide.why}</p></div>
-                            <div className="rounded-xl border border-slate-200 bg-white p-3"><p className="font-black text-slate-500">How to fix</p><p className="mt-1 text-slate-800">{guide.fix}</p></div>
-                            <div className="rounded-xl border border-slate-200 bg-white p-3"><p className="font-black text-slate-500">Verify</p><p className="mt-1 text-slate-800">{guide.verify}</p></div>
-                          </div>
+                      <h2 className="mt-4 text-3xl font-black text-white">{result.project_name || result.website_url}</h2>
+                      <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{result.safe_public_summary || "Launch readiness result generated from supplied evidence."}</p>
+                      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+                          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Assessed</p>
+                          <p className="mt-1 text-2xl font-black text-white">{result.assessed_modules?.length || result.live_module_count || 0}</p>
                         </div>
-                      );
-                    })}
+                        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+                          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Not Assessed</p>
+                          <p className="mt-1 text-2xl font-black text-white">{result.not_assessed_modules?.length || 0}</p>
+                        </div>
+                        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+                          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Actions</p>
+                          <p className="mt-1 text-2xl font-black text-white">{result.priority_actions?.length || 0}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ) : null}
+                </CardShell>
 
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-yellow-700">Evidence required</p>
-                    <h3 className="mt-2 text-2xl font-black text-slate-950">What to add for a deeper report</h3>
+                <CardShell>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="section-label">Split scores</p>
+                      <h2 className="mt-2 text-2xl font-black text-white">Launch confidence, not audit score</h2>
+                      <p className="mt-2 text-sm leading-6 text-slate-400">Each score explains its evidence basis. Missing evidence stays outside the score instead of being guessed.</p>
+                    </div>
+                    {scoreSplit?.note ? <span className="badge badge-amber">Pre-audit only</span> : null}
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">{requiredInputs.length} missing evidence item(s)</div>
-                </div>
-                {requiredInputs.length ? (
-                  <ul className="mt-5 grid gap-2 text-sm text-slate-700 md:grid-cols-2">
-                    {requiredInputs.map((input, index) => (
-                      <li key={`required-${index}`} className="rounded-2xl border border-yellow-200 bg-yellow-50 p-3 text-yellow-900"><strong>{input.label}:</strong> {input.item}</li>
+                  <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    {splitCards.map((item) => <SplitScoreCard key={item.key} item={item} />)}
+                  </div>
+                </CardShell>
+
+                <CardShell>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="section-label">Exports</p>
+                      <h2 className="mt-2 text-2xl font-black text-white">Report artifacts</h2>
+                      <p className="mt-2 text-sm text-slate-400">Exports are built from this scan result and keep limitations visible.</p>
+                    </div>
+                    <button className="btn-secondary sm:w-auto" type="button" onClick={() => void saveUnifiedScanToDashboard()} disabled={saveLoading}>
+                      {saveLoading ? "Saving..." : "Save to dashboard"}
+                    </button>
+                  </div>
+                  <div className="mt-5 grid gap-3 sm:grid-cols-4">
+                    {(["pdf", "html", "markdown", "json"] as ExportFormat[]).map((format) => (
+                      <button key={format} type="button" className="btn-primary !px-4 !py-3 text-xs" onClick={() => void exportCurrentReport(format)}>
+                        Download {format === "markdown" ? "MD" : format.toUpperCase()}
+                      </button>
                     ))}
-                  </ul>
-                ) : (
-                  <p className="mt-5 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-700">No missing evidence was listed by the current scan result.</p>
-                )}
-              </div>
+                  </div>
+                  {exportStatus ? <p className="mt-4 rounded-xl border border-cyan/20 bg-cyan/10 p-3 text-sm text-cyan-50">{exportStatus}</p> : null}
+                </CardShell>
 
-              {!!result.blocked_claims?.length ? (
-                <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                  <h3 className="text-2xl font-black text-slate-950">Blocked fake claims</h3>
-                  <ul className="mt-4 space-y-2 text-sm text-slate-700">
-                    {(result.blocked_claims || []).map((claim, index) => <li key={`blocked-claim-${index}`}>• {claim}</li>)}
-                  </ul>
+                <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+                  <CardShell>
+                    <p className="section-label">Priority actions</p>
+                    <h2 className="mt-2 text-2xl font-black text-white">Findings with fix hints</h2>
+                    <div className="mt-5 space-y-3">
+                      {result.priority_actions?.length ? result.priority_actions.map((action, index) => <FindingCard key={`${action.title}-${index}`} action={action} />) : <p className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">No priority findings were returned for the assessed evidence.</p>}
+                    </div>
+                  </CardShell>
+
+                  <CardShell>
+                    <p className="section-label">Evidence gaps</p>
+                    <h2 className="mt-2 text-2xl font-black text-white">Not Assessed queue</h2>
+                    <div className="mt-5 space-y-3">
+                      {requiredInputs.length ? requiredInputs.map(({ label, item, guide }) => (
+                        <div key={`${label}-${item}`} className="rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4">
+                          <p className="text-sm font-black text-amber-50">{label}</p>
+                          <p className="mt-2 text-sm leading-6 text-amber-100/90">{item}</p>
+                          <p className="mt-3 text-xs leading-5 text-amber-100/70">{guide}</p>
+                        </div>
+                      )) : <p className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">No missing evidence listed in this result.</p>}
+                    </div>
+                  </CardShell>
                 </div>
-              ) : null}
-            </>
-          )}
-        </section>
-      </div>
+
+                <CardShell>
+                  <p className="section-label">Module matrix</p>
+                  <h2 className="mt-2 text-2xl font-black text-white">Assessed vs Not Assessed</h2>
+                  <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {cards.map((card) => <ModuleCard key={card.module} card={card} />)}
+                  </div>
+                </CardShell>
+
+                {result.warnings?.length || result.blocked_claims?.length ? (
+                  <CardShell>
+                    <p className="section-label">Boundaries</p>
+                    <div className="mt-5 grid gap-4 md:grid-cols-2">
+                      {result.warnings?.length ? (
+                        <div className="rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4">
+                          <p className="font-black text-amber-50">Warnings</p>
+                          <ul className="mt-3 space-y-2 text-sm leading-6 text-amber-100/85">{result.warnings.map((item) => <li key={item}>• {item}</li>)}</ul>
+                        </div>
+                      ) : null}
+                      {result.blocked_claims?.length ? (
+                        <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-4">
+                          <p className="font-black text-red-100">Do not claim</p>
+                          <ul className="mt-3 space-y-2 text-sm leading-6 text-red-100/85">{result.blocked_claims.map((item) => <li key={item}>• {item}</li>)}</ul>
+                        </div>
+                      ) : null}
+                    </div>
+                  </CardShell>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

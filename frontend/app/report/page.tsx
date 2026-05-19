@@ -1,48 +1,99 @@
+
 import Link from "next/link";
+
+const reportBlocks = [
+  ["Split readiness", "Website surface, contract rules, launch evidence, and overall confidence are shown separately."],
+  ["Evidence trail", "Every report keeps assessed evidence, gaps, and limitations visible."],
+  ["Export formats", "PDF, HTML, Markdown, and JSON are generated from the same report payload."],
+  ["Public-safe wording", "Reports stay pre-audit readiness reviews and never imply certification."],
+];
+
+const flow = [
+  ["01", "Run scanner", "Start with Unified Launch Scan or a focused module."],
+  ["02", "Review evidence", "Check findings, severity, missing modules, and confidence basis."],
+  ["03", "Export report", "Download artifacts or save records for dashboard/history."],
+];
 
 export default function ReportPage() {
   return (
-    <main className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
-      <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan">professional report layer</p>
-      <h1 className="mt-3 text-4xl font-black sm:text-6xl">Combined Launch Readiness + Professional Delivery</h1>
-      <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-300">
-        Combine Smart Contract, Website, dApp, API, Wallet, and Admin OpSec module outputs into one weighted
-        launch readiness report with report hash, coverage confidence, priority action plan, package recommendation,
-        before-launch checklist, markdown/JSON export, and print/save-as-PDF delivery.
-      </p>
-      <div className="mt-8 grid gap-4 md:grid-cols-4">
-        <div className="card p-5">
-          <p className="font-black text-white">Weighted score</p>
-          <p className="mt-2 text-sm text-slate-400">Contract 35%, Website 15%, dApp 15%, API 15%, Wallet 10%, Admin OpSec 10%.</p>
+    <main className="relative overflow-hidden">
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-end">
+          <div>
+            <p className="section-label">Report center</p>
+            <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-[-0.06em] sm:text-6xl">
+              Evidence-first reports built for serious launch decisions.
+            </h1>
+            <p className="mt-5 max-w-3xl text-base leading-8 text-slate-300 sm:text-lg">
+              Turn scanner output into a professional pre-audit readiness report with traceable evidence, fix guidance, export artifacts, and clear limitations.
+            </p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link href="/scanner/unified-url" className="btn-primary">Run unified scan →</Link>
+              <Link href="/report/professional" className="btn-secondary">Professional delivery</Link>
+              <Link href="/sample-reports" className="btn-secondary">Sample reports</Link>
+            </div>
+          </div>
+
+          <div className="terminal-card rounded-2xl p-5">
+            <div className="flex items-center justify-between border-b border-white/[0.07] pb-4">
+              <p className="mono text-xs font-bold uppercase tracking-[0.16em] text-cyan">report.schema</p>
+              <span className="badge badge-amber">Pre-audit only</span>
+            </div>
+            <div className="mt-5 grid gap-3">
+              {reportBlocks.map(([title, text]) => (
+                <div key={title} className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
+                  <p className="font-black text-white">{title}</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="card p-5">
-          <p className="font-black text-white">Coverage confidence</p>
-          <p className="mt-2 text-sm text-slate-400">Shows whether the score is full launch readiness or partial available score.</p>
-        </div>
-        <div className="card p-5">
-          <p className="font-black text-white">Client delivery</p>
-          <p className="mt-2 text-sm text-slate-400">Print/PDF, markdown, JSON, public-safe wording, and report verification hash.</p>
-        </div>
-        <div className="card p-5">
-          <p className="font-black text-white">No fake claims</p>
-          <p className="mt-2 text-sm text-slate-400">Pre-audit readiness only. No certified audit or 100% secure claim.</p>
-        </div>
-      </div>
-      <section className="mt-10 card p-6">
-        <h2 className="text-2xl font-black text-white">How to generate final report</h2>
-        <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm leading-7 text-slate-300">
-          <li>Run one or more scanner modules from the scanner page.</li>
-          <li>Click <span className="font-black text-white">Generate Launch Report</span>.</li>
-          <li>Review missing modules, severity breakdown, and priority actions.</li>
-          <li>Download server-side PDF, branded HTML, Markdown, JSON, or publish a public/private report record.</li>
-        </ol>
       </section>
-      <div className="mt-8 flex flex-wrap gap-3">
-        <Link href="/scanner" className="btn-primary">Start scanner modules</Link>
-        <Link href="/report/professional" className="btn-secondary">Professional delivery</Link>
-        <Link href="/sample-reports" className="btn-secondary">View sample reports</Link>
-        <Link href="/methodology" className="btn-secondary">Read scoring methodology</Link>
-      </div>
+
+      <section className="border-y border-cyan/10 bg-cyan/[0.025]">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+          <p className="section-label">Workflow</p>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {flow.map(([number, title, text]) => (
+              <div key={number} className="card p-6">
+                <p className="mono text-4xl font-black text-cyan/25">{number}</p>
+                <h2 className="mt-4 text-xl font-black text-white">{title}</h2>
+                <p className="mt-3 text-sm leading-6 text-slate-400">{text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <div className="card p-6 sm:p-8">
+          <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+            <div>
+              <p className="section-label">Trust boundary</p>
+              <h2 className="mt-3 text-3xl font-black text-white">What the report is and is not.</h2>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-5">
+                <p className="font-black text-emerald-100">It is</p>
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-emerald-100/85">
+                  <li>• A pre-audit readiness report</li>
+                  <li>• Evidence-based and exportable</li>
+                  <li>• Useful before paid manual review</li>
+                </ul>
+              </div>
+              <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-5">
+                <p className="font-black text-amber-100">It is not</p>
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-amber-100/85">
+                  <li>• A certified audit</li>
+                  <li>• A guarantee of security</li>
+                  <li>• A replacement for manual review</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
