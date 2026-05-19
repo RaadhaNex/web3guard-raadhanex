@@ -20,6 +20,7 @@ const commands = [
     items: [
       { label: "Professional Report Builder", href: "/report/professional", keywords: "pdf html markdown json export artifacts" },
       { label: "Report Verification", href: "/report/verify", keywords: "verify hash report integrity evidence findings workflow" },
+      { label: "Public Trust Pages", href: "/trust-pages", keywords: "public trust page project readiness evidence ledger report hash disclosure" },
       { label: "Sample Reports", href: "/sample-reports", keywords: "example report evidence wording" },
       { label: "Public Registry", href: "/registry", keywords: "public reports registry verify" },
     ],
