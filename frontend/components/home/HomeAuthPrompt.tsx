@@ -58,7 +58,7 @@ export function HomeAuthPrompt() {
   if (status === "loading" || status === "signed-in") return null;
 
   return (
-    <Link href="/auth/login" className="btn-secondary">
+    <Link href="/auth/login" className="video-hero-secondary home-auth-login">
       Login to save reports
     </Link>
   );
