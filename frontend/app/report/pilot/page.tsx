@@ -26,6 +26,7 @@ export default function PilotReportPage() {
           <Link href="/results" className="btn-primary">Open result engine →</Link>
           <Link href="/pricing" className="btn-secondary">Pricing / ₹999 validation</Link>
           <Link href="/methodology" className="btn-secondary">Methodology</Link>
+          <Link href="/pilot-experience" className="btn-secondary">Pilot feedback</Link>
         </div>
       </section>
 

@@ -27,6 +27,7 @@ export default function ResultsPage() {
           <Link href="/scanner/unified-url" className="btn-primary">Run scanner →</Link>
           <Link href="/report/pilot" className="btn-secondary">Pilot report page</Link>
           <Link href="/dashboard/scans" className="btn-secondary">Saved scans</Link>
+          <Link href="/pilot-experience" className="btn-secondary">Pilot UX cleanup</Link>
         </div>
       </section>
 

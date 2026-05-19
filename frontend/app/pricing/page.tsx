@@ -23,6 +23,7 @@ export default function PricingPage() {
             <Link href="/payment-validation" className="btn-secondary">Payment validation</Link>
             <Link href="/billing" className="btn-secondary">Billing readiness</Link>
             <Link href="/scanner/unified-url" className="btn-primary">Run free scan</Link>
+            <Link href="/pilot-experience" className="btn-secondary">Pilot UX checklist</Link>
           </div>
         </div>
       </section>

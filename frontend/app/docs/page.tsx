@@ -7,6 +7,7 @@ const docs = [
   ["Provider Live", "/provider-live", "Etherscan/GoPlus/GitHub/advisory provider readiness and error handling."],
   ["Worker Execution", "/worker-execution", "Slither, Semgrep, Foundry, Echidna, and Mythril worker status."],
   ["Launch Validation", "/launch-validation", "Phase 31 compression, payment readiness, Slither readiness, and dependency intelligence."],
+  ["Pilot Experience", "/pilot-experience", "Phase 35 first-user journey cleanup, clearer setup states, feedback intake, and safe copy checks."],
   ["Launch Final QA", "/launch-final", "Final release gates for Vercel, Render, Supabase, Razorpay, SEO, and legal ops."],
   ["Trust Metrics", "/trust-metrics", "Public-safe metrics, advisory mapping, disclosures, and no fake discovery claims."],
 ];
