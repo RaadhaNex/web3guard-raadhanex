@@ -109,9 +109,10 @@ export const modules = [
 
 export const nav = [
   { href: "/", label: "Home" },
-  { href: "/scanner/unified-url", label: "Scanner" },
+  { href: "/scanner/unified-url", label: "Scan" },
+  { href: "/pricing", label: "Price" },
   { href: "/results", label: "Results" },
   { href: "/report", label: "Report" },
-  { href: "/pricing", label: "Pricing" },
   { href: "/docs", label: "Docs" },
+  { href: "/advanced", label: "More" },
 ];

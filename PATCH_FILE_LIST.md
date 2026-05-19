@@ -1,9 +1,11 @@
-# Patch File List
+# Changed / New Files
 
 ```text
-frontend/app/page.tsx
 frontend/components/layout/Header.tsx
-frontend/components/home/HomeAuthPrompt.tsx
+frontend/components/brand/KavachWingNavLogo.tsx
+frontend/components/brand/KavachWingNavLogo.module.css
+frontend/app/globals.css
+frontend/app/page.tsx
 frontend/lib/constants.ts
 PHASE_SUMMARY.md
 PATCH_FILE_LIST.md

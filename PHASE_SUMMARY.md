@@ -1,25 +1,27 @@
-# Web3Guard Home Entry UI Patch
-
-## Goal
-Add a cleaner Home entry experience so new visitors land on a Web3-focused overview before scanning.
+# Web3Guard AI — Brand + Simple Nav + Settings UI Patch
 
 ## What changed
-- Added an explicit Home link to the main navigation.
-- Removed the “Web3Guard AI by RAADHANEX” text block from the header brand area.
-- Kept the header logo clickable and routed to `/` for Home.
-- Moved the Web3Guard AI by RAADHANEX identity into the Home hero section.
-- Added Web3-specific information blocks for website/dApp, smart contracts, API/admin, and dependencies.
-- Added a Home auth prompt that shows “Login to save reports” only when the visitor is not logged in.
-- If the visitor is already logged in, the Home login prompt does not render.
 
-## Backend impact
-No backend files changed.
+- Restored top-left branding text as `Web3Guard AI` and `by RAADHANEX`.
+- Kept the header simple with only: `Home`, `Scan`, `Price`, and `More`.
+- Moved Results, Report, Docs, Dashboard, Saved scans, Launch pack, Risk intelligence, Payment validation, Feature status, Advanced tools, and Settings under `More`.
+- Added a future-ready animated settings icon on the top-right.
+- Improved the logo hover treatment with a lightweight 3D tilt/glow and a hover tooltip showing `Web3Guard AI by RAADHANEX`.
+- Preserved Home page Web3 intro section and updated one line so it no longer says branding only lives inside Home.
 
-## Env impact
-No env, secrets, database, payment, or scanner configuration changed.
+## Safety / scope
 
-## Safety preserved
-- Pre-audit readiness wording remains visible.
-- No certified audit claim added.
-- No fake score/result/payment/monitoring added.
-- No private key, seed phrase, mnemonic, wallet signing, exploit automation, or unauthorized active scanning flow added.
+- Frontend UI-only patch.
+- Backend was not touched.
+- Scanner logic was not touched.
+- Payment/env/secrets/database were not touched.
+- No fake scan result, fake score, fake payment success, or certified-audit claim was added.
+
+## Validation performed
+
+```bash
+cd frontend
+npm run typecheck
+```
+
+Result: passed.

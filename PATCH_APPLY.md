@@ -1,38 +1,32 @@
-# How to Apply
+# How to Apply This Patch
 
-From your project root, copy this patch over your existing project files.
+1. Extract this ZIP into the root of your existing Web3Guard project.
+2. Allow files to replace existing files with the same paths.
+3. Run validation:
 
-## PowerShell example
-
-```powershell
-cd C:\web\web3guard
-Expand-Archive -Path "$env:USERPROFILE\Downloads\web3guard_home_entry_ui_patch.zip" -DestinationPath "$env:TEMP\web3guard_home_entry_ui_patch" -Force
-robocopy "$env:TEMP\web3guard_home_entry_ui_patch" "C:\web\web3guard" /E
-```
-
-## Validate
-
-```powershell
+```bash
 cd frontend
 npm run typecheck
 npm run build
 ```
 
-## Push
+4. Push to GitHub:
 
-```powershell
+```bash
 git status
 git add .
-git commit -m "Add clean Home entry UI"
+git commit -m "Restore brand header and simplify navigation"
 git push origin main
 ```
 
 ## Pages to check
+
 - `/`
 - `/scanner/unified-url`
+- `/pricing`
 - `/results`
 - `/report`
-- `/pricing`
 - `/docs`
-- `/auth/login`
-```
+- `/settings/language`
+- Header More dropdown on desktop
+- Mobile hamburger menu

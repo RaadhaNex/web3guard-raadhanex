@@ -122,7 +122,7 @@ export default function HomePage() {
             <p className="section-label">Focus</p>
             <h2 className="mt-3 text-2xl font-black">A clean Home for first-time visitors.</h2>
             <p className="mt-3 text-sm leading-7 text-slate-400">
-              When a user opens the site, they land here first. The top header keeps simple navigation, while the Web3Guard AI by RAADHANEX identity now lives inside the Home hero.
+              When a user opens the site, they land here first. The top header keeps simple navigation, while Web3Guard AI by RAADHANEX branding stays visible and the Home hero explains the product clearly.
             </p>
           </div>
           <div className="clean-panel p-6 md:col-span-2">
