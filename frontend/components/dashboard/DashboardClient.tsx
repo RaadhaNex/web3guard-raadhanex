@@ -169,6 +169,7 @@ export function DashboardClient() {
           <Link className="btn-secondary" href="/dashboard/findings">Findings</Link>
           <Link className="btn-secondary" href="/eon">EON Risk Graph</Link>
           <Link className="btn-secondary" href="/trust-pages">Trust Pages</Link>
+          <Link className="btn-secondary" href="/india-launch">India Launch Pack</Link>
           <Link className="btn-primary" href="/scanner/unified-url">Run scan</Link>
           <button className="btn-secondary" type="button" onClick={logout}>Logout</button>
         </div>
