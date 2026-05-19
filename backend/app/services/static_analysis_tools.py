@@ -22,6 +22,31 @@ SUPPORTED_TOOLS = ("slither", "aderyn", "semgrep")
 SEMGRP_RULE_DIR = Path(__file__).resolve().parents[1] / "data" / "semgrep"
 SEMGRP_RULE_FILE = SEMGRP_RULE_DIR / "solidity_security.yml"
 
+_SECRET_ENV_HINTS = (
+    "SECRET",
+    "TOKEN",
+    "PASSWORD",
+    "PRIVATE",
+    "MNEMONIC",
+    "SEED",
+    "RAZORPAY",
+    "SUPABASE",
+    "OPENAI",
+    "ANTHROPIC",
+)
+
+
+def _safe_tool_env() -> dict[str, str]:
+    keep = {"PATH", "SystemRoot", "WINDIR", "HOME", "USERPROFILE", "TMP", "TEMP", "LANG", "LC_ALL"}
+    safe: dict[str, str] = {}
+    for key, value in os.environ.items():
+        key_upper = key.upper()
+        if key in keep and not any(hint in key_upper for hint in _SECRET_ENV_HINTS):
+            safe[key] = value
+    safe["NO_COLOR"] = "1"
+    safe["WEB3GUARD_WORKER_RUN"] = "1"
+    return safe
+
 
 def _bool(value: bool) -> bool:
     return bool(value)
@@ -124,7 +149,7 @@ def _run_command(args: list[str], cwd: Path, timeout: int) -> dict[str, Any]:
             capture_output=True,
             timeout=timeout,
             check=False,
-            env={**os.environ, "NO_COLOR": "1"},
+            env=_safe_tool_env(),
         )
         return {
             "ok": completed.returncode == 0,
