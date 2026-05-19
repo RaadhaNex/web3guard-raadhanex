@@ -38,6 +38,7 @@ const commands = [
       { label: "Launch QA Board", href: "/launch-qa", keywords: "final ui qa mobile overflow checklist" },
       { label: "Production Deployment QA", href: "/production-deployment-qa", keywords: "vercel render supabase production deployment qa security headers robots sitemap live routes" },
       { label: "EON Risk Graph", href: "/eon", keywords: "risk graph fix plan evidence ledger next best action launch blockers" },
+      { label: "Launch Trust Readiness", href: "/trust-readiness", keywords: "founder trust score launch readiness score evidence completeness fixes monitoring bounty" },
       { label: "Security Test Generator", href: "/security-tests", keywords: "foundry echidna slither aderyn semgrep tests properties defensive templates" },
       { label: "Sentinel Monitoring", href: "/sentinel", keywords: "monitoring vulnerability intelligence admin user alerts advisories" },
       { label: "Continuous Monitoring Lite", href: "/continuous-monitoring", keywords: "scheduled recheck stale report website drift github monitoring alerts" },

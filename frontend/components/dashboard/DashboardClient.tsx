@@ -160,6 +160,7 @@ export function DashboardClient() {
         <div className="flex flex-wrap gap-3">
           <Link className="btn-secondary" href="/dashboard/projects">Projects</Link>
           <Link className="btn-secondary" href="/dashboard/workflow">Workflow</Link>
+          <Link className="btn-secondary" href="/trust-readiness">Trust Readiness</Link>
           <Link className="btn-secondary" href="/dashboard/scans">Scans</Link>
           <Link className="btn-secondary" href="/dashboard/workspace">Workspace</Link>
           <Link className="btn-secondary" href="/sentinel">Sentinel</Link>
