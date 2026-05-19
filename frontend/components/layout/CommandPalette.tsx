@@ -45,6 +45,7 @@ const commands = [
       { label: "Community Review Admin", href: "/community-review/admin", keywords: "admin moderation triage feedback queue reviewer requests" },
       { label: "Security Passport", href: "/security-passport", keywords: "passport trust network readiness report hash evidence monitoring community review external audit links" },
       { label: "Security Passport Admin", href: "/security-passport/admin", keywords: "admin passport trust network overview monitoring community external links" },
+      { label: "Agency Launch Layer", href: "/agency-launch", keywords: "agency enterprise client portfolio white label handoff intake reviewer roles" },
       { label: "Security Test Generator", href: "/security-tests", keywords: "foundry echidna slither aderyn semgrep tests properties defensive templates" },
       { label: "Sentinel Monitoring", href: "/sentinel", keywords: "monitoring vulnerability intelligence admin user alerts advisories" },
       { label: "Continuous Monitoring Lite", href: "/continuous-monitoring", keywords: "scheduled recheck stale report website drift github monitoring alerts" },
