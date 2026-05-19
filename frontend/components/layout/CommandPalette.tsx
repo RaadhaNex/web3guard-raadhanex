@@ -32,6 +32,7 @@ const commands = [
       { label: "Limitations", href: "/limitations", keywords: "not certified audit boundaries" },
       { label: "Feature Status", href: "/feature-status", keywords: "integration tool not installed provider configured" },
       { label: "Engine Depth", href: "/engine-depth", keywords: "slither aderyn semgrep mythril goplus etherscan github real tools" },
+      { label: "Worker Execution", href: "/worker-execution", keywords: "slither aderyn semgrep foundry echidna mythril docker worker real output" },
       { label: "Provider Readiness", href: "/provider-readiness", keywords: "etherscan goplus github api keys provider integrations" },
       { label: "Billing & Payment Final", href: "/billing", keywords: "razorpay upi payment billing subscription webhook plan limits" },
       { label: "Responsible Use", href: "/responsible-use", keywords: "no exploit no private key no wallet signing" },

@@ -115,6 +115,15 @@ class Settings(BaseSettings):
     max_static_analysis_scan_per_hour: int = 12
 
 
+    # Phase 27 real worker execution dashboard/probe. Disabled by default.
+    worker_execution_enabled: bool = False
+    foundry_enabled: bool = False
+    foundry_binary: str | None = None
+    worker_probe_timeout_seconds: int = 15
+    worker_probe_max_output_chars: int = 6000
+    worker_require_isolated_runtime: bool = True
+    worker_allow_version_probe: bool = True
+
     # deep analysis layer / isolated audit worker architecture. Disabled by default.
     deep_analysis_enabled: bool = False
     mythril_enabled: bool = False
