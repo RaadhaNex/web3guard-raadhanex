@@ -1,18 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="KavachWing animated emblem">
   <defs>
-    <radialGradient id="bg" cx="50%" cy="48%" r="58%">
-      <stop offset="0%" stop-color="#062033"/>
-      <stop offset="52%" stop-color="#020712"/>
-      <stop offset="100%" stop-color="#000000"/>
-    </radialGradient>
-    <filter id="cyanGlow" x="-25%" y="-25%" width="150%" height="150%">
+        <filter id="cyanGlow" x="-25%" y="-25%" width="150%" height="150%">
       <feGaussianBlur stdDeviation="6" result="blur"/>
       <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.02 0 0 0 0 0.72 0 0 0 0 0.83 0 0 0 0.75 0" result="glow"/>
       <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
-  <rect width="100%" height="100%" fill="url(#bg)"/>
-  <circle cx="512.0" cy="512.0" r="440" fill="none" stroke="rgba(6,182,212,0.20)" stroke-width="2" stroke-dasharray="14 22">
+    <circle cx="512.0" cy="512.0" r="440" fill="none" stroke="rgba(6,182,212,0.20)" stroke-width="2" stroke-dasharray="14 22">
     <animateTransform attributeName="transform" type="rotate" from="0 512.0 512.0" to="360 512.0 512.0" dur="18s" repeatCount="indefinite"/>
   </circle>
   <circle cx="512.0" cy="512.0" r="365" fill="none" stroke="rgba(34,197,94,0.16)" stroke-width="1" stroke-dasharray="3 18">
