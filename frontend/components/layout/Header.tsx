@@ -29,7 +29,6 @@ const secondaryLinks: NavItem[] = [
   { href: "/payment-validation", label: "Payment validation" },
   { href: "/feature-status", label: "Feature status" },
   { href: "/advanced", label: "Advanced tools" },
-  { href: "/settings/language", label: "Settings" },
 ];
 
 function isActive(pathname: string, item: NavItem) {
@@ -47,32 +46,10 @@ function NavLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
   );
 }
 
-function SettingsIcon() {
-  return (
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M12 15.4a3.4 3.4 0 1 0 0-6.8 3.4 3.4 0 0 0 0 6.8Z"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M19.4 13.5c.08-.48.1-.99.1-1.5s-.02-1.02-.1-1.5l2.03-1.56-1.92-3.32-2.4.97a7.65 7.65 0 0 0-2.6-1.5L14.16 2h-3.84l-.35 3.09a7.65 7.65 0 0 0-2.6 1.5l-2.4-.97-1.92 3.32L5.08 10.5c-.08.48-.1.99-.1 1.5s.02 1.02.1 1.5l-2.03 1.56 1.92 3.32 2.4-.97a7.65 7.65 0 0 0 2.6 1.5l.35 3.09h3.84l.35-3.09a7.65 7.65 0 0 0 2.6-1.5l2.4.97 1.92-3.32-2.03-1.56Z"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 export function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const isMoreActive = secondaryLinks.some((item) => isActive(pathname, item));
-  const settingsItem: NavItem = { href: "/settings/language", label: "Settings" };
 
   return (
     <header className="site-header advanced-nav-header">
@@ -110,14 +87,6 @@ export function Header() {
         </nav>
 
         <div className="hidden shrink-0 items-center gap-2 sm:flex">
-          <Link
-            href="/settings/language"
-            className={`settings-orb ${isActive(pathname, settingsItem) ? "settings-orb-active" : ""}`}
-            aria-label="Open settings"
-            title="Settings"
-          >
-            <SettingsIcon />
-          </Link>
           <AuthSessionButton />
         </div>
 
@@ -141,6 +110,9 @@ export function Header() {
           <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
             <div className="mb-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm text-slate-300">
               Home explains Web3Guard. Scan starts the core readiness flow. Results, reports, docs, and advanced tools stay under More.
+            </div>
+            <div className="mb-3 flex justify-end">
+              <AuthSessionButton />
             </div>
           </div>
           <nav className="mx-auto grid max-w-7xl gap-2 px-4 pb-4 sm:grid-cols-2 sm:px-6" aria-label="Mobile navigation">

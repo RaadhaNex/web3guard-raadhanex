@@ -36,21 +36,21 @@ export default function HomePage() {
         </div>
 
         <div className="home-hero-content mx-auto flex min-h-[calc(100svh-56px)] max-w-7xl items-center px-4 py-16 sm:px-6 lg:px-8">
-          <div className="relative z-10 max-w-3xl">
+          <div className="home-hero-copy relative z-10 max-w-[34rem]">
             <div className="home-kicker">
               <span className="home-kicker-dot" />
               <span>India-first Founder Security OS</span>
               <strong>Clean beta</strong>
             </div>
 
-            <p className="mt-7 text-xs font-black uppercase tracking-[0.30em] text-cyan">{brand.company}</p>
-            <h1 className="mt-4 text-[clamp(2.8rem,8vw,7rem)] font-black leading-[0.84] tracking-[-0.09em] text-white">
+            <p className="mt-7 text-[0.68rem] font-black uppercase tracking-[0.28em] text-cyan/75">{brand.company}</p>
+            <h1 className="mt-4 text-[clamp(2.4rem,5.4vw,5.6rem)] font-black leading-[0.88] tracking-[-0.08em] text-white/85">
               {brand.product}
               <span className="block home-hero-gradient">by {brand.company}</span>
             </h1>
 
-            <p className="mt-6 max-w-2xl text-base leading-8 text-slate-300 sm:text-lg">
-              A cinematic, evidence-first Web3 launch readiness scanner for founders. Check your website, dApp, API, Solidity code, wallet UX, GitHub, and admin OpSec before spending on a full professional audit.
+            <p className="mt-6 max-w-xl text-sm leading-7 text-slate-300/72 sm:text-base">
+              Evidence-first Web3 launch readiness for founders: website, dApp, API, Solidity code, wallet UX, GitHub, and admin OpSec before a professional audit.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
