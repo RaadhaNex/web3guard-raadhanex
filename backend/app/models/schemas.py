@@ -131,6 +131,9 @@ class UnifiedUrlScanRequest(BaseModel):
     api_base_url: str | None = Field(default=None, max_length=2048)
     github_repo_url: str | None = Field(default=None, max_length=2048)
     solidity_code: str | None = Field(default=None, max_length=120000)
+    slither_json: str | None = Field(default=None, max_length=1000000)
+    semgrep_json: str | None = Field(default=None, max_length=1000000)
+    aderyn_json: str | None = Field(default=None, max_length=1000000)
     authorization_confirmed: bool
     real_only_acknowledged: bool = True
 

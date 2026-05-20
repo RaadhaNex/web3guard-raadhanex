@@ -14,6 +14,7 @@ from app.services.scan_website import scan_website
 from app.services.scan_github_repo import scan_github_repository
 from app.services.scan_contract_address import scan_contract_address
 from app.services.static_analysis_tools import run_static_analysis, static_analysis_status
+from app.services.static_analysis_artifacts import analyze_static_artifacts
 from app.services.real_findings_pipeline import build_real_findings_pipeline
 
 MODULE_LABELS = {
@@ -226,6 +227,7 @@ def _static_summary_from_report(report: ScanResponse) -> dict[str, Any]:
     metadata = report.scan_metadata or {}
     tool_status = metadata.get("tool_status", {}) if isinstance(metadata, dict) else {}
     tool_runs = metadata.get("tool_runs", {}) if isinstance(metadata, dict) else {}
+    artifact_runs = metadata.get("artifact_runs", {}) if isinstance(metadata, dict) else {}
     tools: list[dict[str, Any]] = []
     real_tool_completed = False
     real_findings_count = 0
@@ -250,11 +252,37 @@ def _static_summary_from_report(report: ScanResponse) -> dict[str, Any]:
             "timed_out": bool(run.get("timed_out")),
             "stderr_tail": _short_text(run.get("stderr"), 700),
             "stdout_tail": _short_text(run.get("stdout"), 700),
+            "evidence_source": "backend_subprocess",
         })
+
+    if isinstance(artifact_runs, dict):
+        for tool in ("slither", "semgrep", "aderyn"):
+            artifact = artifact_runs.get(tool) if isinstance(artifact_runs.get(tool), dict) else None
+            if not artifact or artifact.get("state") == "Not Supplied":
+                continue
+            parsed = int(artifact.get("parsed_findings") or 0)
+            if parsed:
+                real_tool_completed = True
+            real_findings_count += parsed
+            tools.append({
+                "tool": f"{tool}_artifact",
+                "state": str(artifact.get("state") or "User Artifact"),
+                "status": "artifact_parsed" if parsed else "artifact_status",
+                "installed": False,
+                "enabled_by_env": True,
+                "will_run": False,
+                "real_findings": parsed,
+                "returncode": None,
+                "timed_out": False,
+                "stderr_tail": artifact.get("error"),
+                "stdout_tail": None,
+                "evidence_source": "user_supplied_json_artifact",
+                "artifact_shape": artifact.get("artifact_shape"),
+            })
 
     non_status_findings = [f for f in report.findings if getattr(f, "category", "") != "tool_status"]
     status_messages = [f for f in report.findings if getattr(f, "category", "") == "tool_status"]
-    if real_tool_completed or real_findings_count:
+    if non_status_findings or real_tool_completed or real_findings_count:
         state = "Assessed"
         assessed = True
         score = report.module_score.score
@@ -282,11 +310,38 @@ def _static_summary_from_report(report: ScanResponse) -> dict[str, Any]:
         "risk_label": risk_label_value,
         "report_id": report.report_id,
         "engine_version": report.engine_version,
+        "artifact_trust_level": metadata.get("artifact_trust_level") if isinstance(metadata, dict) else None,
         "tools": tools,
-        "findings": [_finding_to_dict(f) for f in non_status_findings[:24]],
-        "status_messages": [_finding_to_dict(f) for f in status_messages[:10]],
+        "findings": [_finding_to_dict(f) for f in non_status_findings[:36]],
+        "status_messages": [_finding_to_dict(f) for f in status_messages[:14]],
         "safety_controls": metadata.get("safety_controls", {}) if isinstance(metadata, dict) else {},
         "real_only_note": metadata.get("real_only_note") if isinstance(metadata, dict) else None,
+    }
+
+
+def _merge_static_summaries(primary: dict[str, Any], extra: dict[str, Any]) -> dict[str, Any]:
+    findings = (primary.get("findings") or []) + (extra.get("findings") or [])
+    status_messages = (primary.get("status_messages") or []) + (extra.get("status_messages") or [])
+    tools = (primary.get("tools") or []) + (extra.get("tools") or [])
+    assessed = bool(primary.get("assessed") or extra.get("assessed") or findings)
+    scores = [item.get("score") for item in (primary, extra) if isinstance(item.get("score"), (int, float))]
+    score = min(scores) if scores else None
+    if assessed:
+        state = "Assessed"
+        risk_label_value = primary.get("risk_label") or extra.get("risk_label") or "Assessed"
+    else:
+        state = primary.get("state") or extra.get("state") or "Not Assessed"
+        risk_label_value = primary.get("risk_label") or extra.get("risk_label") or state
+    return {
+        **primary,
+        "state": state,
+        "assessed": assessed,
+        "score": score,
+        "risk_label": risk_label_value,
+        "tools": tools,
+        "findings": findings[:48],
+        "status_messages": status_messages[:20],
+        "real_only_note": "Merged backend tool status/output with user-supplied Slither/Semgrep/Aderyn artifacts. Artifact findings are real evidence inputs but not a Web3Guard-certified audit.",
     }
 
 
@@ -297,7 +352,7 @@ def _static_module_card(summary: dict[str, Any]) -> dict[str, Any]:
     ]
     if not evidence:
         evidence = ["No external static-analysis tool status is available for this scan."]
-    required_input = [] if summary.get("assessed") else ["Install/enable Slither or Semgrep in the tools venv, then rerun with Solidity source."]
+    required_input = [] if summary.get("assessed") else ["Install/enable Slither/Semgrep in the tools venv, or paste valid Slither/Semgrep/Aderyn JSON artifacts, then rerun."]
     return {
         "module": "static_analysis",
         "label": MODULE_LABELS["static_analysis"],
@@ -635,6 +690,14 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
             )
         )
 
+
+    static_artifact_report = analyze_static_artifacts(
+        slither_json=getattr(payload, "slither_json", None),
+        semgrep_json=getattr(payload, "semgrep_json", None),
+        aderyn_json=getattr(payload, "aderyn_json", None),
+        project_name=payload.project_name,
+    )
+
     if payload.solidity_code and payload.solidity_code.strip():
         contract_report = scan_solidity(payload.solidity_code, payload.project_name, payload.project_type)
         reports.append(contract_report)
@@ -644,7 +707,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
                 "Live for pasted Solidity",
                 report=contract_report,
                 evidence=["User submitted Solidity source was scanned by the local rule engine."],
-                limitations=["This is a preliminary rule-engine scan. External Slither/Semgrep evidence is shown separately and only when real tools run."],
+                limitations=["This is a preliminary rule-engine scan. External Slither/Semgrep evidence is shown separately and only when real tools run or valid tool artifacts are supplied."],
             )
         )
         try:
@@ -667,10 +730,17 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
                 "status_messages": [],
                 "real_only_note": f"Static-analysis runner could not complete: {exc}",
             }
+        if static_artifact_report:
+            reports.append(static_artifact_report)
+            static_summary = _merge_static_summaries(static_summary, _static_summary_from_report(static_artifact_report))
         surface_hints["static_analysis"] = static_summary
         module_cards.append(_static_module_card(static_summary))
     elif payload.contract_address:
-        surface_hints["static_analysis"] = _static_not_assessed_summary()
+        if static_artifact_report:
+            reports.append(static_artifact_report)
+            surface_hints["static_analysis"] = _static_summary_from_report(static_artifact_report)
+        else:
+            surface_hints["static_analysis"] = _static_not_assessed_summary()
         module_cards.append(_static_module_card(surface_hints["static_analysis"]))
         try:
             address_report = await scan_contract_address(payload.contract_address, payload.chain, payload.project_name)
@@ -700,14 +770,19 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
             )
             warnings.append(f"Contract address scan was not completed: {exc}")
     else:
-        surface_hints["static_analysis"] = _static_not_assessed_summary()
-        module_cards.append(_static_module_card(surface_hints["static_analysis"]))
+        if static_artifact_report:
+            reports.append(static_artifact_report)
+            surface_hints["static_analysis"] = _static_summary_from_report(static_artifact_report)
+            module_cards.append(_static_module_card(surface_hints["static_analysis"]))
+        else:
+            surface_hints["static_analysis"] = _static_not_assessed_summary()
+            module_cards.append(_static_module_card(surface_hints["static_analysis"]))
         module_cards.append(
             _status_card(
                 "contract",
                 "Not assessed",
-                required_input=["Pasted Solidity source or future explorer source fetch"],
-                limitations=["Website URL alone cannot assess smart contract code."],
+                required_input=["Pasted Solidity source, verified contract address, or valid Slither/Semgrep/Aderyn artifact"],
+                limitations=["Website URL alone cannot assess smart contract code. Static-analysis artifacts can add real tool evidence, but they do not replace source review."],
             )
         )
 
@@ -780,7 +855,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "report_id": f"W3G-URL-LAUNCH-{_hash(safe_website_url)[:12]}",
         "generated_at": started.isoformat(),
         "project_name": payload.project_name,
-        "engine_version": "web3guard-unified-url-launch-scanner-v17.0-proof-based-coverage",
+        "engine_version": "web3guard-unified-url-launch-scanner-v18.0-static-artifact-bridge",
         "mode": "real_only_unified_url_scan",
         "website_url": safe_website_url,
         "chain": payload.chain,
@@ -814,7 +889,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         ],
         "next_real_inputs_needed": [
             "Paste Solidity source or enable explorer source fetch for contract scan.",
-            "Install/enable Slither or Semgrep in the tools venv for real external static-analysis evidence.",
+            "Install/enable Slither/Semgrep in the tools venv or paste valid Slither/Semgrep/Aderyn JSON artifact evidence.",
             "Provide API base URL/code for backend review.",
             "Complete wallet-flow checklist for approval/signature UX.",
             "Complete founder/admin OpSec checklist for multisig/timelock/key policy.",

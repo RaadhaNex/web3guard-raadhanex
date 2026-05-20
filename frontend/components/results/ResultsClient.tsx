@@ -178,7 +178,7 @@ function StaticAnalysisPanel({ surface }: { surface: SurfaceRecord }) {
         <div>
           <p className="section-label">Tool output</p>
           <h2 className="mt-2 text-2xl font-black text-white">Slither / Semgrep evidence</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">Real subprocess output appears here only when the backend tools are installed and enabled.</p>
+          <p className="mt-2 text-sm leading-6 text-slate-400">Real subprocess output appears here when backend tools run. User-supplied Slither/Semgrep/Aderyn JSON artifacts also appear here as artifact evidence, not as fake backend execution.</p>
         </div>
         <span className={`badge ${statusClass(asString(staticAnalysis.state, "Not Assessed"))}`}>{asString(staticAnalysis.state, "Not Assessed")}</span>
       </div>
@@ -189,7 +189,7 @@ function StaticAnalysisPanel({ surface }: { surface: SurfaceRecord }) {
               <h3 className="text-lg font-black capitalize text-white">{asString(tool.tool)}</h3>
               <span className={`badge ${statusClass(asString(tool.state, "Not Assessed"))}`}>{asString(tool.state, "Not Assessed")}</span>
             </div>
-            <p className="mt-3 text-sm leading-6 text-slate-300">Installed: {String(Boolean(tool.installed))} · Enabled: {String(Boolean(tool.enabled_by_env))} · Real findings: {String(tool.real_findings ?? 0)}</p>
+            <p className="mt-3 text-sm leading-6 text-slate-300">Installed: {String(Boolean(tool.installed))} · Enabled: {String(Boolean(tool.enabled_by_env))} · Evidence: {asString(tool.evidence_source, "backend/tool status")} · Real findings: {String(tool.real_findings ?? 0)}</p>
             {(tool.stderr_tail || tool.stdout_tail) ? (
               <details className="mt-3 rounded-xl border border-white/[0.07] bg-white/[0.03] p-3 text-xs text-slate-400">
                 <summary className="cursor-pointer font-bold text-slate-200">Tool log tail</summary>
@@ -198,7 +198,7 @@ function StaticAnalysisPanel({ surface }: { surface: SurfaceRecord }) {
             ) : null}
           </article>
         )) : (
-          <article className="rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">No Slither/Semgrep tool run exists for this scan. Paste Solidity source and configure tools to assess this layer.</article>
+          <article className="rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">No Slither/Semgrep backend run or parsed artifact exists for this scan. Paste Solidity source and configure tools, or paste valid Slither/Semgrep/Aderyn JSON artifacts in the scanner form.</article>
         )}
       </div>
       <div className="mt-5 grid gap-3">

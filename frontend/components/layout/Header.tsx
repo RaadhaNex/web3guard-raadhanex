@@ -119,6 +119,13 @@ const moreGroups: MoreGroup[] = [
         status: "beta",
       },
       {
+        href: "/static-artifact-bridge",
+        label: "Artifact bridge",
+        description: "Parse real Slither/Semgrep JSON outputs without fake backend execution claims.",
+        icon: "advanced",
+        status: "beta",
+      },
+      {
         href: "/openzeppelin-pattern",
         label: "OpenZeppelin patterns",
         description: "Check Solidity evidence against OpenZeppelin-style secure patterns.",

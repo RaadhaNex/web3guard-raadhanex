@@ -668,6 +668,9 @@ export function UnifiedUrlScannerClient() {
   const [apiBaseUrl, setApiBaseUrl] = useState("");
   const [githubRepoUrl, setGithubRepoUrl] = useState("");
   const [solidityCode, setSolidityCode] = useState("");
+  const [slitherJson, setSlitherJson] = useState("");
+  const [semgrepJson, setSemgrepJson] = useState("");
+  const [aderynJson, setAderynJson] = useState("");
   const [authorized, setAuthorized] = useState(false);
   const [realOnly, setRealOnly] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -792,6 +795,9 @@ export function UnifiedUrlScannerClient() {
     setApiBaseUrl("");
     setGithubRepoUrl("");
     setSolidityCode("");
+    setSlitherJson("");
+    setSemgrepJson("");
+    setAderynJson("");
     setAdvancedOpen(false);
     setResult(null);
     clearLatestUnifiedScan();
@@ -904,6 +910,9 @@ export function UnifiedUrlScannerClient() {
           api_base_url: apiBaseUrl.trim() || null,
           github_repo_url: githubRepoUrl.trim() || null,
           solidity_code: solidityCode.trim() || null,
+          slither_json: slitherJson.trim() || null,
+          semgrep_json: semgrepJson.trim() || null,
+          aderyn_json: aderynJson.trim() || null,
           authorization_confirmed: authorized,
           real_only_acknowledged: realOnly,
         },
@@ -1048,14 +1057,14 @@ export function UnifiedUrlScannerClient() {
                     <span className="scanner-chip-icon">＋</span>
                     <span>
                       <strong>Optional evidence</strong>
-                      <small>Contract, API, GitHub, and Solidity source can add context.</small>
+                      <small>Contract, API, GitHub, Solidity source, and Slither/Semgrep artifacts can add real evidence.</small>
                     </span>
                     <b>{advancedOpen ? 'Close' : 'Add'}</b>
                   </button>
 
                   {!advancedOpen ? (
                     <div className="scanner-evidence-chips" aria-label="Optional evidence types">
-                      {['Contract address', 'API base', 'GitHub repo', 'Solidity source'].map((item) => <span key={item}>{item}</span>)}
+                      {['Contract address', 'API base', 'GitHub repo', 'Solidity source', 'Slither/Semgrep JSON'].map((item) => <span key={item}>{item}</span>)}
                     </div>
                   ) : null}
 
@@ -1072,8 +1081,23 @@ export function UnifiedUrlScannerClient() {
                       </FieldLabel>
                       <div className="scanner-evidence-wide">
                         <FieldLabel label="Solidity source">
-                          <textarea className="textarea" value={solidityCode} onChange={(event) => setSolidityCode(event.target.value)} placeholder="Paste Solidity source here for local rule checks." />
+                          <textarea className="textarea" value={solidityCode} onChange={(event) => setSolidityCode(event.target.value)} placeholder="Paste Solidity source here for local rule checks and optional backend Slither/Semgrep execution." />
                         </FieldLabel>
+                      </div>
+                      <div className="scanner-evidence-wide rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.04] p-4">
+                        <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-100">Real static-analysis artifacts</p>
+                        <p className="mt-2 text-xs leading-5 text-slate-400">If you already ran Slither/Semgrep locally, paste raw JSON here. Web3Guard will parse it as user-supplied tool evidence, not as a fake backend run or certified audit.</p>
+                        <div className="mt-4 grid gap-4 lg:grid-cols-3">
+                          <FieldLabel label="Slither JSON">
+                            <textarea className="textarea min-h-[140px]" value={slitherJson} onChange={(event) => setSlitherJson(event.target.value)} placeholder='{ "results": { "detectors": [...] } }' />
+                          </FieldLabel>
+                          <FieldLabel label="Semgrep JSON">
+                            <textarea className="textarea min-h-[140px]" value={semgrepJson} onChange={(event) => setSemgrepJson(event.target.value)} placeholder='{ "results": [...] }' />
+                          </FieldLabel>
+                          <FieldLabel label="Aderyn JSON">
+                            <textarea className="textarea min-h-[140px]" value={aderynJson} onChange={(event) => setAderynJson(event.target.value)} placeholder='{ "issues": [...] }' />
+                          </FieldLabel>
+                        </div>
                       </div>
                     </div>
                   ) : null}
