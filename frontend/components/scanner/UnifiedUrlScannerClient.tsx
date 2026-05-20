@@ -909,122 +909,152 @@ export function UnifiedUrlScannerClient() {
   }
 
   return (
-    <main className="relative overflow-hidden scanner-console-page scanner-focus-page">
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-5xl space-y-6">
-          <CardShell className="scanner-launch-card card-glow">
-            <div className="scanner-form-shell">
-              <div className="scanner-form-strip" aria-hidden="true" />
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="scanner-mini-mark">✦</div>
+    <main className="relative overflow-hidden scanner-console-page scanner-focus-page scanner-premium-page">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl space-y-6">
+          <CardShell className="scanner-premium-console card-glow">
+            <div className="scanner-premium-aurora" aria-hidden="true" />
+            <div className="scanner-premium-grid">
+              <aside className="scanner-visual-panel" aria-label="Scanner readiness visual">
+                <div className="scanner-visual-topline">
+                  <span className="scanner-pulse-dot" />
+                  <span>Evidence engine</span>
+                </div>
+
+                <div className="scanner-butterfly-stage" aria-hidden="true">
+                  <div className="scanner-wing-mark">
+                    <span className="scanner-wing scanner-wing-left" />
+                    <span className="scanner-wing scanner-wing-right" />
+                    <span className="scanner-wing-core">W3</span>
+                  </div>
+                  <span className="scanner-orbit scanner-orbit-one" />
+                  <span className="scanner-orbit scanner-orbit-two" />
+                  <span className="scanner-scan-beam" />
+                </div>
+
+                <div className="scanner-visual-copy">
+                  <p className="section-label">Launch scan</p>
+                  <h1>Check your Web3 surface without fake scores.</h1>
+                  <p>URL first. Evidence optional. Missing tools stay visible as Not Assessed.</p>
+                </div>
+
+                <div className="scanner-signal-grid">
+                  {['Website', 'dApp', 'API', 'Contract', 'Wallet UX', 'OpSec'].map((item) => (
+                    <span key={item}>{item}</span>
+                  ))}
+                </div>
+              </aside>
+
+              <div className="scanner-input-panel">
+                <div className="scanner-input-head">
                   <div>
-                    <p className="section-label">Scan console</p>
-                    <h1 className="mt-2 text-2xl font-black text-white sm:text-3xl">Start readiness scan</h1>
+                    <p className="section-label">Scan setup</p>
+                    <h2>Paste URL and choose surface</h2>
                   </div>
+                  <span className={`scanner-ready-pill ${missingRequiredFields.length ? 'scanner-ready-pill-warn' : 'scanner-ready-pill-ok'}`}>
+                    {missingRequiredFields.length ? 'Needs input' : 'Ready'}
+                  </span>
                 </div>
-                <span className={`badge ${missingRequiredFields.length ? "badge-amber" : "badge-green"}`}>
-                  {missingRequiredFields.length ? "Needs input" : "Ready"}
-                </span>
-              </div>
 
-              <div className="mt-7 grid gap-4 lg:grid-cols-12">
-                <div className="lg:col-span-12">
+                <div className="scanner-premium-fields">
                   <FieldLabel label="Website / dApp URL" required>
-                    <input className="input scanner-input-xl" value={websiteUrl} onChange={(event) => setWebsiteUrl(event.target.value)} placeholder="https://yourproject.com" />
+                    <input className="input scanner-input-xl scanner-premium-url" value={websiteUrl} onChange={(event) => setWebsiteUrl(event.target.value)} placeholder="https://yourproject.com" />
                   </FieldLabel>
-                </div>
 
-                <div className="lg:col-span-6">
-                  <FieldLabel label="Project type" required>
-                    <select className="select scanner-choice-select" value={projectType} onChange={(event) => setProjectType(event.target.value)}>
-                      <option value="" disabled>Select project type</option>
-                      {projectTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-                    </select>
-                  </FieldLabel>
-                </div>
+                  <div className="scanner-field-row">
+                    <FieldLabel label="Project type" required>
+                      <select className="select scanner-choice-select" value={projectType} onChange={(event) => setProjectType(event.target.value)}>
+                        <option value="" disabled>Select project type</option>
+                        {projectTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                      </select>
+                    </FieldLabel>
 
-                <div className="lg:col-span-6">
-                  <FieldLabel label="Chain / surface" required>
-                    <select className="select scanner-choice-select" value={chain} onChange={(event) => setChain(event.target.value)}>
-                      <option value="" disabled>Select chain</option>
-                      {chainOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-                    </select>
-                  </FieldLabel>
-                </div>
-
-                {projectType === "Other" ? (
-                  <div className="lg:col-span-6">
-                    <FieldLabel label="Custom project type" required>
-                      <input className="input" value={customProjectType} onChange={(event) => setCustomProjectType(event.target.value)} placeholder="Example: RWA, DePIN, AI x Web3" />
+                    <FieldLabel label="Chain / surface" required>
+                      <select className="select scanner-choice-select" value={chain} onChange={(event) => setChain(event.target.value)}>
+                        <option value="" disabled>Select chain</option>
+                        {chainOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                      </select>
                     </FieldLabel>
                   </div>
-                ) : null}
 
-                {chain === "Other" ? (
-                  <div className="lg:col-span-6">
-                    <FieldLabel label="Custom chain" required>
-                      <input className="input" value={customChain} onChange={(event) => setCustomChain(event.target.value)} placeholder="Example: Sui, Aptos, Monad" />
-                    </FieldLabel>
-                  </div>
-                ) : null}
-              </div>
+                  {(projectType === 'Other' || chain === 'Other') ? (
+                    <div className="scanner-field-row">
+                      {projectType === 'Other' ? (
+                        <FieldLabel label="Custom project type" required>
+                          <input className="input" value={customProjectType} onChange={(event) => setCustomProjectType(event.target.value)} placeholder="Example: RWA, DePIN, AI x Web3" />
+                        </FieldLabel>
+                      ) : <div />}
 
-              <div className="mt-6 rounded-[1.5rem] border border-cyan/15 bg-cyan/[0.035] p-4 shadow-[0_0_32px_rgba(6,182,212,.08)]">
-                <button type="button" onClick={() => setAdvancedOpen((value) => !value)} className="flex w-full items-center justify-between gap-4 text-left">
-                  <div className="flex items-center gap-3">
+                      {chain === 'Other' ? (
+                        <FieldLabel label="Custom chain" required>
+                          <input className="input" value={customChain} onChange={(event) => setCustomChain(event.target.value)} placeholder="Example: Sui, Aptos, Monad" />
+                        </FieldLabel>
+                      ) : <div />}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="scanner-evidence-panel">
+                  <button type="button" onClick={() => setAdvancedOpen((value) => !value)} className="scanner-evidence-toggle">
                     <span className="scanner-chip-icon">＋</span>
-                    <div>
-                      <p className="text-sm font-black text-white">Add optional evidence</p>
-                      <p className="mt-1 text-xs text-slate-500">Contract, API, GitHub and Solidity evidence can improve context.</p>
+                    <span>
+                      <strong>Optional evidence</strong>
+                      <small>Contract, API, GitHub, and Solidity source can add context.</small>
+                    </span>
+                    <b>{advancedOpen ? 'Close' : 'Add'}</b>
+                  </button>
+
+                  {!advancedOpen ? (
+                    <div className="scanner-evidence-chips" aria-label="Optional evidence types">
+                      {['Contract address', 'API base', 'GitHub repo', 'Solidity source'].map((item) => <span key={item}>{item}</span>)}
                     </div>
-                  </div>
-                  <span className="badge badge-cyan">{advancedOpen ? "Hide" : "Open"}</span>
-                </button>
-                {advancedOpen ? (
-                  <div className="mt-5 grid gap-4 border-t border-cyan/10 pt-5 lg:grid-cols-3">
-                    <FieldLabel label="Contract address">
-                      <input className="input" value={contractAddress} onChange={(event) => setContractAddress(event.target.value)} placeholder="0x..." />
-                    </FieldLabel>
-                    <FieldLabel label="API base URL">
-                      <input className="input" value={apiBaseUrl} onChange={(event) => setApiBaseUrl(event.target.value)} placeholder="https://api.yourproject.com" />
-                    </FieldLabel>
-                    <FieldLabel label="GitHub repo URL">
-                      <input className="input" value={githubRepoUrl} onChange={(event) => setGithubRepoUrl(event.target.value)} placeholder="https://github.com/org/repo" />
-                    </FieldLabel>
-                    <div className="lg:col-span-3">
-                      <FieldLabel label="Solidity source" helper="Optional source for rule-based review.">
-                        <textarea className="textarea" value={solidityCode} onChange={(event) => setSolidityCode(event.target.value)} placeholder="Paste Solidity source here for local rule checks." />
+                  ) : null}
+
+                  {advancedOpen ? (
+                    <div className="scanner-evidence-grid">
+                      <FieldLabel label="Contract address">
+                        <input className="input" value={contractAddress} onChange={(event) => setContractAddress(event.target.value)} placeholder="0x..." />
                       </FieldLabel>
+                      <FieldLabel label="API base URL">
+                        <input className="input" value={apiBaseUrl} onChange={(event) => setApiBaseUrl(event.target.value)} placeholder="https://api.yourproject.com" />
+                      </FieldLabel>
+                      <FieldLabel label="GitHub repo URL">
+                        <input className="input" value={githubRepoUrl} onChange={(event) => setGithubRepoUrl(event.target.value)} placeholder="https://github.com/org/repo" />
+                      </FieldLabel>
+                      <div className="scanner-evidence-wide">
+                        <FieldLabel label="Solidity source">
+                          <textarea className="textarea" value={solidityCode} onChange={(event) => setSolidityCode(event.target.value)} placeholder="Paste Solidity source here for local rule checks." />
+                        </FieldLabel>
+                      </div>
                     </div>
-                  </div>
-                ) : null}
-              </div>
+                  ) : null}
+                </div>
 
-              <div className="mt-6 grid gap-3 md:grid-cols-2">
-                <label className={`scanner-check-card ${authorized ? "scanner-check-card-on" : ""}`}>
-                  <input type="checkbox" checked={authorized} onChange={(event) => setAuthorized(event.target.checked)} />
-                  <span>
-                    <strong>Permission confirmed</strong>
-                    <small>I own this project or have permission to review the supplied evidence.</small>
-                  </span>
-                </label>
-                <label className={`scanner-check-card ${realOnly ? "scanner-check-card-on" : ""}`}>
-                  <input type="checkbox" checked={realOnly} onChange={(event) => setRealOnly(event.target.checked)} />
-                  <span>
-                    <strong>Evidence-only result</strong>
-                    <small>Unavailable modules stay Not Assessed instead of guessed.</small>
-                  </span>
-                </label>
-              </div>
+                <div className="scanner-consent-grid">
+                  <label className={`scanner-check-card ${authorized ? "scanner-check-card-on" : ""}`}>
+                    <input type="checkbox" checked={authorized} onChange={(event) => setAuthorized(event.target.checked)} />
+                    <span>
+                      <strong>Permission confirmed</strong>
+                      <small>I own this project or have permission to review it.</small>
+                    </span>
+                  </label>
+                  <label className={`scanner-check-card ${realOnly ? "scanner-check-card-on" : ""}`}>
+                    <input type="checkbox" checked={realOnly} onChange={(event) => setRealOnly(event.target.checked)} />
+                    <span>
+                      <strong>Evidence-only result</strong>
+                      <small>Unavailable modules stay Not Assessed.</small>
+                    </span>
+                  </label>
+                </div>
 
-              {fieldPrompt ? <p className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100">{fieldPrompt}</p> : null}
+                {fieldPrompt ? <p className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100">{fieldPrompt}</p> : null}
 
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <button type="button" onClick={() => void runScan()} disabled={!canRunScan} className="btn-primary sm:w-auto">
-                  {loading ? "Scanning evidence..." : "Run scan →"}
-                </button>
-                {!isLoggedIn && !authLoading ? <Link href="/auth/login" className="btn-secondary sm:w-auto">Login first</Link> : null}
+                <div className="scanner-action-row">
+                  <button type="button" onClick={() => void runScan()} disabled={!canRunScan} className="btn-primary scanner-run-button">
+                    {loading ? 'Scanning evidence...' : 'Run readiness scan →'}
+                  </button>
+                  {!isLoggedIn && !authLoading ? <Link href="/auth/login" className="btn-secondary scanner-login-button">Login first</Link> : null}
+                </div>
               </div>
             </div>
           </CardShell>
