@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.middleware import SecurityHeadersMiddleware
-from app.routers import admin, admin_super, agency_launch, ai, billing_final, bug_bounty, cicd, community_review, compliance, security_passport, continuous_monitoring, crosschain, database, developer_api, engine_depth, eon, india_launch, provider_readiness, provider_live, trust_metrics, public_trust_page, report_verification, dashboard_workflow, production_deployment_qa, final_qa, launch_final, launch_validation, scanner_results, worker_runs, payment_validation, pilot_experience, mvp_launch, scanner_depth, risk_intelligence, web_dast, admin_pentest, openzeppelin_pattern, scanner_correlation, scanner_truth_validation, real_findings_pipeline, static_artifact_bridge, manual_review, accuracy_upgrade, health, leads, launch, learning, monitoring, notifications, ownership, packages, payments, public_beta, public_registry, qa, reports, scans, securescore, security_copilot, security_hardening, security_tests, sentinel, threat_intel, trust, trust_readiness, worker_execution, workspace
+from app.routers import admin, admin_super, agency_launch, ai, billing_final, bug_bounty, cicd, community_review, compliance, security_passport, continuous_monitoring, crosschain, database, developer_api, engine_depth, eon, india_launch, provider_readiness, provider_live, trust_metrics, public_trust_page, report_verification, dashboard_workflow, production_deployment_qa, final_qa, launch_final, launch_validation, scanner_results, worker_runs, payment_validation, pilot_experience, mvp_launch, scanner_depth, risk_intelligence, web_dast, admin_pentest, openzeppelin_pattern, scanner_correlation, scanner_truth_validation, real_findings_pipeline, static_artifact_bridge, manual_review, accuracy_upgrade, accuracy_hardening, health, leads, launch, learning, monitoring, notifications, ownership, packages, payments, public_beta, public_registry, qa, reports, scans, securescore, security_copilot, security_hardening, security_tests, sentinel, threat_intel, trust, trust_readiness, worker_execution, workspace
 
 app = FastAPI(
     title=settings.app_name,
@@ -93,6 +93,7 @@ app.include_router(real_findings_pipeline.router)
 app.include_router(static_artifact_bridge.router)
 app.include_router(manual_review.router)
 app.include_router(accuracy_upgrade.router)
+app.include_router(accuracy_hardening.router)
 
 
 @app.get("/")
