@@ -94,8 +94,8 @@ const moreGroups: MoreGroup[] = [
     ],
   },
   {
-    title: "Advanced setup",
-    helper: "Keep power tools out of the main path.",
+    title: "Scanner intelligence",
+    helper: "Advanced engines without making the header crowded.",
     items: [
       {
         href: "/risk-intelligence",
@@ -104,6 +104,40 @@ const moreGroups: MoreGroup[] = [
         icon: "risk",
         status: "beta",
       },
+      {
+        href: "/scanner-correlation",
+        label: "Scanner correlation",
+        description: "Prioritize real findings into P0/P1/P2/P3 and attack-path hints.",
+        icon: "risk",
+        status: "beta",
+      },
+      {
+        href: "/openzeppelin-pattern",
+        label: "OpenZeppelin patterns",
+        description: "Check Solidity evidence against OpenZeppelin-style secure patterns.",
+        icon: "advanced",
+        status: "beta",
+      },
+      {
+        href: "/web-dast",
+        label: "Authorized Web DAST",
+        description: "Safe authorized baseline checks with no exploit automation.",
+        icon: "status",
+        status: "beta",
+      },
+      {
+        href: "/admin-pentest",
+        label: "Admin governance",
+        description: "Scope, permission, admin, role, and governance readiness workflow.",
+        icon: "advanced",
+        status: "setup",
+      },
+    ],
+  },
+  {
+    title: "Advanced setup",
+    helper: "Keep power tools out of the main path.",
+    items: [
       {
         href: "/more",
         label: "More hub",
@@ -117,6 +151,13 @@ const moreGroups: MoreGroup[] = [
         label: "Payment validation",
         description: "Razorpay/UPI verification checks for the ₹999 pilot path.",
         icon: "payment",
+        status: "setup",
+      },
+      {
+        href: "/provider-live",
+        label: "Provider live",
+        description: "Check configured external provider/API/tool readiness states.",
+        icon: "status",
         status: "setup",
       },
     ],

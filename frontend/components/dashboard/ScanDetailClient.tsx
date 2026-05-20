@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiGet, apiPatch, apiPost } from "@/lib/api";
 import type { SavedReportRecord, ScanHistoryRecord } from "@/lib/types";
+import { looksLikeLatestUnifiedScan, saveLatestUnifiedScan } from "@/lib/latestUnifiedScan";
 import { currentDashboardUser, fmtDate, scoreText } from "./DashboardDataHelpers";
 
 export function ScanDetailClient({ scanId }: { scanId: string }) {
@@ -48,6 +49,16 @@ export function ScanDetailClient({ scanId }: { scanId: string }) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update scan");
     }
+  }
+
+
+  function openInResults() {
+    if (!scan?.payload || !looksLikeLatestUnifiedScan(scan.payload)) {
+      setError("This saved scan does not contain a complete unified scan payload for the Results page.");
+      return;
+    }
+    saveLatestUnifiedScan(scan.payload);
+    setMessage("Saved scan loaded into the Results/Report flow. Open Results or Report now.");
   }
 
   async function createReportFromScan() {
@@ -128,10 +139,15 @@ export function ScanDetailClient({ scanId }: { scanId: string }) {
               </button>
 
               <div className="mt-6 status-node p-4">
-                <h3 className="font-black text-white">Report export workflow</h3>
+                <h3 className="font-black text-white">Results → report workflow</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-400">
-                  Convert this saved scan into a saved report, then export it as PDF, HTML, Markdown, or JSON.
+                  Load this real saved scan into the public Results/Report flow, or create a saved report record for dashboard export.
                 </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button className="btn-secondary" onClick={openInResults}>Load into Results</button>
+                  <Link className="btn-ghost" href="/results">Open Results</Link>
+                  <Link className="btn-ghost" href="/report">Open Report</Link>
+                </div>
                 <button className="btn-secondary mt-4" onClick={createReportFromScan} disabled={creatingReport}>
                   {creatingReport ? "Creating report..." : "Create saved report from scan"}
                 </button>

@@ -11,12 +11,23 @@ const groups = [
     ],
   },
   {
+    title: "Scanner intelligence",
+    note: "Advanced evidence engines added safely under More.",
+    items: [
+      ["Risk intelligence", "/risk-intelligence", "Explain impact, future risk, fix path, and verification."],
+      ["Scanner correlation", "/scanner-correlation", "Prioritize real findings into P0/P1/P2/P3 and attack-path hints."],
+      ["OpenZeppelin patterns", "/openzeppelin-pattern", "Compare Solidity evidence against common OpenZeppelin-style secure patterns."],
+      ["Authorized Web DAST", "/web-dast", "Safe authorized web baseline checks with no exploit automation."],
+      ["Admin pentest governance", "/admin-pentest", "Scope, authorization, role, and governance readiness workflow."],
+    ],
+  },
+  {
     title: "Trust and help",
     note: "Use these to understand the beta.",
     items: [
       ["Docs", "/docs", "Methodology, limitations, responsible use, and setup pages."],
       ["Feature status", "/feature-status", "See what is live, beta, manual, or setup-required."],
-      ["Risk intelligence", "/risk-intelligence", "Explain impact, likely risk, fix path, and verification."],
+      ["Responsible use", "/responsible-use", "Allowed usage, authorization, and safety boundaries."],
     ],
   },
   {
@@ -37,7 +48,7 @@ const groups = [
     items: [
       ["Worker execution", "/worker-execution", "Slither/Semgrep/tool-worker execution states."],
       ["Provider live", "/provider-live", "Explorer, advisory, GitHub, and external provider states."],
-      ["Payment validation", "/payment-validation", "Razorpay/UPI verification for the ₹999 pilot flow."],
+      ["Payment validation", "/payment-validation", "Razorpay/UPI verification for the ₹999 pilot path."],
       ["Trust metrics", "/trust-metrics", "Public-safe metrics without fake audit claims."],
     ],
   },
@@ -50,7 +61,7 @@ export function MoreHub() {
         <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-200/80">More</p>
         <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-[-0.06em] text-white sm:text-6xl">All extra screens, cleaned and grouped.</h1>
         <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
-          Main flow stays simple: Home → Scan → Results → Report → Price. Everything else lives here with a clear use case.
+          Main flow stays simple: Home → Scan → Results → Report → Price. Advanced scanner engines live here without cluttering the header.
         </p>
       </section>
 
