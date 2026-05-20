@@ -123,9 +123,9 @@ function statusClass(status: string) {
 export function ScannerResultsClient() {
   const [status, setStatus] = useState<StatusPayload | null>(null);
   const [projectName, setProjectName] = useState("Pilot Web3 Project");
-  const [slitherJson, setSlitherJson] = useState(sampleSlitherJson);
-  const [packageJson, setPackageJson] = useState(samplePackageJson);
-  const [includeImportedSlither, setIncludeImportedSlither] = useState(true);
+  const [slitherJson, setSlitherJson] = useState("");
+  const [packageJson, setPackageJson] = useState("");
+  const [includeImportedSlither, setIncludeImportedSlither] = useState(false);
   const [runStaticTools, setRunStaticTools] = useState(false);
   const [liveDependencyLookup, setLiveDependencyLookup] = useState(false);
   const [result, setResult] = useState<ScannerResult | null>(null);
@@ -158,7 +158,7 @@ export function ScannerResultsClient() {
       const response = await apiPost<ScannerResult>("/scanner-results/evaluate", {
         project_name: projectName,
         slither_json: includeImportedSlither ? slitherJson : null,
-        package_json: packageJson,
+        package_json: packageJson.trim() ? packageJson : null,
         run_static_tools: runStaticTools,
         live_dependency_lookup: liveDependencyLookup,
         authorization_confirmed: true,
@@ -195,7 +195,7 @@ export function ScannerResultsClient() {
         <div className="result-console-head">
           <div>
             <p className="video-section-kicker">LIVE PREVIEW</p>
-            <h2>Normalize evidence into result cards.</h2>
+            <h2>Use supplied evidence to create result cards.</h2>
           </div>
           <span className={statusClass(status?.slither_status || "Not assessed yet")}>Slither: {status?.slither_status || "checking"}</span>
         </div>
@@ -209,7 +209,7 @@ export function ScannerResultsClient() {
           <div className="result-toggle-stack">
             <label>
               <input type="checkbox" checked={includeImportedSlither} onChange={(event) => setIncludeImportedSlither(event.target.checked)} />
-              <span>Import Slither JSON sample</span>
+              <span>Include supplied Slither JSON</span>
             </label>
             <label>
               <input type="checkbox" checked={runStaticTools} onChange={(event) => setRunStaticTools(event.target.checked)} />
@@ -227,11 +227,11 @@ export function ScannerResultsClient() {
           <div className="result-evidence-grid">
             <label>
               <span>Slither JSON</span>
-              <textarea value={slitherJson} onChange={(event) => setSlitherJson(event.target.value)} rows={8} />
+              <textarea value={slitherJson} onChange={(event) => setSlitherJson(event.target.value)} rows={8} placeholder={sampleSlitherJson} />
             </label>
             <label>
               <span>package.json</span>
-              <textarea value={packageJson} onChange={(event) => setPackageJson(event.target.value)} rows={8} />
+              <textarea value={packageJson} onChange={(event) => setPackageJson(event.target.value)} rows={8} placeholder={samplePackageJson} />
             </label>
           </div>
         </details>
@@ -254,7 +254,7 @@ export function ScannerResultsClient() {
         {!result ? (
           <div className="result-empty-state">
             <strong>No preview generated yet.</strong>
-            <p>Run the evaluation to see evidence-backed findings, Not Assessed modules, and the pilot report path.</p>
+            <p>Add evidence or run a safe preview to see backend result states. Empty modules must remain Not Assessed.</p>
           </div>
         ) : (
           <>

@@ -1,62 +1,79 @@
 import Link from "next/link";
 
-const groups = [
+const featureGroups = [
   {
-    title: "Worker and provider setup",
-    text: "Use these only when you are ready to enable real scanner tools or external APIs.",
-    links: [
-      ["Scanner depth", "/scanner-depth"],
-      ["Risk intelligence", "/risk-intelligence"],
-      ["Worker runs", "/worker-runs"],
-      ["Worker execution", "/worker-execution"],
-      ["Provider live", "/provider-live"],
-      ["Provider readiness", "/provider-readiness"],
+    title: "User flow",
+    note: "Useful for normal users after they run a scan.",
+    items: [
+      ["Results", "/results", "See what was assessed, what is missing, and what needs manual review."],
+      ["Report center", "/report", "Create a founder-friendly readiness report path."],
+      ["Saved scans", "/dashboard/scans", "Return to previous scans when login/storage is configured."],
     ],
   },
   {
-    title: "Trust and monitoring",
-    text: "Advanced pages for passports, monitoring, public trust artifacts, and advisory tracking.",
-    links: [
-      ["Security passport", "/security-passport"],
-      ["Trust metrics", "/trust-metrics"],
-      ["Continuous monitoring", "/continuous-monitoring"],
-      ["Trust pages", "/trust-pages"],
+    title: "Trust and learning",
+    note: "Useful for understanding the beta before paying or sharing reports.",
+    items: [
+      ["Docs", "/docs", "Methodology, limitations, responsible use, and setup guides."],
+      ["Feature status", "/feature-status", "See live, beta, setup-required, and manual states."],
+      ["Risk intelligence", "/risk-intelligence", "Understand impact, likely risk, fix path, and verification steps."],
     ],
   },
   {
-    title: "Launch and agency ops",
-    text: "Use after the core scanner/report flow is validated with real users.",
-    links: [
-      ["Launch final", "/launch-final"],
-      ["MVP launch pack", "/launch-pack"],
-      ["Agency launch", "/agency-launch"],
-      ["Community review", "/community-review"],
+    title: "Scanner engines",
+    note: "Useful when you want to check one surface directly.",
+    items: [
+      ["Website surface", "/scanner/website", "HTTPS, headers, robots, sitemap, and policy-page readiness."],
+      ["Smart contract", "/scanner/contract", "Solidity rules and supplied contract evidence."],
+      ["API readiness", "/scanner/api-deep", "Auth, CORS, webhook, rate-limit, and admin-route review."],
+      ["Wallet flow", "/scanner/wallet", "Approval, chain mismatch, blind signing, and transaction preview readiness."],
+      ["GitHub repo", "/scanner/github", "Repo hygiene, package metadata, CI, and secret-exposure patterns."],
+      ["Admin OpSec", "/scanner/admin-opsec", "MFA, multisig, timelock, role separation, and incident response evidence."],
+    ],
+  },
+  {
+    title: "Setup / internal",
+    note: "Keep these away from the main user path unless you are configuring the product.",
+    items: [
+      ["Worker execution", "/worker-execution", "Real tool execution states for Slither, Semgrep, and worker-required tools."],
+      ["Provider live", "/provider-live", "Explorer, advisory, GitHub, and external-provider configuration state."],
+      ["Payment validation", "/payment-validation", "Razorpay/UPI test and verification workflow for the ₹999 pilot path."],
+      ["Trust metrics", "/trust-metrics", "Public-safe metrics without fake discovery or audit claims."],
+      ["Launch pack", "/launch-pack", "Checklist and outreach support after the core product flow is stable."],
+      ["Community review", "/community-review", "Optional review workflow for later public-beta growth."],
     ],
   },
 ];
 
+export const metadata = {
+  title: "More Tools | Web3Guard AI",
+  description: "Clean More hub for Web3Guard results, reports, docs, scanner engines, and advanced setup screens.",
+};
+
 export default function AdvancedToolsPage() {
   return (
-    <main className="cinematic-page-shell mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-      <section className="cinematic-page-hero clean-panel cinematic-panel p-6 sm:p-8">
-        <p className="section-label">More / Advanced tools</p>
-        <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-[-0.06em] text-white sm:text-6xl">
-          Hidden from main navigation, still available when needed.
-        </h1>
-        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400">
-          First users should follow the clean path: Home → Scan → Results → Report → Price. These tools stay here for setup, power users, and internal validation.
+    <main className="more-hub-page mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <section className="more-hub-hero scroll-motion-ready">
+        <p className="video-section-kicker">More</p>
+        <h1>Everything outside the main flow, organized clearly.</h1>
+        <p>
+          Normal users should understand each screen in seconds. Core flow stays simple: Home → Scan → Results → Report → Price.
         </p>
       </section>
 
-      <section className="mt-6 grid gap-4 lg:grid-cols-3">
-        {groups.map((group) => (
-          <article key={group.title} className="clean-panel cinematic-panel p-6">
-            <h2 className="text-xl font-black text-white">{group.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-400">{group.text}</p>
-            <div className="mt-5 grid gap-2">
-              {group.links.map(([label, href]) => (
-                <Link key={href} href={href} className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3 text-sm font-bold text-slate-300 transition hover:border-cyan/25 hover:bg-cyan/[0.04] hover:text-white">
-                  {label} →
+      <section className="more-hub-grid mt-8">
+        {featureGroups.map((group) => (
+          <article key={group.title} className="more-hub-group scroll-motion-ready">
+            <div className="more-hub-group-head">
+              <h2>{group.title}</h2>
+              <p>{group.note}</p>
+            </div>
+            <div className="more-hub-links">
+              {group.items.map(([label, href, text]) => (
+                <Link key={href} href={href} className="more-hub-link">
+                  <b>{label}</b>
+                  <small>{text}</small>
+                  <span>Open →</span>
                 </Link>
               ))}
             </div>

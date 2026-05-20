@@ -1,67 +1,81 @@
 import Link from "next/link";
 
-const coreDocs = [
-  ["Methodology", "/methodology", "How readiness scoring, evidence, confidence, and Not Assessed states work."],
-  ["Limitations", "/limitations", "What Web3Guard does not claim and where manual security review is still required."],
-  ["Responsible Use", "/responsible-use", "No private keys, no wallet signing, no exploit automation, and no unauthorized scanning."],
-  ["Scope & Refund", "/scope-refund", "How to keep paid pilot-report scope clear for early users."],
+const docGroups = [
+  {
+    title: "Start here",
+    text: "Use these pages to understand what Web3Guard checks and what it never claims.",
+    links: [
+      ["Methodology", "/methodology", "How evidence, confidence, and Not Assessed states are handled."],
+      ["Limitations", "/limitations", "Where professional security review is still required."],
+      ["Responsible use", "/responsible-use", "No private keys, no wallet signing, no exploit automation, no unauthorized scanning."],
+    ],
+  },
+  {
+    title: "Report and payment",
+    text: "Use these when a founder wants a clean report path or paid pilot flow.",
+    links: [
+      ["Report center", "/report", "Convert scan evidence into a pre-audit readiness report path."],
+      ["Scope & refund", "/scope-refund", "Keep paid pilot-review scope clear and fair."],
+      ["Payment validation", "/payment-validation", "Check Razorpay/UPI verification states before treating a payment as complete."],
+    ],
+  },
+  {
+    title: "Setup and advanced",
+    text: "Use only when enabling provider keys, workers, or deeper tooling.",
+    links: [
+      ["Provider live", "/provider-live", "Explorer, advisory, GitHub, and external-provider states."],
+      ["Worker execution", "/worker-execution", "Slither, Semgrep, Mythril, and worker-required boundaries."],
+      ["Advanced tools", "/advanced", "All non-core screens organized in one simple More hub."],
+    ],
+  },
 ];
 
-const setupDocs = [
-  ["Provider Live", "/provider-live", "Explorer, advisory, GitHub, and external-provider readiness states."],
-  ["Worker Execution", "/worker-execution", "Slither, Semgrep, Foundry, Echidna, Mythril, and worker status boundaries."],
-  ["Payment Validation", "/payment-validation", "Razorpay/UPI test flow, verification, webhook, and audit-log status."],
-  ["Launch Pack", "/launch-pack", "First 10 users checklist, outreach, public beta wording, and safe launch guardrails."],
-  ["Trust Metrics", "/trust-metrics", "Public-safe metrics, disclosures, and no fake discovery claims."],
-  ["Advanced Tools", "/advanced", "All non-core modules moved away from the main navigation."],
+const quickRules = [
+  "Pre-audit readiness only",
+  "Not a certified audit",
+  "No security guarantee",
+  "Unavailable tools stay visible",
 ];
 
 export const metadata = {
   title: "Docs | Web3Guard AI",
-  description: "Web3Guard methodology, limitations, responsible use, provider setup, and launch validation docs.",
+  description: "Simple Web3Guard docs for methodology, limitations, payment validation, provider setup, and responsible use.",
 };
 
 export default function DocsPage() {
   return (
-    <main className="cinematic-page-shell mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-      <section className="cinematic-page-hero clean-panel cinematic-panel p-6 sm:p-8">
-        <p className="section-label">Docs</p>
-        <h1 className="mt-3 max-w-4xl text-4xl font-black tracking-[-0.06em] sm:text-6xl">Everything users need to trust the beta.</h1>
-        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400 sm:text-base">
-          Main navigation stays simple. Technical setup, advanced modules, provider status, and limitations stay organized here.
-        </p>
-      </section>
-
-      <section className="mt-8">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="section-label">Core trust docs</p>
-            <h2 className="mt-2 text-2xl font-black text-white">Show these to beta users first.</h2>
-          </div>
-          <Link href="/responsible-use" className="btn-secondary">Responsible use →</Link>
+    <main className="docs-final-page mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <section className="docs-final-hero scroll-motion-ready">
+        <div>
+          <p className="video-section-kicker">Docs</p>
+          <h1>Clear docs, no confusing beta clutter.</h1>
+          <p>
+            These pages explain what Web3Guard is useful for, where evidence comes from, and what must stay manual or not assessed.
+          </p>
         </div>
-        <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {coreDocs.map(([title, href, text]) => (
-            <Link key={href} href={href} className="glass-tile cinematic-card block p-5 transition hover:-translate-y-1">
-              <p className="text-lg font-black text-white">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
-              <p className="mt-4 text-xs font-bold text-cyan">Open →</p>
-            </Link>
+        <div className="docs-rule-card">
+          {quickRules.map((rule) => (
+            <span key={rule}>{rule}</span>
           ))}
         </div>
       </section>
 
-      <section className="mt-12">
-        <p className="section-label">Setup and advanced</p>
-        <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {setupDocs.map(([title, href, text]) => (
-            <Link key={href} href={href} className="glass-tile cinematic-card block p-5 transition hover:-translate-y-1">
-              <p className="text-lg font-black text-white">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
-              <p className="mt-4 text-xs font-bold text-cyan">Open →</p>
-            </Link>
-          ))}
-        </div>
+      <section className="docs-group-grid mt-8">
+        {docGroups.map((group) => (
+          <article key={group.title} className="docs-group-card scroll-motion-ready">
+            <h2>{group.title}</h2>
+            <p>{group.text}</p>
+            <div className="docs-link-stack">
+              {group.links.map(([label, href, text]) => (
+                <Link key={href} href={href} className="docs-link-card">
+                  <b>{label}</b>
+                  <small>{text}</small>
+                  <span>Open →</span>
+                </Link>
+              ))}
+            </div>
+          </article>
+        ))}
       </section>
     </main>
   );
