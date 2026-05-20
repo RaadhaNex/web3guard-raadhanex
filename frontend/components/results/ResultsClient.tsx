@@ -460,6 +460,70 @@ function DeepDetectionExpansionPanel({ expansion }: { expansion?: unknown }) {
   );
 }
 
+
+function DeepEvidenceAccuracyPanel({ packageData }: { packageData?: unknown }) {
+  const root = asRecord(packageData);
+  if (!Object.keys(root).length) {
+    return (
+      <section className="rounded-[1.5rem] border border-amber-300/15 bg-amber-300/10 p-5 text-sm leading-7 text-amber-50">
+        <p className="section-label">Phases 68–77</p>
+        <h2 className="mt-2 text-2xl font-black text-white">Deep evidence accuracy not attached</h2>
+        <p className="mt-3">Run a fresh unified scan after applying Phase 68–77.</p>
+      </section>
+    );
+  }
+  const summary = asRecord(root.summary);
+  const phases = Object.entries(asRecord(root.phases));
+  const findings = asArray(root.normalized_findings).map(findingFromRecord).filter((item): item is Finding => Boolean(item));
+  return (
+    <section className="rounded-[1.5rem] border border-emerald-300/15 bg-emerald-300/[0.045] p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="section-label">Phases 68–77 deep evidence</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Evidence-backed deeper bug proof</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-300">{asString(root.output_authenticity_guarantee, "Every visible finding must include evidence and reproduction context.")}</p>
+        </div>
+        <Link href="/deep-evidence" className="btn-secondary">Open hub</Link>
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Findings</p><p className="mt-2 text-2xl font-black text-white">{String(summary.total_findings ?? findings.length)}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Critical/high</p><p className="mt-2 text-2xl font-black text-white">{String(summary.critical_high_findings ?? 0)}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Assessed phases</p><p className="mt-2 text-2xl font-black text-white">{String(summary.assessed_phase_count ?? "—")}/10</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Evidence score</p><p className="mt-2 text-2xl font-black text-white">{summary.evidence_score === null || summary.evidence_score === undefined ? "Gated" : `${String(summary.evidence_score)}/100`}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">State</p><p className="mt-2 text-sm font-black text-white">{asString(root.state, "Needs Evidence")}</p></div>
+      </div>
+      {phases.length ? (
+        <div className="mt-5 grid gap-3 lg:grid-cols-2">
+          {phases.map(([key, value]) => {
+            const phase = asRecord(value);
+            return (
+              <article key={key} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="font-black text-white">Phase {key}</h3>
+                  <span className={`badge ${statusClass(asString(phase.state, "Not Assessed"))}`}>{asString(phase.state, "Not Assessed")}</span>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-slate-300">Findings: <b className="text-white">{String(phase.findings ?? 0)}</b></p>
+                <p className="mt-2 text-xs leading-5 text-slate-500">{asString(phase.evidence, "Evidence pending")}</p>
+              </article>
+            );
+          })}
+        </div>
+      ) : null}
+      {findings.length ? (
+        <div className="mt-5 grid gap-3">
+          {findings.slice(0, 16).map((finding) => <FindingCard key={`phase68-77-${finding.id}`} finding={finding} />)}
+        </div>
+      ) : (
+        <p className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-7 text-slate-400">No Phase 68–77 findings were generated. Add HAR/API/SCA/secrets/Foundry/Echidna/wallet/feedback artifacts for deeper real proof.</p>
+      )}
+      <details className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-6 text-slate-300">
+        <summary className="cursor-pointer font-black text-white">Raw Phase 68–77 package</summary>
+        <pre className="mt-4 max-h-[420px] overflow-auto text-xs text-slate-300">{formatJson(root)}</pre>
+      </details>
+    </section>
+  );
+}
+
 function RealFindingsPipelinePanel({ pipeline }: { pipeline?: UnifiedUrlScanResponse["findings_pipeline"] }) {
   if (!pipeline) {
     return (
@@ -753,6 +817,7 @@ export function ResultsClient() {
       <div className="mt-5 grid gap-5">
         <AccuracyUpgradePanel accuracy={(result as unknown as { accuracy_upgrade?: unknown }).accuracy_upgrade} />
         <DeepDetectionExpansionPanel expansion={(result as unknown as { detection_expansion?: unknown }).detection_expansion} />
+        <DeepEvidenceAccuracyPanel packageData={(result as unknown as { deep_evidence_accuracy?: unknown }).deep_evidence_accuracy} />
         <RealFindingsPipelinePanel pipeline={result.findings_pipeline} />
         <StaticAnalysisPanel surface={surface} />
         <GithubDependencyPanel surface={surface} />

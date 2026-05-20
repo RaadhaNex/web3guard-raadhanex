@@ -143,6 +143,14 @@ class UnifiedUrlScanRequest(BaseModel):
     defi_simulation_json: str | None = Field(default=None, max_length=600000)
     protocol_context_json: str | None = Field(default=None, max_length=600000)
     review_context_json: str | None = Field(default=None, max_length=600000)
+    har_json: str | None = Field(default=None, max_length=1000000)
+    crawler_artifact_json: str | None = Field(default=None, max_length=1000000)
+    auth_test_context_json: str | None = Field(default=None, max_length=800000)
+    security_tool_artifacts_json: str | None = Field(default=None, max_length=1200000)
+    foundry_test_output: str | None = Field(default=None, max_length=800000)
+    echidna_output_json: str | None = Field(default=None, max_length=1000000)
+    invariant_artifact_json: str | None = Field(default=None, max_length=1000000)
+    accuracy_feedback_json: str | None = Field(default=None, max_length=800000)
     authorization_confirmed: bool
     real_only_acknowledged: bool = True
 

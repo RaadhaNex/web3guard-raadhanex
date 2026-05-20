@@ -21,6 +21,7 @@ const groups = [
       ["Accuracy upgrade", "/accuracy-upgrade", "Phases 52–58: OSV, static worker, API evidence, wallet UX, business logic, DeFi simulation, and reviewed confirmation."],
       ["Accuracy hardening", "/accuracy-hardening", "Phase 59: benchmark accuracy, false-positive tuning, formal/fuzz artifacts, API harness, DeFi invariants, and trust proof."],
       ["Detection expansion", "/detection-expansion", "Phases 60–67: deep crawler, JS/API discovery, wallet/API/business/DeFi evidence, and false-positive learning."],
+      ["Deep evidence accuracy", "/deep-evidence", "Phases 68–77: HAR/API capture, authorized observations, SCA/secrets artifacts, fuzz/invariant evidence, wallet decoding, and accuracy feedback."],
       ["Truth validation", "/scanner-truth-validation", "Check latest scan output for real evidence mapping, missing states, and fake-claim blockers."],
       ["OpenZeppelin patterns", "/openzeppelin-pattern", "Compare Solidity evidence against common OpenZeppelin-style secure patterns."],
       ["Authorized Web DAST", "/web-dast", "Safe authorized web baseline checks with no exploit automation."],

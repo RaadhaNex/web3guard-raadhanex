@@ -79,13 +79,14 @@ function missingCards(cards: UnifiedModuleCard[]) {
 
 function exportReadyReport(result: UnifiedUrlScanResponse | null): CombinedLaunchReport | null {
   if (!result?.combined_report?.report_id || !result.combined_report.report_hash) return null;
-  const extras = result as unknown as { accuracy_upgrade?: unknown; detection_expansion?: unknown; bug_detection_coverage?: unknown; real_evidence_summary?: unknown };
+  const extras = result as unknown as { accuracy_upgrade?: unknown; detection_expansion?: unknown; deep_evidence_accuracy?: unknown; bug_detection_coverage?: unknown; real_evidence_summary?: unknown };
   return {
     ...result.combined_report,
     json_export: {
       ...(result.combined_report.json_export || {}),
       accuracy_upgrade: extras.accuracy_upgrade ?? null,
       detection_expansion: extras.detection_expansion ?? null,
+      deep_evidence_accuracy: extras.deep_evidence_accuracy ?? null,
       bug_detection_coverage: extras.bug_detection_coverage ?? null,
       real_evidence_summary: extras.real_evidence_summary ?? null,
     },
@@ -198,6 +199,45 @@ function DetectionExpansionReportCard({ result }: { result: UnifiedUrlScanRespon
   );
 }
 
+
+function DeepEvidenceReportCard({ result }: { result: UnifiedUrlScanResponse | null }) {
+  const deep = asRecord((result as unknown as { deep_evidence_accuracy?: unknown } | null)?.deep_evidence_accuracy);
+  if (!Object.keys(deep).length) return null;
+  const summary = asRecord(deep.summary);
+  const phases = Object.entries(asRecord(deep.phases));
+  return (
+    <section className="mt-5 rounded-[1.5rem] border border-emerald-300/15 bg-emerald-300/[0.045] p-5 shadow-2xl shadow-black/20">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="section-label">Phases 68–77 evidence accuracy</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Deep evidence package attached</h2>
+          <p className="mt-2 text-sm leading-7 text-slate-300">{asString(deep.output_authenticity_guarantee, "Every finding needs proof and reproduction context.")}</p>
+        </div>
+        <Link href="/deep-evidence" className="btn-secondary">Open deep evidence hub</Link>
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Findings</p><p className="mt-2 text-2xl font-black text-white">{String(summary.total_findings ?? 0)}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Critical/high</p><p className="mt-2 text-2xl font-black text-white">{String(summary.critical_high_findings ?? 0)}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Assessed phases</p><p className="mt-2 text-2xl font-black text-white">{String(summary.assessed_phase_count ?? "—")}/10</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Evidence score</p><p className="mt-2 text-2xl font-black text-white">{summary.evidence_score === null || summary.evidence_score === undefined ? "Gated" : `${String(summary.evidence_score)}/100`}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">State</p><p className="mt-2 text-sm font-black text-white">{asString(deep.state, "Needs Evidence")}</p></div>
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {phases.map(([key, value]) => {
+          const phase = asRecord(value);
+          return (
+            <article key={key} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Phase {key}</p>
+              <h3 className="mt-2 font-black text-white">{asString(phase.state, "Not Assessed")}</h3>
+              <p className="mt-2 text-sm text-slate-300">Findings: <b>{String(phase.findings ?? 0)}</b></p>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export function ReportCenterClient() {
   const [result, setResult] = useState<UnifiedUrlScanResponse | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -295,6 +335,7 @@ export function ReportCenterClient() {
       <BugCoverageReportCard result={result} />
       <AccuracyUpgradeReportCard result={result} />
       <DetectionExpansionReportCard result={result} />
+      <DeepEvidenceReportCard result={result} />
 
       <section className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 shadow-2xl shadow-black/20">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

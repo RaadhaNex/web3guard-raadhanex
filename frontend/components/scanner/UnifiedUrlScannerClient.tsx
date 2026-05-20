@@ -682,6 +682,14 @@ export function UnifiedUrlScannerClient() {
   const [defiSimulationJson, setDefiSimulationJson] = useState("");
   const [protocolContextJson, setProtocolContextJson] = useState("");
   const [reviewContextJson, setReviewContextJson] = useState("");
+  const [harJson, setHarJson] = useState("");
+  const [crawlerArtifactJson, setCrawlerArtifactJson] = useState("");
+  const [authTestContextJson, setAuthTestContextJson] = useState("");
+  const [securityToolArtifactsJson, setSecurityToolArtifactsJson] = useState("");
+  const [foundryTestOutput, setFoundryTestOutput] = useState("");
+  const [echidnaOutputJson, setEchidnaOutputJson] = useState("");
+  const [invariantArtifactJson, setInvariantArtifactJson] = useState("");
+  const [accuracyFeedbackJson, setAccuracyFeedbackJson] = useState("");
   const [authorized, setAuthorized] = useState(false);
   const [realOnly, setRealOnly] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -942,6 +950,14 @@ export function UnifiedUrlScannerClient() {
           defi_simulation_json: defiSimulationJson.trim() || null,
           protocol_context_json: protocolContextJson.trim() || null,
           review_context_json: reviewContextJson.trim() || null,
+          har_json: harJson.trim() || null,
+          crawler_artifact_json: crawlerArtifactJson.trim() || null,
+          auth_test_context_json: authTestContextJson.trim() || null,
+          security_tool_artifacts_json: securityToolArtifactsJson.trim() || null,
+          foundry_test_output: foundryTestOutput.trim() || null,
+          echidna_output_json: echidnaOutputJson.trim() || null,
+          invariant_artifact_json: invariantArtifactJson.trim() || null,
+          accuracy_feedback_json: accuracyFeedbackJson.trim() || null,
           authorization_confirmed: authorized,
           real_only_acknowledged: realOnly,
         },
@@ -1131,7 +1147,7 @@ export function UnifiedUrlScannerClient() {
 
                       <div className="scanner-evidence-wide rounded-2xl border border-purple-300/10 bg-purple-300/[0.04] p-4">
                         <p className="text-xs font-black uppercase tracking-[0.16em] text-purple-100">Phases 52–58 accuracy evidence</p>
-                        <p className="mt-2 text-xs leading-5 text-slate-400">Optional JSON evidence for OSV/OpenAPI, authorized API observations, wallet UX, business logic, DeFi simulation, and reviewed-report confirmation. Missing evidence stays Not Assessed.</p>
+                        <p className="mt-2 text-xs leading-5 text-slate-400">Optional JSON evidence for OSV/OpenAPI, authorized API observations, wallet UX, business logic, DeFi simulation, reviewed-report confirmation, HAR/crawler artifacts, SCA/secrets artifacts, Foundry/Echidna outputs, and accuracy feedback. Missing evidence stays Not Assessed.</p>
                         <div className="mt-4 grid gap-4 lg:grid-cols-2">
                           <FieldLabel label="OpenAPI JSON">
                             <textarea className="textarea min-h-[120px]" value={openapiJson} onChange={(event) => setOpenapiJson(event.target.value)} placeholder='{ "openapi": "3.0.0", "paths": { ... } }' />
@@ -1159,6 +1175,30 @@ export function UnifiedUrlScannerClient() {
                           </FieldLabel>
                           <FieldLabel label="Reviewed confirmation JSON">
                             <textarea className="textarea min-h-[120px]" value={reviewContextJson} onChange={(event) => setReviewContextJson(event.target.value)} placeholder='{ "reviewer":"name", "triaged_findings_count":8, "unresolved_critical_high_count":0, "payment_verified":true }' />
+                          </FieldLabel>
+                          <FieldLabel label="HAR / browser network capture JSON">
+                            <textarea className="textarea min-h-[120px]" value={harJson} onChange={(event) => setHarJson(event.target.value)} placeholder='{ "log": { "entries": [{ "request": {"url":"https://example.com/api/me","method":"GET"}, "response": {"status": 200} }] } }' />
+                          </FieldLabel>
+                          <FieldLabel label="Crawler artifact JSON">
+                            <textarea className="textarea min-h-[120px]" value={crawlerArtifactJson} onChange={(event) => setCrawlerArtifactJson(event.target.value)} placeholder='{ "entries": [{"url":"https://example.com/admin","status":200,"method":"GET"}] }' />
+                          </FieldLabel>
+                          <FieldLabel label="Authorized API test context JSON">
+                            <textarea className="textarea min-h-[120px]" value={authTestContextJson} onChange={(event) => setAuthTestContextJson(event.target.value)} placeholder='[{"endpoint":"/api/orders/123","expected_status":403,"actual_status":200,"cross_account_access_proved":true,"response_hash":"sha256..."}]' />
+                          </FieldLabel>
+                          <FieldLabel label="SCA / secrets tool artifact JSON">
+                            <textarea className="textarea min-h-[120px]" value={securityToolArtifactsJson} onChange={(event) => setSecurityToolArtifactsJson(event.target.value)} placeholder='{ "gitleaks": [{"RuleID":"generic-api-key","File":"src/config.ts"}], "npm_audit": {"vulnerabilities": []} }' />
+                          </FieldLabel>
+                          <FieldLabel label="Foundry / forge test output">
+                            <textarea className="textarea min-h-[120px]" value={foundryTestOutput} onChange={(event) => setFoundryTestOutput(event.target.value)} placeholder='Paste forge test output. Failure markers become evidence-backed local test findings.' />
+                          </FieldLabel>
+                          <FieldLabel label="Echidna output JSON">
+                            <textarea className="textarea min-h-[120px]" value={echidnaOutputJson} onChange={(event) => setEchidnaOutputJson(event.target.value)} placeholder='[{"name":"echidna_balance_never_drops","status":"falsified","counterexample":"..."}]' />
+                          </FieldLabel>
+                          <FieldLabel label="Invariant / simulation artifact JSON">
+                            <textarea className="textarea min-h-[120px]" value={invariantArtifactJson} onChange={(event) => setInvariantArtifactJson(event.target.value)} placeholder='{ "invariants": [{"name":"assets conserved","status":"failed","evidence":"local fork test"}] }' />
+                          </FieldLabel>
+                          <FieldLabel label="Accuracy feedback / triage benchmark JSON">
+                            <textarea className="textarea min-h-[120px]" value={accuracyFeedbackJson} onChange={(event) => setAccuracyFeedbackJson(event.target.value)} placeholder='[{"finding_id":"abc","status":"confirmed"},{"finding_id":"def","status":"false_positive"}]' />
                           </FieldLabel>
                         </div>
                       </div>

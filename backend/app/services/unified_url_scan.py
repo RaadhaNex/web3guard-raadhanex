@@ -18,6 +18,7 @@ from app.services.static_analysis_artifacts import analyze_static_artifacts
 from app.services.real_findings_pipeline import build_real_findings_pipeline
 from app.services.accuracy_upgrade import build_accuracy_upgrade_package
 from app.services.detection_expansion import build_detection_expansion_package
+from app.services.deep_evidence_accuracy import build_deep_evidence_accuracy_package
 
 MODULE_LABELS = {
     "website": "Website Surface",
@@ -870,6 +871,31 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "required_input": detection_expansion.get("next_accuracy_steps", [])[:4] if isinstance(detection_expansion, dict) else [],
     })
 
+    deep_evidence_accuracy = await build_deep_evidence_accuracy_package(
+        {"surface_hints": surface_hints, "module_cards": module_cards},
+        payload,
+    )
+    surface_hints["deep_evidence_accuracy"] = deep_evidence_accuracy
+    deep_summary = deep_evidence_accuracy.get("summary", {}) if isinstance(deep_evidence_accuracy, dict) else {}
+    module_cards.append({
+        "module": "deep_evidence_accuracy",
+        "label": "Deep Evidence Accuracy",
+        "status": "Assessed" if int(deep_summary.get("assessed_phase_count") or 0) > 1 else "Needs Evidence",
+        "score": deep_summary.get("evidence_score"),
+        "risk_label": "Evidence-backed findings present" if int(deep_summary.get("total_findings") or 0) else "Needs artifact evidence",
+        "assessed": True,
+        "report_id": None,
+        "findings_count": int(deep_summary.get("total_findings") or 0),
+        "critical_high_count": int(deep_summary.get("critical_high_findings") or 0),
+        "evidence": [
+            "Phase 68-77 deep evidence accuracy layer executed.",
+            f"Evidence findings: {int(deep_summary.get('total_findings') or 0)}",
+            f"Assessed sub-phases: {int(deep_summary.get('assessed_phase_count') or 0)}/10",
+        ],
+        "limitations": deep_evidence_accuracy.get("safe_boundaries", [])[:4] if isinstance(deep_evidence_accuracy, dict) else ["Safe evidence/artifact layer only."],
+        "required_input": deep_evidence_accuracy.get("next_accuracy_steps", [])[:4] if isinstance(deep_evidence_accuracy, dict) else [],
+    })
+
     combined = await build_combined_launch_report(CombinedReportRequest(
         project_name=payload.project_name or urlparse(safe_website_url).hostname or "Web3 project",
         reports=reports,
@@ -887,7 +913,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "report_id": f"W3G-URL-LAUNCH-{_hash(safe_website_url)[:12]}",
         "generated_at": started.isoformat(),
         "project_name": payload.project_name,
-        "engine_version": "web3guard-unified-url-launch-scanner-v20.0-deep-detection-phases-60-67",
+        "engine_version": "web3guard-unified-url-launch-scanner-v21.0-deep-evidence-phases-68-77",
         "mode": "real_only_unified_url_scan",
         "website_url": safe_website_url,
         "chain": payload.chain,
@@ -932,4 +958,5 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
     result["findings_pipeline"] = build_real_findings_pipeline(result)
     result["accuracy_upgrade"] = await build_accuracy_upgrade_package(result, payload)
     result["detection_expansion"] = detection_expansion
+    result["deep_evidence_accuracy"] = deep_evidence_accuracy
     return result
