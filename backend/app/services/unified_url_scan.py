@@ -14,6 +14,7 @@ from app.services.scan_website import scan_website
 from app.services.scan_github_repo import scan_github_repository
 from app.services.scan_contract_address import scan_contract_address
 from app.services.static_analysis_tools import run_static_analysis, static_analysis_status
+from app.services.real_findings_pipeline import build_real_findings_pipeline
 
 MODULE_LABELS = {
     "website": "Website Surface",
@@ -679,7 +680,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
     live_count = sum(1 for card in module_cards if str(card["status"]).lower().startswith("live"))
     score_split = _score_split(module_cards, combined)
 
-    return {
+    result = {
         "report_id": f"W3G-URL-LAUNCH-{_hash(safe_website_url)[:12]}",
         "generated_at": started.isoformat(),
         "project_name": payload.project_name,
@@ -720,3 +721,5 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         ],
         "disclaimer": "This is a preliminary security review and does not replace a full manual audit. URL-only scans are partial by design.",
     }
+    result["findings_pipeline"] = build_real_findings_pipeline(result)
+    return result

@@ -285,6 +285,87 @@ function ApiExposurePanel({ surface }: { surface: SurfaceRecord }) {
   );
 }
 
+
+function RealFindingsPipelinePanel({ pipeline }: { pipeline?: UnifiedUrlScanResponse["findings_pipeline"] }) {
+  if (!pipeline) {
+    return (
+      <section className="rounded-[1.5rem] border border-amber-300/15 bg-amber-300/10 p-5 text-sm leading-7 text-amber-50">
+        <p className="section-label">Phase 45 pipeline</p>
+        <h2 className="mt-2 text-2xl font-black text-white">Real findings pipeline not attached</h2>
+        <p className="mt-3">Re-run the unified scanner after applying Phase 45. Older local scan payloads will not contain pipeline validation.</p>
+      </section>
+    );
+  }
+
+  const realFindings = (pipeline.normalized_findings || []).map(findingFromRecord).filter((item): item is Finding => Boolean(item));
+  const tools = (pipeline.tool_runs || []).filter(isRecord);
+  const moduleStatus = (pipeline.module_status || []).filter(isRecord);
+  const issues = pipeline.integrity?.issues || [];
+  const blockers = pipeline.integrity?.blockers || [];
+
+  return (
+    <section className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="section-label">Phase 45 truth mapping</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Real findings pipeline</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">Checks tool output → parser → module cards → Results → Report/export mapping. Status messages stay separate from vulnerability findings.</p>
+        </div>
+        <span className={`badge ${pipeline.pipeline_ready ? "badge-green" : "badge-amber"}`}>{pipeline.status}</span>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Real findings</p><p className="mt-2 text-2xl font-black text-white">{pipeline.summary.real_findings}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Status msgs</p><p className="mt-2 text-2xl font-black text-white">{pipeline.summary.tool_status_messages}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">C/H findings</p><p className="mt-2 text-2xl font-black text-white">{pipeline.summary.critical_high_findings}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Export gate</p><p className="mt-2 text-sm font-black text-white">{pipeline.export_gate.export_ready ? "Ready" : "Blocked"}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Blockers</p><p className="mt-2 text-2xl font-black text-white">{pipeline.summary.blocker_count}</p></div>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        <article className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+          <h3 className="font-black text-white">Tool run integrity</h3>
+          <div className="mt-3 grid gap-2">
+            {tools.length ? tools.map((tool) => (
+              <div key={asString(tool.tool)} className="flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 text-sm text-slate-300 sm:flex-row sm:items-center sm:justify-between">
+                <span className="font-black capitalize text-white">{asString(tool.tool)}</span>
+                <span className={`badge ${statusClass(asString(tool.state, "Not Assessed"))}`}>{asString(tool.state, "Not Assessed")} · {String(tool.real_findings ?? 0)} finding(s)</span>
+              </div>
+            )) : <p className="text-sm leading-6 text-slate-400">No tool run status exists in this scan payload.</p>}
+          </div>
+        </article>
+        <article className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+          <h3 className="font-black text-white">Module mapping integrity</h3>
+          <div className="mt-3 grid gap-2">
+            {moduleStatus.slice(0, 8).map((module) => (
+              <div key={asString(module.module)} className="flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 text-sm text-slate-300 sm:flex-row sm:items-center sm:justify-between">
+                <span className="font-black text-white">{asString(module.label, asString(module.module))}</span>
+                <span className={`badge ${statusClass(asString(module.state, "Not Assessed"))}`}>{asString(module.state, "Not Assessed")}</span>
+              </div>
+            ))}
+          </div>
+        </article>
+      </div>
+
+      {blockers.length || issues.length ? (
+        <details className="mt-5 rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4 text-sm leading-6 text-amber-50" open={blockers.length > 0}>
+          <summary className="cursor-pointer font-black text-white">Pipeline issues / blockers</summary>
+          <ul className="mt-3 space-y-2">
+            {(blockers.length ? blockers : issues).slice(0, 8).map((issue) => <li key={issue}>• {issue}</li>)}
+          </ul>
+        </details>
+      ) : (
+        <p className="mt-5 rounded-2xl border border-emerald-300/15 bg-emerald-300/10 p-4 text-sm leading-7 text-emerald-50">Pipeline passed: no fake score/tool-output/export blocker detected in this payload.</p>
+      )}
+
+      <div className="mt-5 grid gap-3">
+        {realFindings.slice(0, 6).map((finding) => <FindingCard key={`pipeline-${finding.id}`} finding={finding} />)}
+        {!realFindings.length ? <p className="rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-7 text-slate-400">No normalized vulnerability findings. This can be valid when tools ran clean or evidence was not provided.</p> : null}
+      </div>
+    </section>
+  );
+}
+
 export function ResultsClient() {
   const [result, setResult] = useState<UnifiedUrlScanResponse | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -382,6 +463,7 @@ export function ResultsClient() {
       </section>
 
       <div className="mt-5 grid gap-5">
+        <RealFindingsPipelinePanel pipeline={result.findings_pipeline} />
         <StaticAnalysisPanel surface={surface} />
         <GithubDependencyPanel surface={surface} />
         <ApiExposurePanel surface={surface} />

@@ -282,6 +282,50 @@ export type UnifiedScoreSplit = {
   [key: string]: UnifiedScoreSplitItem | boolean | string | undefined;
 };
 
+
+export type RealFindingsPipeline = {
+  phase: string;
+  engine_version: string;
+  generated_at: string;
+  status: string;
+  pipeline_ready: boolean;
+  real_only_rule: string;
+  summary: {
+    real_findings: number;
+    tool_status_messages: number;
+    modules_assessed: number;
+    modules_not_assessed: number;
+    critical_high_findings: number;
+    export_ready: boolean;
+    blocker_count: number;
+    issue_count: number;
+  };
+  severity_breakdown: Record<Severity, number>;
+  module_breakdown: Record<string, number>;
+  source_breakdown: Record<string, number>;
+  tool_runs: Array<Record<string, unknown>>;
+  module_status: Array<Record<string, unknown>>;
+  normalized_findings: Array<Record<string, unknown>>;
+  tool_status_messages: Array<Record<string, unknown>>;
+  export_gate: {
+    report_id?: string | null;
+    report_hash_present: boolean;
+    delivery_formats: unknown[];
+    json_or_markdown_payload_present: boolean;
+    export_ready: boolean;
+    manual_payment_validation_required: boolean;
+    public_wording?: string | null;
+  };
+  integrity: {
+    passed: boolean;
+    blockers: string[];
+    issues: string[];
+    checks: string[];
+  };
+  next_actions: string[];
+  admin_panel_note: string;
+};
+
 export type UnifiedUrlScanResponse = {
   report_id: string;
   generated_at: string;
@@ -310,6 +354,7 @@ export type UnifiedUrlScanResponse = {
   blocked_claims: string[];
   next_real_inputs_needed: string[];
   disclaimer: string;
+  findings_pipeline?: RealFindingsPipeline;
 };
 
 export type ProjectRecord = {

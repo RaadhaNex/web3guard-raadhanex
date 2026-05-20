@@ -75,10 +75,17 @@ export function ReportCenterClient() {
   const report = exportReadyReport(result);
   const gaps = useMemo(() => missingCards(result?.module_cards ?? []), [result]);
   const hasVerifiedReport = Boolean(report);
+  const pipeline = result?.findings_pipeline;
+  const exportGateReady = Boolean(pipeline?.export_gate?.export_ready);
+  const canExport = Boolean(report) && (!pipeline || (pipeline.pipeline_ready && exportGateReady));
 
   async function exportReport(format: ExportFormat) {
     if (!report) {
       setStatus("Run a real scan first. Export is blocked because no combined report_hash is available.");
+      return;
+    }
+    if (pipeline && (!pipeline.pipeline_ready || !pipeline.export_gate.export_ready)) {
+      setStatus("Export is blocked by Phase 45 pipeline validation. Fix pipeline blockers or rerun the scan before delivery.");
       return;
     }
     setBusy(format);
@@ -148,6 +155,30 @@ export function ReportCenterClient() {
         ))}
       </section>
 
+      <section className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 shadow-2xl shadow-black/20">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="section-label">Phase 45 export integrity</p>
+            <h2 className="mt-2 text-2xl font-black text-white">Report uses real findings pipeline</h2>
+            <p className="mt-2 text-sm leading-7 text-slate-300">Export should unlock only when the latest scan has combined report data, report_hash, and no pipeline blocker. Older saved scans may show “not attached” until rerun.</p>
+          </div>
+          <span className={`badge ${pipeline?.pipeline_ready && exportGateReady ? "badge-green" : "badge-amber"}`}>{pipeline?.pipeline_ready && exportGateReady ? "Pipeline export-ready" : "Needs validation"}</span>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Pipeline</p><p className="mt-2 text-sm font-black text-white">{pipeline?.status || "Not attached"}</p></div>
+          <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Real findings</p><p className="mt-2 text-2xl font-black text-white">{pipeline?.summary.real_findings ?? "—"}</p></div>
+          <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Tool status</p><p className="mt-2 text-2xl font-black text-white">{pipeline?.summary.tool_status_messages ?? "—"}</p></div>
+          <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Blockers</p><p className="mt-2 text-2xl font-black text-white">{pipeline?.summary.blocker_count ?? "—"}</p></div>
+          <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Report hash</p><p className="mt-2 text-sm font-black text-white">{pipeline?.export_gate.report_hash_present ? "Present" : hasVerifiedReport ? "Present" : "Missing"}</p></div>
+        </div>
+        {pipeline?.integrity?.issues?.length ? (
+          <details className="mt-5 rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4 text-sm leading-6 text-amber-50">
+            <summary className="cursor-pointer font-black text-white">Pipeline export issues</summary>
+            <ul className="mt-3 space-y-2">{pipeline.integrity.issues.slice(0, 6).map((issue) => <li key={issue}>• {issue}</li>)}</ul>
+          </details>
+        ) : null}
+      </section>
+
       <section className="mt-5 grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
         <article className="rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 shadow-2xl shadow-black/20">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -160,7 +191,7 @@ export function ReportCenterClient() {
           </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {(["pdf", "html", "markdown", "json"] as ExportFormat[]).map((format) => (
-              <button key={format} className="btn-secondary" onClick={() => void exportReport(format)} disabled={busy !== null || !hasVerifiedReport}>
+              <button key={format} className="btn-secondary" onClick={() => void exportReport(format)} disabled={busy !== null || !canExport}>
                 {busy === format ? "Exporting..." : `Export ${formatName(format)}`}
               </button>
             ))}
