@@ -17,6 +17,7 @@ from app.services.static_analysis_tools import run_static_analysis, static_analy
 from app.services.static_analysis_artifacts import analyze_static_artifacts
 from app.services.real_findings_pipeline import build_real_findings_pipeline
 from app.services.accuracy_upgrade import build_accuracy_upgrade_package
+from app.services.detection_expansion import build_detection_expansion_package
 
 MODULE_LABELS = {
     "website": "Website Surface",
@@ -27,6 +28,7 @@ MODULE_LABELS = {
     "admin_opsec": "Founder/Admin OpSec",
     "github": "GitHub Repository",
     "static_analysis": "Slither / Semgrep Static Analysis",
+    "deep_detection": "Deep Detection Expansion",
 }
 
 REALNESS_MATRIX = [
@@ -621,6 +623,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
     safe_website_url = validate_public_http_url(payload.website_url)
     reports: list[ScanResponse] = []
     module_cards: list[dict] = []
+    github_report_for_expansion: ScanResponse | None = None
     surface_hints: dict = {}
     warnings: list[str] = []
 
@@ -806,6 +809,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
     if payload.github_repo_url:
         try:
             github_report = await scan_github_repository(payload.github_repo_url, project_name=payload.project_name)
+            github_report_for_expansion = github_report
             reports.append(github_report)
             surface_hints["github_dependency_risk"] = _github_dependency_summary(github_report)
             dependency_summary = surface_hints["github_dependency_risk"]
@@ -839,6 +843,33 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         surface_hints["github_dependency_risk"] = _github_dependency_summary(None)
         module_cards.append(_github_not_assessed())
 
+    detection_expansion = await build_detection_expansion_package(
+        website_url=safe_website_url,
+        payload=payload,
+        github_report=github_report_for_expansion,
+        static_summary=surface_hints.get("static_analysis") if isinstance(surface_hints.get("static_analysis"), dict) else None,
+    )
+    surface_hints["deep_detection_expansion"] = detection_expansion
+    expansion_summary = detection_expansion.get("summary", {}) if isinstance(detection_expansion, dict) else {}
+    module_cards.append({
+        "module": "deep_detection",
+        "label": "Deep Detection Expansion",
+        "status": "Assessed" if expansion_summary.get("total_findings", 0) or expansion_summary.get("assessed_phase_count", 0) else "Manual Review Required",
+        "score": None,
+        "risk_label": "Evidence findings present" if expansion_summary.get("total_findings", 0) else "No extra proof findings",
+        "assessed": True,
+        "report_id": None,
+        "findings_count": int(expansion_summary.get("total_findings") or 0),
+        "critical_high_count": int(expansion_summary.get("critical_high_findings") or 0),
+        "evidence": [
+            "Phase 60 same-origin crawler and JS/API endpoint discovery executed.",
+            f"Deep detection findings: {int(expansion_summary.get('total_findings') or 0)}",
+            f"Critical/high: {int(expansion_summary.get('critical_high_findings') or 0)}",
+        ],
+        "limitations": detection_expansion.get("safe_scope", [])[:4] if isinstance(detection_expansion, dict) else ["Safe passive expansion only."],
+        "required_input": detection_expansion.get("next_accuracy_steps", [])[:4] if isinstance(detection_expansion, dict) else [],
+    })
+
     combined = await build_combined_launch_report(CombinedReportRequest(
         project_name=payload.project_name or urlparse(safe_website_url).hostname or "Web3 project",
         reports=reports,
@@ -856,7 +887,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "report_id": f"W3G-URL-LAUNCH-{_hash(safe_website_url)[:12]}",
         "generated_at": started.isoformat(),
         "project_name": payload.project_name,
-        "engine_version": "web3guard-unified-url-launch-scanner-v19.0-accuracy-upgrade-phases-52-58",
+        "engine_version": "web3guard-unified-url-launch-scanner-v20.0-deep-detection-phases-60-67",
         "mode": "real_only_unified_url_scan",
         "website_url": safe_website_url,
         "chain": payload.chain,
@@ -900,4 +931,5 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
     }
     result["findings_pipeline"] = build_real_findings_pipeline(result)
     result["accuracy_upgrade"] = await build_accuracy_upgrade_package(result, payload)
+    result["detection_expansion"] = detection_expansion
     return result

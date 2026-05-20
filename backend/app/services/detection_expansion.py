@@ -1,0 +1,550 @@
+from __future__ import annotations
+
+import hashlib
+import html.parser
+import json
+import re
+from datetime import datetime, timezone
+from typing import Any
+from urllib.parse import urljoin, urlparse
+
+import httpx
+
+from app.core.config import settings
+from app.core.security import validate_public_http_url
+from app.models.schemas import Finding, UnifiedUrlScanRequest
+
+MAX_INTERNAL_PAGES = 8
+MAX_JS_ASSETS = 10
+MAX_BODY_BYTES = 70000
+
+API_PATH_RE = re.compile(r"(?i)(['\"])(/(?:api|v1|v2|graphql|webhook|admin|auth|login|checkout|orders|users|reports|scans)[A-Za-z0-9_./{}?=&:%-]{0,180})\1")
+ABS_API_RE = re.compile(r"(?i)https?://[^'\"\s<>]+/(?:api|v1|v2|graphql|webhook|admin|auth|login|checkout|orders|users|reports|scans)[^'\"\s<>]*")
+SECRET_MARKER_RE = re.compile(r"(?i)(api[_-]?key|secret|token|private[_-]?key|mnemonic|seed[_-]?phrase|service[_-]?role|database_url|db_url|razorpay[_-]?key[_-]?secret|aws[_-]?secret)")
+UNLIMITED_APPROVAL_RE = re.compile(r"(?i)(maxuint256|ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff|115792089237316195423570985008687907853269984665640564039457584007913129639935)")
+ADMIN_PATH_RE = re.compile(r"(?i)(/admin|/dashboard/admin|/super-admin|/internal|/debug|/docs|/openapi|/swagger|/graphql)")
+AUTHLESS_WORDS = {"none", "not required", "public", "no auth", "auth not required", "without auth"}
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _hash(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _safe_json(value: str | None) -> Any:
+    if not value or not value.strip():
+        return None
+    try:
+        return json.loads(value)
+    except Exception as exc:
+        return {"_parse_error": str(exc), "_raw_preview": value[:400]}
+
+
+def _as_list(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return value
+    if value is None:
+        return []
+    return [value]
+
+
+def _as_dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _same_origin(candidate: str, base_url: str) -> bool:
+    try:
+        c = urlparse(urljoin(base_url, candidate))
+        b = urlparse(base_url)
+        return bool(c.hostname and b.hostname and c.hostname.lower() == b.hostname.lower()) and c.scheme in {"http", "https"}
+    except Exception:
+        return False
+
+
+def _normalize_path(path: str) -> str:
+    clean = path.strip().split("#", 1)[0]
+    return clean if clean.startswith("/") else f"/{clean}"
+
+
+def _redact(value: str, limit: int = 650) -> str:
+    text = value[: min(len(value), 4000)]
+    text = re.sub(r"(?i)([a-z0-9_.-]*(?:secret|token|password|private|mnemonic|seed|service_role|database_url|db_url)[a-z0-9_.-]*\s*[:=]\s*['\"]?)([^'\"\n\s]{6,})", r"\1<redacted>", text)
+    text = re.sub(r"0x[a-fA-F0-9]{64}", "0x<redacted-private-key-like-value>", text)
+    text = re.sub(r"sk-[A-Za-z0-9_\-]{16,}", "sk-<redacted>", text)
+    return text[:limit]
+
+
+def _make_finding(
+    *,
+    phase: str,
+    module: str,
+    severity: str,
+    title: str,
+    description: str,
+    evidence: dict[str, Any],
+    recommendation: str,
+    category: str,
+    rule_id: str,
+    confidence: str = "medium",
+) -> dict[str, Any]:
+    fid = f"phase{phase}-{_hash(json.dumps(evidence, sort_keys=True, default=str) + title)[:10]}"
+    return {
+        "id": fid,
+        "phase": phase,
+        "module": module,
+        "severity": severity,
+        "title": title,
+        "description": description,
+        "confidence": confidence,
+        "source": "Web3Guard Phase 60-67 Deep Detection Expansion",
+        "category": category,
+        "rule_id": rule_id,
+        "business_impact": "This finding can affect launch trust, user safety, funds movement, data exposure, or incident readiness depending on the project context.",
+        "developer_explanation": description,
+        "recommendation": recommendation,
+        "raw_evidence": evidence,
+        "paid_review_recommended": severity in {"critical", "high"},
+    }
+
+
+def _finding_model(item: dict[str, Any]) -> Finding:
+    allowed_modules = {
+        "website_advanced", "github", "api_deep", "wallet_risk", "deep_analysis", "static_analysis", "contract", "api", "website"
+    }
+    module = str(item.get("module") or "website_advanced")
+    if module not in allowed_modules:
+        module = "website_advanced"
+    severity = str(item.get("severity") or "info")
+    if severity not in {"critical", "high", "medium", "low", "info"}:
+        severity = "info"
+    confidence = str(item.get("confidence") or "medium")
+    if confidence not in {"high", "medium", "low"}:
+        confidence = "medium"
+    return Finding(
+        id=str(item.get("id") or _hash(str(item))[:12]),
+        module=module,  # type: ignore[arg-type]
+        severity=severity,  # type: ignore[arg-type]
+        title=str(item.get("title") or "Deep detection finding"),
+        description=str(item.get("description") or "Evidence-backed finding generated by the deep detection expansion."),
+        confidence=confidence,  # type: ignore[arg-type]
+        source=str(item.get("source") or "Web3Guard Phase 60-67 Deep Detection Expansion"),
+        category=str(item.get("category") or "deep_detection"),
+        rule_id=str(item.get("rule_id") or "W3G-DEEP-DETECTION"),
+        business_impact=str(item.get("business_impact") or "Review before launch."),
+        developer_explanation=str(item.get("developer_explanation") or item.get("description") or "Review the raw evidence."),
+        recommendation=str(item.get("recommendation") or "Review and fix before production launch."),
+        references=[],
+        paid_review_recommended=bool(item.get("paid_review_recommended")),
+    )
+
+
+class LinkScriptParser(html.parser.HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.links: list[str] = []
+        self.scripts: list[str] = []
+        self.forms: list[dict[str, str]] = []
+        self.iframes: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        tag_name = tag.lower()
+        attr = {k.lower(): v or "" for k, v in attrs}
+        if tag_name == "a" and attr.get("href"):
+            self.links.append(attr["href"])
+        elif tag_name == "script" and attr.get("src"):
+            self.scripts.append(attr["src"])
+        elif tag_name == "form":
+            self.forms.append(attr)
+        elif tag_name == "iframe" and attr.get("src"):
+            self.iframes.append(attr["src"])
+
+
+def _extract_links_scripts(html: str, final_url: str) -> dict[str, Any]:
+    parser = LinkScriptParser()
+    try:
+        parser.feed(html[:MAX_BODY_BYTES])
+    except Exception:
+        pass
+    internal_links = []
+    for href in parser.links:
+        absolute = urljoin(final_url, href)
+        if _same_origin(absolute, final_url) and urlparse(absolute).path not in {"", "/"}:
+            internal_links.append(absolute)
+    scripts = [urljoin(final_url, src) for src in parser.scripts if _same_origin(src, final_url)]
+    return {
+        "internal_links": sorted(set(internal_links))[:MAX_INTERNAL_PAGES],
+        "same_origin_scripts": sorted(set(scripts))[:MAX_JS_ASSETS],
+        "form_actions": [urljoin(final_url, item.get("action", "")) for item in parser.forms[:10]],
+        "iframes": [urljoin(final_url, src) for src in parser.iframes[:10]],
+    }
+
+
+def _extract_endpoint_hints(text: str, base_url: str) -> list[dict[str, Any]]:
+    found: dict[str, dict[str, Any]] = {}
+    sample = text[:MAX_BODY_BYTES]
+    for match in API_PATH_RE.finditer(sample):
+        path = _normalize_path(match.group(2))
+        if len(path) > 2:
+            found[path] = {"endpoint": path, "absolute_url": urljoin(base_url, path), "source": "relative_string_literal"}
+    for match in ABS_API_RE.finditer(sample):
+        url = match.group(0).rstrip("),;]")
+        if _same_origin(url, base_url):
+            found[urlparse(url).path or url] = {"endpoint": urlparse(url).path or url, "absolute_url": url, "source": "absolute_same_origin_url"}
+    return list(found.values())[:40]
+
+
+async def _fetch_text(client: httpx.AsyncClient, url: str) -> dict[str, Any]:
+    try:
+        safe = validate_public_http_url(url)
+        response = await client.get(safe, follow_redirects=True)
+        body = response.text[:MAX_BODY_BYTES] if response.content else ""
+        return {"url": safe, "status_code": response.status_code, "content_type": response.headers.get("content-type"), "body": body, "error": None}
+    except Exception as exc:
+        return {"url": url, "status_code": None, "content_type": None, "body": "", "error": str(exc)}
+
+
+async def _phase60_deep_website(base_url: str) -> dict[str, Any]:
+    findings: list[dict[str, Any]] = []
+    crawled_pages: list[dict[str, Any]] = []
+    js_assets: list[dict[str, Any]] = []
+    endpoint_hints: list[dict[str, Any]] = []
+    hidden_surface_hints: list[dict[str, Any]] = []
+
+    timeout = httpx.Timeout(min(float(getattr(settings, "website_scan_timeout_seconds", 8)), 12.0))
+    headers = {"User-Agent": "Web3GuardAI-DeepDiscovery/60.0 (safe-passive; no exploit payloads)"}
+    async with httpx.AsyncClient(timeout=timeout, headers=headers) as client:
+        home = await _fetch_text(client, base_url)
+        crawled_pages.append({k: v for k, v in home.items() if k != "body"})
+        discovered = _extract_links_scripts(str(home.get("body") or ""), str(home.get("url") or base_url))
+        endpoint_hints.extend(_extract_endpoint_hints(str(home.get("body") or ""), str(home.get("url") or base_url)))
+
+        for page_url in discovered["internal_links"][:MAX_INTERNAL_PAGES]:
+            page = await _fetch_text(client, page_url)
+            crawled_pages.append({k: v for k, v in page.items() if k != "body"})
+            endpoint_hints.extend(_extract_endpoint_hints(str(page.get("body") or ""), page_url))
+            lower = str(page.get("body") or "")[:10000].lower()
+            if page.get("status_code") == 200 and ADMIN_PATH_RE.search(urlparse(page_url).path):
+                hidden_surface_hints.append({"url": page_url, "status_code": 200, "kind": "admin_or_docs_route"})
+            if SECRET_MARKER_RE.search(lower):
+                findings.append(_make_finding(
+                    phase="60",
+                    module="website_advanced",
+                    severity="medium",
+                    title="Internal Page Contains Secret-Like Marker",
+                    description="A same-origin public page contained secret/token/private-key style text markers. This is a real content observation, not proof that a valid secret is exposed.",
+                    evidence={"url": page_url, "status_code": page.get("status_code"), "redacted_preview": _redact(str(page.get("body") or ""))},
+                    recommendation="Manually verify the page content and remove any real secrets/tokens from public frontend output.",
+                    category="frontend_content_marker",
+                    rule_id="PH60-PAGE-SECRET-MARKER",
+                    confidence="medium",
+                ))
+
+        for script_url in discovered["same_origin_scripts"][:MAX_JS_ASSETS]:
+            js = await _fetch_text(client, script_url)
+            endpoints = _extract_endpoint_hints(str(js.get("body") or ""), script_url)
+            endpoint_hints.extend(endpoints)
+            secret_markers = sorted(set(SECRET_MARKER_RE.findall(str(js.get("body") or "")[:50000])))
+            js_entry = {"url": script_url, "status_code": js.get("status_code"), "endpoint_hints": len(endpoints), "secret_marker_count": len(secret_markers)}
+            js_assets.append(js_entry)
+            if secret_markers:
+                findings.append(_make_finding(
+                    phase="60",
+                    module="website_advanced",
+                    severity="high",
+                    title="Public JavaScript Contains Secret-Like Marker",
+                    description="A same-origin public JavaScript asset contains secret/token/private-key style identifiers. This requires manual review and removal if real secrets are present.",
+                    evidence={"script": script_url, "markers": secret_markers[:6], "redacted_preview": _redact(str(js.get("body") or ""))},
+                    recommendation="Move sensitive keys to backend-only env variables. Public JS may contain public IDs, but secrets/private keys must never be bundled.",
+                    category="frontend_js_secret_marker",
+                    rule_id="PH60-JS-SECRET-MARKER",
+                    confidence="medium",
+                ))
+
+    endpoint_keys = {item.get("absolute_url") or item.get("endpoint") for item in endpoint_hints}
+    endpoint_hints = [item for item in endpoint_hints if item.get("absolute_url") or item.get("endpoint")]
+    if len(endpoint_keys) >= 8:
+        findings.append(_make_finding(
+            phase="60",
+            module="website_advanced",
+            severity="low",
+            title="Multiple API/Admin Endpoint Hints Found In Frontend",
+            description="The crawler extracted multiple same-origin API/admin route hints from public pages/assets. This is useful attack-surface evidence, not proof of unauthorized access.",
+            evidence={"endpoint_count": len(endpoint_keys), "sample_endpoints": endpoint_hints[:12]},
+            recommendation="Review every exposed endpoint for authentication, object authorization, rate limits, and sensitive response fields.",
+            category="endpoint_discovery",
+            rule_id="PH60-ENDPOINT-DISCOVERY",
+            confidence="high",
+        ))
+
+    return {
+        "phase": "60",
+        "engine": "Deep Website Crawler + JS/API Endpoint Discovery",
+        "state": "Assessed",
+        "safe_scope": "Same-origin GET-only crawl of a small number of pages/assets. No payloads, fuzzing, login, brute force, or exploit automation.",
+        "crawled_pages": crawled_pages[:MAX_INTERNAL_PAGES + 1],
+        "js_assets": js_assets[:MAX_JS_ASSETS],
+        "endpoint_hints": endpoint_hints[:40],
+        "hidden_surface_hints": hidden_surface_hints[:20],
+        "findings": findings,
+    }
+
+
+def _phase61_github_deep(github_report: Any | None) -> dict[str, Any]:
+    if not github_report:
+        return {"phase": "61", "engine": "GitHub Repo Deep Risk Scanner", "state": "Not Assessed", "required_input": ["Public GitHub repo URL"], "findings": []}
+    metadata = getattr(github_report, "scan_metadata", {}) or {}
+    structure = _as_dict(metadata.get("structure_summary"))
+    manifests = _as_list(metadata.get("dependency_manifests"))
+    findings = []
+    if structure.get("workflow_count") and not structure.get("security_policy_count"):
+        findings.append(_make_finding(
+            phase="61", module="github", severity="low", title="CI/CD Workflows Present Without Security Policy Evidence",
+            description="The repository appears to include CI/CD workflow evidence but no security policy evidence was captured.",
+            evidence={"structure_summary": structure}, recommendation="Add SECURITY.md/security policy and review GitHub Actions permissions/secrets usage.",
+            category="repo_governance", rule_id="PH61-CICD-NO-SECURITY-POLICY", confidence="medium"))
+    if not manifests:
+        findings.append(_make_finding(
+            phase="61", module="github", severity="info", title="No Dependency Manifest Captured",
+            description="No package/lockfile dependency manifest was captured from the repository evidence.",
+            evidence={"repo": metadata.get("repo"), "structure_summary": structure}, recommendation="Provide repo branch/files or lockfiles so OSV/dependency analysis can run.",
+            category="dependency_visibility", rule_id="PH61-NO-MANIFEST", confidence="medium"))
+    return {
+        "phase": "61",
+        "engine": "GitHub Repo Deep Risk Scanner",
+        "state": "Assessed",
+        "repo": metadata.get("repo", {}),
+        "structure_summary": structure,
+        "dependency_manifest_count": len(manifests),
+        "findings": findings,
+        "note": "Uses already fetched public GitHub metadata/content. No clone, install, execution, or private repo access.",
+    }
+
+
+def _phase62_api_auth(payload: UnifiedUrlScanRequest) -> dict[str, Any]:
+    openapi = _safe_json(payload.openapi_json)
+    observations = _safe_json(payload.api_observations_json)
+    findings: list[dict[str, Any]] = []
+    paths = _as_dict(_as_dict(openapi).get("paths")) if isinstance(openapi, dict) else {}
+    unauth_admin = []
+    unauth_webhook = []
+    for path, methods in paths.items():
+        methods_dict = _as_dict(methods)
+        for method, spec in methods_dict.items():
+            spec_dict = _as_dict(spec)
+            security = spec_dict.get("security", "__missing__")
+            entry = {"method": str(method).upper(), "path": path, "security": security}
+            security_missing = security in {None, "__missing__"} or security == []
+            if ADMIN_PATH_RE.search(path) and security_missing:
+                unauth_admin.append(entry)
+            if "webhook" in path.lower() and security_missing:
+                unauth_webhook.append(entry)
+    if unauth_admin:
+        findings.append(_make_finding(
+            phase="62", module="api_deep", severity="high", title="OpenAPI Shows Admin/Internal Route Without Security Requirement",
+            description="A supplied OpenAPI document lists admin/internal-looking endpoints without a security requirement.",
+            evidence={"routes": unauth_admin[:10]}, recommendation="Require authentication/authorization on admin/internal routes and document security schemes in OpenAPI.",
+            category="api_auth_design", rule_id="PH62-OPENAPI-ADMIN-NO-SECURITY", confidence="medium"))
+    if unauth_webhook:
+        findings.append(_make_finding(
+            phase="62", module="api_deep", severity="high", title="OpenAPI Shows Webhook Route Without Security Requirement",
+            description="A supplied OpenAPI document lists webhook endpoints without security requirements.",
+            evidence={"routes": unauth_webhook[:10]}, recommendation="Verify webhook signatures using raw body + shared secret before accepting state changes.",
+            category="webhook_auth", rule_id="PH62-OPENAPI-WEBHOOK-NO-SECURITY", confidence="medium"))
+    for obs in _as_list(observations):
+        record = _as_dict(obs)
+        status = int(record.get("status") or record.get("status_code") or 0) if str(record.get("status") or record.get("status_code") or "0").isdigit() else 0
+        route = str(record.get("path") or record.get("endpoint") or record.get("url") or "")
+        auth = str(record.get("auth") or record.get("auth_required") or "").lower()
+        if status == 200 and ADMIN_PATH_RE.search(route) and auth in AUTHLESS_WORDS:
+            findings.append(_make_finding(
+                phase="62", module="api_deep", severity="critical", title="Observation Indicates Public Admin/Internal Endpoint",
+                description="A user-supplied API observation shows an admin/internal-looking endpoint returning 200 without auth.",
+                evidence=record, recommendation="Confirm with authorized tests, then require auth/role checks and return 401/403 for unauthenticated requests.",
+                category="api_observed_public_admin", rule_id="PH62-OBS-PUBLIC-ADMIN", confidence="high"))
+    state = "Assessed" if openapi or observations else ("Manual Review Required" if payload.api_base_url else "Not Assessed")
+    return {"phase": "62", "engine": "OpenAPI/Auth Evidence API Tester", "state": state, "paths_seen": len(paths), "findings": findings, "parse_errors": [item for item in [openapi, observations] if isinstance(item, dict) and item.get("_parse_error")]}
+
+
+def _phase63_static_runner(payload: UnifiedUrlScanRequest, static_summary: dict[str, Any] | None) -> dict[str, Any]:
+    tools = _as_list(_as_dict(static_summary).get("tools")) if static_summary else []
+    findings = []
+    has_source = bool(payload.solidity_code or payload.contract_address)
+    parsed_artifact_findings = sum(int(_as_dict(tool).get("real_findings") or 0) for tool in tools)
+    state = "Assessed" if parsed_artifact_findings or has_source else "Not Assessed"
+    if has_source and not tools:
+        findings.append(_make_finding(
+            phase="63", module="static_analysis", severity="info", title="Contract Evidence Present But No External Static Tool Output Attached",
+            description="Contract/source evidence was present, but Slither/Semgrep/Aderyn output was not visible in this scan package.",
+            evidence={"has_solidity_source": bool(payload.solidity_code), "has_contract_address": bool(payload.contract_address)}, recommendation="Run backend Slither/Semgrep or paste valid JSON artifacts to improve static-analysis depth.",
+            category="static_analysis_coverage", rule_id="PH63-NO-EXTERNAL-STATIC-OUTPUT", confidence="medium"))
+    return {"phase": "63", "engine": "Smart Contract Compile + Static Tool Runner Hardening", "state": state, "tool_evidence": tools, "parsed_artifact_findings": parsed_artifact_findings, "findings": findings}
+
+
+def _phase64_wallet(payload: UnifiedUrlScanRequest) -> dict[str, Any]:
+    wallet = _safe_json(payload.wallet_evidence_json)
+    signatures = _safe_json(payload.signature_samples_json)
+    transactions = _safe_json(payload.transaction_samples_json)
+    findings: list[dict[str, Any]] = []
+    for tx in _as_list(transactions):
+        record = _as_dict(tx)
+        text = json.dumps(record, default=str)
+        method = str(record.get("method") or record.get("function") or record.get("name") or "")
+        if re.search(r"(?i)(approve|setApprovalForAll|permit|permit2)", method + text) and UNLIMITED_APPROVAL_RE.search(text):
+            findings.append(_make_finding(
+                phase="64", module="wallet_risk", severity="high", title="Transaction Sample Indicates Unlimited Approval Risk",
+                description="A supplied transaction sample appears to request unlimited approval or all-assets approval.",
+                evidence=record, recommendation="Show spender, token, amount, chain, and risk warning in the wallet UX. Prefer exact allowance and allow revoke instructions.",
+                category="wallet_approval_risk", rule_id="PH64-UNLIMITED-APPROVAL", confidence="high"))
+    for sig in _as_list(signatures):
+        record = _as_dict(sig)
+        msg = str(record.get("message") or record.get("typedData") or record.get("data") or "")
+        if msg.startswith("0x") and len(msg) > 40:
+            findings.append(_make_finding(
+                phase="64", module="wallet_risk", severity="medium", title="Signature Sample Uses Opaque Hex Message",
+                description="A supplied signature sample looks like raw hex data, which can be unclear to users.",
+                evidence={"sample": _redact(msg, 220)}, recommendation="Use EIP-712 typed data with human-readable domain, action, chain, and expiry.",
+                category="wallet_signature_clarity", rule_id="PH64-OPAQUE-SIGNATURE", confidence="medium"))
+    state = "Assessed" if wallet or signatures or transactions else "Manual Review Required"
+    return {"phase": "64", "engine": "Wallet Transaction/Signature Risk Decoder", "state": state, "findings": findings, "evidence_present": {"wallet": bool(wallet), "signatures": bool(signatures), "transactions": bool(transactions)}}
+
+
+def _phase65_business_logic(payload: UnifiedUrlScanRequest) -> dict[str, Any]:
+    context = _safe_json(payload.business_context_json)
+    findings: list[dict[str, Any]] = []
+    review_items = []
+    ctx = _as_dict(context)
+    flows = _as_list(ctx.get("critical_flows")) + _as_list(ctx.get("flows"))
+    lower = json.dumps(ctx, default=str).lower() if ctx else ""
+    checks = [
+        ("payment", "Can report/export/subscription unlock occur without verified payment/webhook?"),
+        ("object", "Can user A access user B project/scan/report object ID?"),
+        ("referral", "Can referral/reward/credit be claimed twice?"),
+        ("admin", "Can non-admin call admin actions?"),
+        ("refund", "Can refund/cancel flow be abused after service delivery?"),
+    ]
+    for keyword, question in checks:
+        if keyword in lower or any(keyword in str(flow).lower() for flow in flows):
+            review_items.append({"category": keyword, "question": question, "status": "manual_test_required"})
+    if ctx and not _as_list(ctx.get("roles")):
+        findings.append(_make_finding(
+            phase="65", module="api_deep", severity="medium", title="Business Logic Context Missing Role Model",
+            description="Business context was supplied but no roles/permissions model was included.",
+            evidence={"provided_keys": sorted(ctx.keys())[:20]}, recommendation="Add roles, permissions, critical actions, asset ownership, and expected authorization outcomes before manual review.",
+            category="business_logic_context_gap", rule_id="PH65-MISSING-ROLE-MODEL", confidence="medium"))
+    state = "Assessed" if ctx else "Manual Review Required"
+    return {"phase": "65", "engine": "Business Logic + Payment Abuse Review Builder", "state": state, "review_items": review_items, "findings": findings}
+
+
+def _phase66_defi(payload: UnifiedUrlScanRequest) -> dict[str, Any]:
+    simulation = _safe_json(payload.defi_simulation_json)
+    protocol = _safe_json(payload.protocol_context_json)
+    findings: list[dict[str, Any]] = []
+    for item in _as_list(_as_dict(simulation).get("invariants")) + _as_list(_as_dict(simulation).get("results")):
+        record = _as_dict(item)
+        passed = record.get("passed")
+        if passed is False or str(record.get("status") or "").lower() in {"failed", "fail", "broken"}:
+            findings.append(_make_finding(
+                phase="66", module="deep_analysis", severity="high", title="DeFi Invariant/Simulation Artifact Shows Failure",
+                description="A supplied local/testnet simulation artifact contains a failed invariant/result.",
+                evidence=record, recommendation="Reproduce locally, isolate the condition, add regression tests, and manually review economic assumptions before launch.",
+                category="defi_invariant_failure", rule_id="PH66-INVARIANT-FAILED", confidence="high"))
+    proto = _as_dict(protocol)
+    if proto.get("uses_oracle") and not proto.get("oracle_twap") and not proto.get("oracle_bounds"):
+        findings.append(_make_finding(
+            phase="66", module="deep_analysis", severity="medium", title="Oracle Risk Context Needs TWAP/Bounds Evidence",
+            description="Protocol context says oracle usage exists, but no TWAP/bounds/guard evidence was supplied.",
+            evidence=proto, recommendation="Document oracle source, TWAP/window, bounds checks, fallback mode, and manipulation assumptions.",
+            category="defi_oracle_review", rule_id="PH66-ORACLE-CONTEXT-GAP", confidence="medium"))
+    state = "Assessed" if simulation or protocol else "Manual Review Required"
+    return {"phase": "66", "engine": "DeFi Invariant/Simulation Artifact Analyzer", "state": state, "findings": findings}
+
+
+def _phase67_false_positive(payload: UnifiedUrlScanRequest, findings: list[dict[str, Any]]) -> dict[str, Any]:
+    review = _safe_json(payload.review_context_json)
+    ctx = _as_dict(review)
+    triaged = _as_list(ctx.get("triaged_findings")) or _as_list(ctx.get("findings"))
+    counts: dict[str, int] = {}
+    for item in triaged:
+        status = str(_as_dict(item).get("status") or "untriaged").lower().replace(" ", "_")
+        counts[status] = counts.get(status, 0) + 1
+    confirmed = counts.get("confirmed", 0) + counts.get("fixed", 0)
+    false_positive = counts.get("false_positive", 0)
+    precision = round((confirmed / (confirmed + false_positive)) * 100, 2) if (confirmed + false_positive) else None
+    return {
+        "phase": "67",
+        "engine": "False Positive Learning + Accuracy Dashboard",
+        "state": "Assessed" if triaged else "Manual Review Required",
+        "triage_counts": counts,
+        "estimated_precision_from_triage_percent": precision,
+        "untriaged_current_findings": len(findings),
+        "learning_rule": "Only user/reviewer triage changes accuracy metrics. The scanner does not self-certify correctness.",
+    }
+
+
+def _severity_counts(findings: list[dict[str, Any]]) -> dict[str, int]:
+    counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
+    for item in findings:
+        sev = str(item.get("severity") or "info")
+        counts[sev if sev in counts else "info"] += 1
+    return counts
+
+
+async def build_detection_expansion_package(
+    *,
+    website_url: str,
+    payload: UnifiedUrlScanRequest,
+    github_report: Any | None = None,
+    static_summary: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    phase60 = await _phase60_deep_website(website_url)
+    phase61 = _phase61_github_deep(github_report)
+    phase62 = _phase62_api_auth(payload)
+    phase63 = _phase63_static_runner(payload, static_summary)
+    phase64 = _phase64_wallet(payload)
+    phase65 = _phase65_business_logic(payload)
+    phase66 = _phase66_defi(payload)
+
+    phases_without_67 = [phase60, phase61, phase62, phase63, phase64, phase65, phase66]
+    findings: list[dict[str, Any]] = []
+    for phase in phases_without_67:
+        findings.extend(_as_list(phase.get("findings")))
+    phase67 = _phase67_false_positive(payload, findings)
+    phases = {f"phase_{phase['phase']}": phase for phase in [*phases_without_67, phase67]}
+    confirmed = [item for item in findings if item.get("confidence") == "high" and item.get("severity") in {"critical", "high"}]
+    return {
+        "phase_range": "60-67",
+        "engine_version": "deep-detection-expansion-v1.0",
+        "generated_at": _now_iso(),
+        "real_only_rule": "Every finding in this package comes from passive same-origin crawl evidence, supplied GitHub/static/API/wallet/business/DeFi artifacts, or reviewer triage. Missing proof stays Not Assessed or Manual Review Required.",
+        "safe_scope": [
+            "No brute force, credential stuffing, DoS, destructive payloads, wallet signing, private-key collection, or unauthorized active scanning.",
+            "Website discovery uses bounded same-origin GET requests and public assets only.",
+            "Business logic and DeFi findings require supplied context/artifacts or manual reviewer confirmation.",
+        ],
+        "phases": phases,
+        "summary": {
+            "total_findings": len(findings),
+            "critical_high_findings": sum(1 for item in findings if item.get("severity") in {"critical", "high"}),
+            "confirmed_high_confidence_findings": len(confirmed),
+            "severity_breakdown": _severity_counts(findings),
+            "assessed_phase_count": sum(1 for phase in phases_without_67 if phase.get("state") == "Assessed"),
+            "manual_or_not_assessed_phase_count": sum(1 for phase in phases_without_67 if phase.get("state") != "Assessed"),
+        },
+        "normalized_findings": findings[:80],
+        "finding_models": [_finding_model(item).model_dump(mode="json") for item in findings[:80]],
+        "next_accuracy_steps": [
+            "Provide GitHub repo + lockfiles for dependency and OSV evidence.",
+            "Provide OpenAPI + safe observations for API/auth evidence.",
+            "Provide wallet transaction/signature samples for wallet UX risk decoding.",
+            "Provide business logic context and reviewer triage for false-positive reduction.",
+            "Provide local Foundry/Echidna simulation artifacts for DeFi/economic review.",
+        ],
+        "blocked_claims": [
+            "Do not claim all bugs were found.",
+            "Do not claim certified audit or audit-company replacement.",
+            "Do not call review questions confirmed vulnerabilities without proof.",
+        ],
+    }

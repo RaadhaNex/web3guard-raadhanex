@@ -415,6 +415,7 @@ function buildInlineReportFromResult(result: UnifiedUrlScanResponse) {
       limitations: card.limitations || [],
     })),
     dynamic_score_trace: result.dynamic_score_trace || result.real_evidence_summary?.dynamic_score_trace || null,
+    detection_expansion: (result as unknown as { detection_expansion?: unknown }).detection_expansion || null,
     executive_summary: result.safe_public_summary || combined.executive_summary || "Preliminary launch-surface report generated from scanner evidence.",
     risk_narrative: result.realness_rule || combined.risk_narrative || "Only assessed modules receive scores. Missing modules remain Not Assessed.",
     limitations: [
@@ -447,6 +448,7 @@ function buildInlineReportFromResult(result: UnifiedUrlScanResponse) {
     evidence_required: report.evidence_required,
     evidence_summary: report.evidence_summary,
     dynamic_score_trace: report.dynamic_score_trace,
+    detection_expansion: report.detection_expansion,
     limitations: report.limitations,
     disclaimer: report.disclaimer,
   };

@@ -79,7 +79,17 @@ function missingCards(cards: UnifiedModuleCard[]) {
 
 function exportReadyReport(result: UnifiedUrlScanResponse | null): CombinedLaunchReport | null {
   if (!result?.combined_report?.report_id || !result.combined_report.report_hash) return null;
-  return result.combined_report;
+  const extras = result as unknown as { accuracy_upgrade?: unknown; detection_expansion?: unknown; bug_detection_coverage?: unknown; real_evidence_summary?: unknown };
+  return {
+    ...result.combined_report,
+    json_export: {
+      ...(result.combined_report.json_export || {}),
+      accuracy_upgrade: extras.accuracy_upgrade ?? null,
+      detection_expansion: extras.detection_expansion ?? null,
+      bug_detection_coverage: extras.bug_detection_coverage ?? null,
+      real_evidence_summary: extras.real_evidence_summary ?? null,
+    },
+  };
 }
 
 function BugCoverageReportCard({ result }: { result: UnifiedUrlScanResponse | null }) {
@@ -146,6 +156,44 @@ function AccuracyUpgradeReportCard({ result }: { result: UnifiedUrlScanResponse 
         <summary className="cursor-pointer font-black text-white">Raw accuracy package</summary>
         <pre className="mt-4 max-h-[360px] overflow-auto text-xs">{formatJson(accuracy)}</pre>
       </details>
+    </section>
+  );
+}
+
+function DetectionExpansionReportCard({ result }: { result: UnifiedUrlScanResponse | null }) {
+  const expansion = asRecord((result as unknown as { detection_expansion?: unknown } | null)?.detection_expansion);
+  if (!Object.keys(expansion).length) return null;
+  const summary = asRecord(expansion.summary);
+  const phases = Object.entries(asRecord(expansion.phases));
+  return (
+    <section className="mt-5 rounded-[1.5rem] border border-purple-300/15 bg-purple-300/[0.045] p-5 shadow-2xl shadow-black/20">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="section-label">Phases 60–67 deep coverage</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Deep detection expansion attached</h2>
+          <p className="mt-2 text-sm leading-7 text-slate-300">{asString(expansion.real_only_rule, "Every finding needs real evidence or supplied artifacts.")}</p>
+        </div>
+        <Link href="/detection-expansion" className="btn-secondary">Open hub</Link>
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Deep findings</p><p className="mt-2 text-2xl font-black text-white">{String(summary.total_findings ?? 0)}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Critical/high</p><p className="mt-2 text-2xl font-black text-white">{String(summary.critical_high_findings ?? 0)}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Assessed phases</p><p className="mt-2 text-2xl font-black text-white">{String(summary.assessed_phase_count ?? "—")}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">High-confidence</p><p className="mt-2 text-2xl font-black text-white">{String(summary.confirmed_high_confidence_findings ?? 0)}</p></div>
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {phases.map(([key, value]) => {
+          const phase = asRecord(value);
+          return (
+            <article key={key} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{key}</p>
+              <h3 className="mt-2 font-black text-white">{asString(phase.engine, key)}</h3>
+              <p className="mt-2 text-sm text-slate-300">State: <b>{asString(phase.state, "Not Assessed")}</b></p>
+              <p className="mt-1 text-sm text-slate-300">Findings: <b>{asArray(phase.findings).length}</b></p>
+            </article>
+          );
+        })}
+      </div>
     </section>
   );
 }
@@ -246,6 +294,7 @@ export function ReportCenterClient() {
 
       <BugCoverageReportCard result={result} />
       <AccuracyUpgradeReportCard result={result} />
+      <DetectionExpansionReportCard result={result} />
 
       <section className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 shadow-2xl shadow-black/20">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

@@ -398,6 +398,68 @@ function AccuracyUpgradePanel({ accuracy }: { accuracy?: unknown }) {
   );
 }
 
+function DeepDetectionExpansionPanel({ expansion }: { expansion?: unknown }) {
+  const root = asRecord(expansion);
+  if (!Object.keys(root).length) {
+    return (
+      <section className="rounded-[1.5rem] border border-amber-300/15 bg-amber-300/10 p-5 text-sm leading-7 text-amber-50">
+        <p className="section-label">Phases 60–67</p>
+        <h2 className="mt-2 text-2xl font-black text-white">Deep detection expansion not attached</h2>
+        <p className="mt-3">Run a fresh unified scan after applying Phase 60–67.</p>
+      </section>
+    );
+  }
+  const summary = asRecord(root.summary);
+  const phases = Object.entries(asRecord(root.phases));
+  const findings = asArray(root.normalized_findings).map(findingFromRecord).filter((item): item is Finding => Boolean(item));
+  return (
+    <section className="rounded-[1.5rem] border border-purple-300/15 bg-purple-300/[0.045] p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="section-label">Phases 60–67 deep coverage</p>
+          <h2 className="mt-2 text-2xl font-black text-white">More bug discovery from real evidence</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-300">{asString(root.real_only_rule, "Evidence-backed findings only. Missing proof stays Not Assessed.")}</p>
+        </div>
+        <Link href="/detection-expansion" className="btn-secondary">Open hub</Link>
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Deep findings</p><p className="mt-2 text-2xl font-black text-white">{String(summary.total_findings ?? findings.length)}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Critical/high</p><p className="mt-2 text-2xl font-black text-white">{String(summary.critical_high_findings ?? 0)}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Assessed phases</p><p className="mt-2 text-2xl font-black text-white">{String(summary.assessed_phase_count ?? "—")}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">High-confidence</p><p className="mt-2 text-2xl font-black text-white">{String(summary.confirmed_high_confidence_findings ?? 0)}</p></div>
+      </div>
+      {phases.length ? (
+        <div className="mt-5 grid gap-3 lg:grid-cols-2">
+          {phases.map(([key, value]) => {
+            const phase = asRecord(value);
+            const phaseFindings = asArray(phase.findings).length;
+            return (
+              <article key={key} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="font-black text-white">{asString(phase.engine, key)}</h3>
+                  <span className={`badge ${statusClass(asString(phase.state, "Not Assessed"))}`}>{asString(phase.state, "Not Assessed")}</span>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-slate-300">Findings/proofs: <b className="text-white">{phaseFindings}</b></p>
+              </article>
+            );
+          })}
+        </div>
+      ) : null}
+      {findings.length ? (
+        <div className="mt-5 grid gap-3">
+          {findings.slice(0, 14).map((finding) => <FindingCard key={`deep-${finding.id}`} finding={finding} />)}
+        </div>
+      ) : (
+        <p className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-7 text-slate-400">No extra deep detection findings were produced from the supplied evidence. This does not mean all bugs are absent; it means this layer found no proof-backed items.</p>
+      )}
+      <details className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-6 text-slate-300">
+        <summary className="cursor-pointer font-black text-white">Raw Phase 60–67 package</summary>
+        <pre className="mt-4 max-h-[420px] overflow-auto text-xs text-slate-300">{formatJson(root)}</pre>
+      </details>
+    </section>
+  );
+}
+
 function RealFindingsPipelinePanel({ pipeline }: { pipeline?: UnifiedUrlScanResponse["findings_pipeline"] }) {
   if (!pipeline) {
     return (
@@ -690,6 +752,7 @@ export function ResultsClient() {
 
       <div className="mt-5 grid gap-5">
         <AccuracyUpgradePanel accuracy={(result as unknown as { accuracy_upgrade?: unknown }).accuracy_upgrade} />
+        <DeepDetectionExpansionPanel expansion={(result as unknown as { detection_expansion?: unknown }).detection_expansion} />
         <RealFindingsPipelinePanel pipeline={result.findings_pipeline} />
         <StaticAnalysisPanel surface={surface} />
         <GithubDependencyPanel surface={surface} />
