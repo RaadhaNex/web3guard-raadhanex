@@ -1,49 +1,96 @@
 import Link from "next/link";
 import { ScannerResultsClient } from "@/components/results/ScannerResultsClient";
 
-const states = [
-  ["Assessed", "A real rule, tool, provider, or supplied evidence produced a check."],
-  ["Not Assessed", "The module was not checked and must not be treated as passed."],
-  ["Tool Not Installed", "The worker/runtime does not have the required tool available."],
-  ["Needs API Key", "The provider exists, but backend credentials are not configured."],
-  ["Provider Not Configured", "External provider checks are intentionally unavailable until setup is complete."],
-  ["Manual Review Required", "Human review is needed before launch or payment decisions."],
+const resultStates = [
+  {
+    title: "Assessed",
+    label: "Evidence found",
+    text: "A configured tool, imported evidence, or safe backend rule reviewed this area.",
+  },
+  {
+    title: "Not Assessed",
+    label: "No guessing",
+    text: "No evidence was supplied, so Web3Guard keeps the module visible instead of inventing a pass.",
+  },
+  {
+    title: "Needs API Key",
+    label: "Provider missing",
+    text: "The provider exists but cannot run until the backend is configured with the required key.",
+  },
+  {
+    title: "Manual Review",
+    label: "Human check",
+    text: "Launch-critical decisions stay marked for founder or reviewer verification.",
+  },
+];
+
+const signalCards = [
+  ["Findings", "Real issues only", "Imported Slither, safe dependency signals, and backend rules stay traceable."],
+  ["Gaps", "Visible missing coverage", "Unavailable tools become Not Assessed, Tool Not Installed, or Provider Not Configured."],
+  ["Actions", "Prioritized fix path", "The result screen separates blockers, next fixes, and report-ready evidence."],
 ];
 
 export const metadata = {
   title: "Results | Web3Guard AI",
-  description: "Normalize scanner findings, advisories, risk intelligence, Not Assessed modules, and pilot report output without fake certainty.",
+  description: "Premium result console for Web3Guard AI pre-audit readiness findings, gaps, and report actions.",
 };
 
 export default function ResultsPage() {
   return (
-    <main className="cinematic-page-shell mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-      <section className="cinematic-page-hero clean-panel cinematic-panel p-6 sm:p-8">
-        <p className="section-label">Results</p>
-        <h1 className="mt-3 max-w-4xl text-4xl font-black tracking-[-0.06em] sm:text-6xl">Real results with visible gaps.</h1>
-        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400 sm:text-base">
-          Understand exactly what was assessed, what was not assessed, what needs a configured provider, and where manual review is still required.
-        </p>
-        <div className="mt-7 flex flex-wrap gap-3">
-          <Link href="/scanner/unified-url" className="btn-primary">Run scanner →</Link>
-          <Link href="/report" className="btn-secondary">Report flow</Link>
-          <Link href="/risk-intelligence" className="btn-secondary">Risk intelligence</Link>
-          <Link href="/dashboard/scans" className="btn-secondary">Saved scans</Link>
+    <main className="results-cinematic-page">
+      <section className="results-hero-shell mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <div className="results-hero-grid">
+          <div className="results-hero-copy scroll-motion-ready">
+            <p className="video-section-kicker">RESULT CONSOLE</p>
+            <h1>Readiness results without fake confidence.</h1>
+            <p>
+              See what Web3Guard actually assessed, what stayed unassessed, and what should move into the ₹999 pilot report path.
+            </p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link href="/scanner/unified-url" className="video-hero-primary">Run new scan →</Link>
+              <Link href="/report" className="video-hero-secondary">Open report center</Link>
+            </div>
+          </div>
+
+          <div className="result-orb-panel scroll-motion-ready" aria-hidden="true">
+            <div className="result-orb-glow" />
+            <div className="result-orb-core">WG</div>
+            <span className="result-orbit result-orbit-one" />
+            <span className="result-orbit result-orbit-two" />
+            <span className="result-signal-dot result-signal-dot-a" />
+            <span className="result-signal-dot result-signal-dot-b" />
+            <span className="result-signal-dot result-signal-dot-c" />
+          </div>
         </div>
       </section>
 
-      <section className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {states.map(([title, text]) => (
-          <div key={title} className="glass-tile cinematic-card p-5">
-            <p className="text-lg font-black text-white">{title}</p>
-            <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
-          </div>
-        ))}
+      <section className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
+        <div className="result-state-grid">
+          {resultStates.map((item) => (
+            <article key={item.title} className="result-state-card scroll-motion-ready">
+              <span>{item.label}</span>
+              <h2>{item.title}</h2>
+              <p>{item.text}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
-      <div className="mt-8 rounded-[28px] border border-white/[0.07] bg-black/20 p-1 shadow-[0_24px_90px_rgba(0,0,0,.35)]">
+      <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
+        <div className="results-signal-strip scroll-motion-ready">
+          {signalCards.map(([title, label, text]) => (
+            <article key={title}>
+              <span>{label}</span>
+              <h3>{title}</h3>
+              <p>{text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
         <ScannerResultsClient />
-      </div>
+      </section>
     </main>
   );
 }
