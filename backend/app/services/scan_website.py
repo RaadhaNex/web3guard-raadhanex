@@ -11,7 +11,7 @@ import httpx
 from app.core.config import settings
 from app.core.security import validate_public_http_url
 from app.models.schemas import Finding, ModuleScore, ScanResponse
-from app.services.scoring import priority_actions, risk_label, score_findings, severity_breakdown
+from app.services.scoring import priority_actions, risk_label, score_findings_with_trace, severity_breakdown
 
 SECURITY_HEADERS = {
     "strict-transport-security": (
@@ -256,7 +256,20 @@ def _extract_html_evidence(html: str, final_url: str) -> dict:
 
 
 def _build_response(url: str, project_name: str | None, findings: list[Finding], metadata: dict) -> ScanResponse:
-    score = score_findings(findings)
+    score_trace = score_findings_with_trace(findings)
+    score = int(score_trace["score"])
+    metadata["dynamic_score_trace"] = score_trace
+    metadata["score_explanation"] = {
+        "why_score_may_look_stable": "If the same real findings repeat across scans, the score will repeat. It is not random and not fixed.",
+        "when_score_changes": [
+            "HTTP status/reachability changes",
+            "security headers are added/removed or CSP directives change",
+            "external/inline/mixed-content script evidence changes",
+            "sensitive path responses change",
+            "new real findings are generated or existing findings are fixed",
+        ],
+        "display_rule": "Website score is the assessed website-surface readiness score. Overall launch confidence is gated until other modules have evidence.",
+    }
     digest = _hash_input(url)[:12]
     return ScanResponse(
         report_id=f"W3G-WEBSITE-{digest}",

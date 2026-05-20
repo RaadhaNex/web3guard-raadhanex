@@ -342,6 +342,38 @@ export type CoverageGate = {
   combined_overall_score_raw?: number | null;
 };
 
+
+export type DynamicScoreTraceItem = {
+  id: string;
+  title: string;
+  module: string;
+  severity: Severity;
+  confidence: "high" | "medium" | "low";
+  category: string;
+  rule_id?: string | null;
+  base_penalty: number;
+  confidence_multiplier: number;
+  raw_penalty: number;
+  category_cap: number;
+  category_penalty_used_before: number;
+  applied_penalty: number;
+  running_penalty: number;
+  score_after_finding: number;
+};
+
+export type DynamicScoreTrace = {
+  version: string;
+  score: number;
+  risk_label: string;
+  total_penalty: number;
+  finding_count: number;
+  severity_breakdown: Record<string, number>;
+  category_penalties: Record<string, number>;
+  breakdown: DynamicScoreTraceItem[];
+  formula: string;
+  important_note: string;
+};
+
 export type RealEvidenceSummary = {
   summary_rule: string;
   coverage: string;
@@ -352,6 +384,8 @@ export type RealEvidenceSummary = {
   observed_issues: Array<Record<string, unknown>>;
   hardening_hints: Array<Record<string, unknown>>;
   website_raw_evidence: Record<string, unknown>;
+  dynamic_score_trace?: DynamicScoreTrace | Record<string, unknown>;
+  score_debug_note?: string;
   not_assessed_warning: string;
 };
 
@@ -372,6 +406,7 @@ export type UnifiedUrlScanResponse = {
   coverage?: CombinedLaunchReport["coverage"];
   coverage_gate?: CoverageGate;
   real_evidence_summary?: RealEvidenceSummary;
+  dynamic_score_trace?: DynamicScoreTrace | Record<string, unknown>;
   assessed_modules: string[];
   not_assessed_modules: string[];
   live_module_count: number;

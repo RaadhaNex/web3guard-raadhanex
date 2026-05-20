@@ -91,3 +91,70 @@ def combine_scores(module_scores: dict[str, int]) -> dict:
         "assessed_modules": list(assessed.keys()),
         "missing_modules": [module for module in WEIGHTS if module not in assessed],
     }
+
+DYNAMIC_SCORE_VERSION = "real-dynamic-v1"
+
+
+def score_findings_with_trace(findings: list[Finding]) -> dict:
+    """Return a transparent dynamic score and per-finding penalty trace.
+
+    This keeps Web3Guard honest: scores move only when real findings move.
+    The trace is safe to show in UI/report because it contains rule ids, severity,
+    confidence, category, and exact penalty math without inventing exploitability.
+    """
+    category_caps: dict[str, float] = {}
+    breakdown: list[dict] = []
+    total_penalty = 0.0
+
+    for finding in findings:
+        category = finding.category or finding.title.lower().split()[0]
+        severity = finding.severity
+        confidence = finding.confidence
+        base_penalty = float(PENALTIES.get(severity, 1))
+        confidence_multiplier = float(CONFIDENCE_MULTIPLIER.get(confidence, 0.7))
+
+        # Security headers and passive website checks should be responsive, but
+        # repeated findings from one category must not destroy the score.
+        category_cap = 40.0
+        if category in {"security_headers", "frontend_supply_chain", "sensitive_paths", "availability", "transport_security"}:
+            category_cap = 48.0
+
+        raw_penalty = base_penalty * confidence_multiplier
+        used = category_caps.get(category, 0.0)
+        allowed = max(0.0, category_cap - used)
+        applied = min(raw_penalty, allowed)
+        category_caps[category] = used + applied
+        total_penalty += applied
+
+        breakdown.append({
+            "id": finding.id,
+            "title": finding.title,
+            "module": finding.module,
+            "severity": severity,
+            "confidence": confidence,
+            "category": category,
+            "rule_id": finding.rule_id,
+            "base_penalty": base_penalty,
+            "confidence_multiplier": confidence_multiplier,
+            "raw_penalty": round(raw_penalty, 2),
+            "category_cap": category_cap,
+            "category_penalty_used_before": round(used, 2),
+            "applied_penalty": round(applied, 2),
+            "running_penalty": round(total_penalty, 2),
+            "score_after_finding": max(0, min(100, round(100 - total_penalty))),
+        })
+
+    score = max(0, min(100, round(100 - total_penalty)))
+    return {
+        "version": DYNAMIC_SCORE_VERSION,
+        "score": score,
+        "risk_label": risk_label(score),
+        "total_penalty": round(total_penalty, 2),
+        "finding_count": len(findings),
+        "severity_breakdown": severity_breakdown(findings),
+        "category_penalties": {key: round(value, 2) for key, value in sorted(category_caps.items())},
+        "breakdown": breakdown,
+        "formula": "100 - sum(severity_penalty × confidence_multiplier), with per-category caps. Score changes only when real findings/status/evidence changes.",
+        "important_note": "This is a launch-readiness score for assessed evidence, not a certified audit score or exploit proof.",
+    }
+

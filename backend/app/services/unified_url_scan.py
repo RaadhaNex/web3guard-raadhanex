@@ -489,6 +489,7 @@ def _real_evidence_summary(website_report: ScanResponse, module_cards: list[dict
     metadata = website_report.scan_metadata or {}
     taxonomy = metadata.get("finding_truth_taxonomy", {}) if isinstance(metadata, dict) else {}
     raw_response = metadata.get("raw_response_evidence", {}) if isinstance(metadata, dict) else {}
+    score_trace = metadata.get("dynamic_score_trace", {}) if isinstance(metadata, dict) else {}
     assessed_count = sum(1 for card in module_cards if card.get("assessed"))
     total = len(module_cards)
     return {
@@ -501,6 +502,8 @@ def _real_evidence_summary(website_report: ScanResponse, module_cards: list[dict
         "observed_issues": taxonomy.get("confirmed_observed_issues", []),
         "hardening_hints": taxonomy.get("potential_hardening_hints", []),
         "website_raw_evidence": raw_response,
+        "dynamic_score_trace": score_trace,
+        "score_debug_note": "If the same site keeps the same headers/scripts/status, the score can repeat. If bugs/errors change, the score trace and score change together.",
         "not_assessed_warning": "Modules without evidence are not scanned and must not be treated as passed or failed.",
     }
 
@@ -725,7 +728,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "report_id": f"W3G-URL-LAUNCH-{_hash(safe_website_url)[:12]}",
         "generated_at": started.isoformat(),
         "project_name": payload.project_name,
-        "engine_version": "web3guard-unified-url-launch-scanner-v14.0-coverage-gated",
+        "engine_version": "web3guard-unified-url-launch-scanner-v15.0-dynamic-evidence-scoring",
         "mode": "real_only_unified_url_scan",
         "website_url": safe_website_url,
         "chain": payload.chain,
@@ -738,6 +741,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "coverage": combined.get("coverage"),
         "coverage_gate": _coverage_gate(module_cards, combined),
         "real_evidence_summary": _real_evidence_summary(website_report, module_cards),
+        "dynamic_score_trace": (website_report.scan_metadata or {}).get("dynamic_score_trace", {}),
         "assessed_modules": assessed_modules,
         "not_assessed_modules": not_assessed_modules,
         "live_module_count": live_count,
@@ -747,7 +751,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "combined_report": combined,
         "feature_status_matrix": REALNESS_MATRIX,
         "warnings": warnings,
-        "safe_public_summary": "This is a preliminary URL launch-surface review. Website-surface findings are real observed evidence; full launch confidence is blocked when required modules are Not Assessed.",
+        "safe_public_summary": "This is a preliminary URL launch-surface review. Website score is dynamic from observed evidence; full launch confidence is blocked when required modules are Not Assessed.",
         "blocked_claims": [
             "Do not say this project is certified audited.",
             "Do not claim AI/manual experts reviewed missing modules.",

@@ -83,6 +83,26 @@ function safeJsonStringify(value: unknown) {
   }
 }
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function plainRecord(value: unknown): Record<string, unknown> {
+  return isPlainRecord(value) ? value : {};
+}
+
+function unknownArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function unknownNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function unknownString(value: unknown, fallback = "—") {
+  return typeof value === "string" && value.trim() ? value : fallback;
+}
+
 function makeJsonSafe<T>(value: T): T {
   const seen = new WeakSet<object>();
   return JSON.parse(
@@ -394,6 +414,7 @@ function buildInlineReportFromResult(result: UnifiedUrlScanResponse) {
       evidence: card.evidence || [],
       limitations: card.limitations || [],
     })),
+    dynamic_score_trace: result.dynamic_score_trace || result.real_evidence_summary?.dynamic_score_trace || null,
     executive_summary: result.safe_public_summary || combined.executive_summary || "Preliminary launch-surface report generated from scanner evidence.",
     risk_narrative: result.realness_rule || combined.risk_narrative || "Only assessed modules receive scores. Missing modules remain Not Assessed.",
     limitations: [
@@ -425,6 +446,7 @@ function buildInlineReportFromResult(result: UnifiedUrlScanResponse) {
     top_findings: report.top_findings,
     evidence_required: report.evidence_required,
     evidence_summary: report.evidence_summary,
+    dynamic_score_trace: report.dynamic_score_trace,
     limitations: report.limitations,
     disclaimer: report.disclaimer,
   };
@@ -453,6 +475,57 @@ async function postBlob(path: string, payload: unknown, accept: string) {
     throw new Error(detail || `Export failed with ${response.status}`);
   }
   return response.blob();
+}
+
+function DynamicScoreTraceCard({ trace }: { trace: Record<string, unknown> }) {
+  const score = unknownNumber(trace.score);
+  const penalty = unknownNumber(trace.total_penalty);
+  const rows = unknownArray(trace.breakdown).filter(isPlainRecord);
+  if (score === null && !rows.length) return null;
+
+  return (
+    <CardShell>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="section-label">Dynamic score proof</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Why score is {score ?? "—"}</h2>
+          <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-400">{unknownString(trace.formula, "Score changes only when real response/tool evidence changes.")}</p>
+          <p className="mt-2 text-xs leading-5 text-slate-500">{unknownString(trace.important_note, "This is a readiness score, not a certified audit score.")}</p>
+        </div>
+        <div className="grid min-w-[260px] gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
+            <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Website score</p>
+            <p className={`mt-2 text-2xl font-black ${scoreTone(score)}`}>{score ?? "—"}/100</p>
+          </div>
+          <div className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
+            <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Penalty</p>
+            <p className="mt-2 text-2xl font-black text-white">-{penalty ?? 0}</p>
+          </div>
+        </div>
+      </div>
+      <div className="mt-5 grid gap-3">
+        {rows.length ? rows.map((item, index) => (
+          <div key={`${unknownString(item.id, "score-row")}-${index}`} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="font-black text-white">{unknownString(item.title, "Finding penalty")}</p>
+                <p className="mt-1 text-xs uppercase tracking-[0.14em] text-slate-500">{unknownString(item.category)} · {unknownString(item.rule_id, "no rule id")}</p>
+              </div>
+              <SeverityBadge severity={(unknownString(item.severity, "info") as Severity)} />
+            </div>
+            <div className="mt-3 grid gap-2 text-xs sm:grid-cols-4">
+              <span className="rounded-xl bg-black/20 p-3 text-slate-300">Base <b className="text-white">{unknownNumber(item.base_penalty) ?? 0}</b></span>
+              <span className="rounded-xl bg-black/20 p-3 text-slate-300">Confidence <b className="text-white">×{unknownNumber(item.confidence_multiplier) ?? 0}</b></span>
+              <span className="rounded-xl bg-black/20 p-3 text-slate-300">Applied <b className="text-white">-{unknownNumber(item.applied_penalty) ?? 0}</b></span>
+              <span className="rounded-xl bg-black/20 p-3 text-slate-300">After <b className="text-white">{unknownNumber(item.score_after_finding) ?? "—"}</b></span>
+            </div>
+          </div>
+        )) : (
+          <p className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 text-sm leading-6 text-slate-400">No penalty rows were generated. That means the assessed website surface had no passive findings.</p>
+        )}
+      </div>
+    </CardShell>
+  );
 }
 
 function CardShell({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -643,6 +716,7 @@ export function UnifiedUrlScannerClient() {
   const requiredInputs = result?.module_cards.flatMap((card) => (card.required_input || []).map((item) => ({ label: card.label, item, guide: moduleFixGuide(card) }))) || [];
   const coverageGate = result?.coverage_gate;
   const realEvidenceSummary = result?.real_evidence_summary;
+  const dynamicScoreTrace = plainRecord(realEvidenceSummary?.dynamic_score_trace ?? result?.dynamic_score_trace);
   const overallAllowed = coverageGate ? coverageGate.overall_confidence_allowed : Boolean(result?.overall_score);
   const heroScore = overallAllowed ? result?.overall_score ?? null : scoreSplit?.website_surface_score?.score ?? null;
   const heroLabel = overallAllowed ? "confidence" : "site score";
@@ -781,7 +855,7 @@ export function UnifiedUrlScannerClient() {
     setProgress(8);
     setStageIndex(0);
     const timer = window.setInterval(() => {
-      setProgress((value) => (value >= 92 ? value : value + 7));
+      setProgress((value) => (value >= 96 ? value : value + 7));
       setStageIndex((value) => (value >= scanStages.length - 2 ? value : value + 1));
     }, 800);
     return () => window.clearInterval(timer);
@@ -1189,6 +1263,8 @@ export function UnifiedUrlScannerClient() {
                 </details>
               </CardShell>
             ) : null}
+
+            <DynamicScoreTraceCard trace={dynamicScoreTrace} />
 
             <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
               <CardShell>

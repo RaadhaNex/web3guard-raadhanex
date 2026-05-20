@@ -366,6 +366,59 @@ function RealFindingsPipelinePanel({ pipeline }: { pipeline?: UnifiedUrlScanResp
   );
 }
 
+
+function DynamicScoreTracePanel({ trace }: { trace: SurfaceRecord }) {
+  const score = asNumber(trace.score);
+  const totalPenalty = asNumber(trace.total_penalty);
+  const breakdown = asArray(trace.breakdown).filter(isRecord);
+  if (score === null && !breakdown.length) return null;
+
+  return (
+    <section className="mt-5 rounded-[1.5rem] border border-cyan-300/15 bg-cyan-300/[0.035] p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="section-label">Dynamic score proof</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Why this number changed or stayed same</h2>
+          <p className="mt-2 max-w-4xl text-sm leading-7 text-slate-300">{asString(trace.formula, "Score is calculated from real findings and penalty math.")}</p>
+          <p className="mt-2 text-xs leading-5 text-cyan-100/70">{asString(trace.important_note, "This is not a certified audit score.")}</p>
+        </div>
+        <div className="grid min-w-[220px] gap-2 text-right sm:grid-cols-2 lg:grid-cols-1">
+          <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-3">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Score</p>
+            <p className="mt-1 text-2xl font-black text-white">{scoreText(score)}</p>
+          </div>
+          <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-3">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Penalty</p>
+            <p className="mt-1 text-2xl font-black text-white">{totalPenalty ?? 0}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3">
+        {breakdown.length ? breakdown.map((item, index) => (
+          <article key={`${asString(item.id, "trace")}-${index}`} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 className="font-black text-white">{asString(item.title, "Finding penalty")}</h3>
+                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{asString(item.category)} · {asString(item.rule_id, "no rule id")}</p>
+              </div>
+              <SeverityBadge severity={toSeverity(item.severity)} />
+            </div>
+            <div className="mt-3 grid gap-2 text-sm sm:grid-cols-4">
+              <div className="rounded-xl bg-white/[0.04] p-3"><span className="text-slate-500">Base</span><br /><b className="text-white">{asNumber(item.base_penalty) ?? 0}</b></div>
+              <div className="rounded-xl bg-white/[0.04] p-3"><span className="text-slate-500">Confidence</span><br /><b className="text-white">×{asNumber(item.confidence_multiplier) ?? 0}</b></div>
+              <div className="rounded-xl bg-white/[0.04] p-3"><span className="text-slate-500">Applied</span><br /><b className="text-white">-{asNumber(item.applied_penalty) ?? 0}</b></div>
+              <div className="rounded-xl bg-white/[0.04] p-3"><span className="text-slate-500">Score after</span><br /><b className="text-white">{scoreText(asNumber(item.score_after_finding))}</b></div>
+            </div>
+          </article>
+        )) : (
+          <p className="rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-7 text-slate-400">No finding penalties were applied. If the site is clean from passive evidence, website readiness can be 100/100 while full launch confidence remains gated until other modules are assessed.</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export function ResultsClient() {
   const [result, setResult] = useState<UnifiedUrlScanResponse | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -382,6 +435,7 @@ export function ResultsClient() {
   const priorityActions = result?.priority_actions ?? [];
   const coverageGate = result?.coverage_gate;
   const realEvidenceSummary = result?.real_evidence_summary;
+  const dynamicScoreTrace = asRecord(realEvidenceSummary?.dynamic_score_trace ?? result?.dynamic_score_trace);
 
   if (!loaded) {
     return <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8"><div className="card p-6 text-slate-300">Loading latest real scan output...</div></main>;
@@ -469,6 +523,8 @@ export function ResultsClient() {
           </details>
         </section>
       ) : null}
+
+      <DynamicScoreTracePanel trace={dynamicScoreTrace} />
 
       <section className="mt-5 grid gap-4 lg:grid-cols-2" aria-label="Module evidence">
         {cards.map((card) => <ModuleEvidenceCard key={card.module} card={card} />)}
