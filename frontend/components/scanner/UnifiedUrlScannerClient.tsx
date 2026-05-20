@@ -912,10 +912,24 @@ export function UnifiedUrlScannerClient() {
     <main className="relative overflow-hidden scanner-console-page scanner-focus-page scanner-premium-page">
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl space-y-6">
-          <CardShell className="scanner-premium-console card-glow">
+          <div className="scanner-balance-intro">
+            <div>
+              <p className="section-label">Scan console</p>
+              <h1>Start with one URL. Add evidence only when ready.</h1>
+              <p>Designed for founders who want clear assessed vs not-assessed output before a professional security review.</p>
+            </div>
+            <div className="scanner-balance-steps" aria-label="Scanner flow">
+              <span><b>1</b> URL</span>
+              <span><b>2</b> Surface</span>
+              <span><b>3</b> Evidence</span>
+              <span><b>4</b> Report</span>
+            </div>
+          </div>
+
+          <CardShell className="scanner-premium-console scanner-balanced-card card-glow">
             <div className="scanner-premium-aurora" aria-hidden="true" />
-            <div className="scanner-premium-grid scanner-premium-grid-single">
-              <div className="scanner-input-panel scanner-input-panel-wide">
+            <div className="scanner-premium-grid scanner-premium-grid-single scanner-balanced-grid">
+              <div className="scanner-input-panel scanner-input-panel-wide scanner-balanced-input">
                 <div className="scanner-input-head">
                   <div>
                     <p className="section-label">Scan setup</p>
@@ -1028,6 +1042,31 @@ export function UnifiedUrlScannerClient() {
               </div>
             </div>
           </CardShell>
+
+          <div className="scanner-support-grid" aria-label="What the scanner checks">
+            <article>
+              <span>01</span>
+              <strong>Surface check</strong>
+              <p>Website, dApp frontend, HTTPS, policy links, wallet UX copy, and visible launch risk signals.</p>
+            </article>
+            <article>
+              <span>02</span>
+              <strong>Evidence modules</strong>
+              <p>Optional contract, API, GitHub, and Solidity evidence can improve context without guessing results.</p>
+            </article>
+            <article>
+              <span>03</span>
+              <strong>Clear output</strong>
+              <p>Assessed, Not Assessed, Needs API Key, Tool Not Installed, and Manual Review stay separated.</p>
+            </article>
+          </div>
+
+          <div className="scanner-trust-strip">
+            <span>No wallet signing</span>
+            <span>No private key collection</span>
+            <span>Pre-audit readiness only</span>
+            <span>No fake score</span>
+          </div>
 
         {loading ? (
           <CardShell>
