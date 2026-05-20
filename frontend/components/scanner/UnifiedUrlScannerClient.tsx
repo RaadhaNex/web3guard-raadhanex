@@ -620,14 +620,12 @@ export function UnifiedUrlScannerClient() {
 
   const missingRequiredFields = useMemo(() => {
     const missing: string[] = [];
-    if (!projectName.trim()) missing.push("Project name");
     if (!websiteUrl.trim()) missing.push("Website / dApp URL");
-    if (projectMode === "existing" && !selectedProjectId) missing.push("Existing project");
     if (projectType === "Other" && !customProjectType.trim()) missing.push("Custom project type");
     if (!authorized) missing.push("Authorization confirmation");
     if (!realOnly) missing.push("Evidence-only acknowledgement");
     return missing;
-  }, [authorized, customProjectType, projectMode, projectName, projectType, realOnly, selectedProjectId, websiteUrl]);
+  }, [authorized, customProjectType, projectType, realOnly, websiteUrl]);
 
   const canRunScan = !loading && !authLoading;
   const cards = result?.module_cards ? sortModuleCards(result.module_cards) : [];
@@ -666,11 +664,7 @@ export function UnifiedUrlScannerClient() {
       const token = await getSessionToken();
       const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
       const queryUser = encodeURIComponent(userId);
-      const [projectData, scanData] = await Promise.all([
-        apiGet<{ projects: ProjectRecord[] }>(`/projects?user_id=${queryUser}&limit=100`, { headers }),
-        apiGet<{ scans: ScanHistoryRecord[] }>(`/scan-history?user_id=${queryUser}&limit=30`, { headers }),
-      ]);
-      setProjects(projectData.projects || []);
+      const scanData = await apiGet<{ scans: ScanHistoryRecord[] }>(`/scan-history?user_id=${queryUser}&limit=30`, { headers });
       setScanHistory(
         (scanData.scans || []).filter((scan) => scan.module === "unified_url" || looksLikeUnifiedResult(getHistoryPayload(scan) as Record<string, unknown>))
       );
@@ -698,7 +692,12 @@ export function UnifiedUrlScannerClient() {
   function startNewProject() {
     setProjectMode("new");
     setSelectedProjectId("");
+    setSelectedHistoryId("");
     setProjectName("");
+    setResult(null);
+    setError(null);
+    setFieldPrompt(null);
+    setExportStatus(null);
     setSaveMessage(null);
   }
 
@@ -896,72 +895,64 @@ export function UnifiedUrlScannerClient() {
   }
 
   return (
-    <main className="relative overflow-hidden">
+    <main className="relative overflow-hidden scanner-console-page">
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[0.78fr_1.22fr]">
+        <div className="grid gap-6 lg:grid-cols-[0.72fr_1.28fr]">
           <aside className="space-y-5 lg:sticky lg:top-20 lg:self-start">
             <CardShell className="card-glow">
-              <p className="section-label">Unified scanner</p>
-              <h1 className="mt-3 text-3xl font-black sm:text-5xl">Launch evidence console</h1>
-              <p className="mt-4 text-sm leading-7 text-slate-400">
-                Start with a URL, then add optional evidence for contracts, API, GitHub, wallet, and admin controls. The report separates assessed evidence from missing modules.
-              </p>
-              <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Session</p>
-                  <p className="mt-1 text-sm font-black text-white">{authLoading ? "Checking..." : isLoggedIn ? "Logged in" : "Login required"}</p>
-                </div>
-                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Output</p>
-                  <p className="mt-1 text-sm font-black text-white">PDF · HTML · MD · JSON</p>
+              <div className="flex items-start gap-4">
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-cyan/20 bg-cyan/10 text-xl shadow-[0_0_28px_rgba(34,211,238,.18)]">⌁</div>
+                <div>
+                  <p className="section-label">Scan console</p>
+                  <h1 className="mt-2 text-2xl font-black text-white">Evidence-first launch scan</h1>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">Enter your public URL, add optional evidence, and generate a clear readiness report.</p>
                 </div>
               </div>
-              <div className="mt-6 flex flex-wrap gap-2">
-                <span className="badge badge-cyan">Pre-audit only</span>
-                <span className="badge badge-amber">No wallet signing</span>
-                <span className="badge">Not a certified audit</span>
+              <div className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                {[
+                  [authLoading ? "Checking" : isLoggedIn ? "Logged in" : "Login needed", "Session"],
+                  ["PDF · HTML · MD · JSON", "Exports"],
+                  ["No wallet signing", "Safety"],
+                ].map(([value, label]) => (
+                  <div key={label} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+                    <p className="mt-1 text-sm font-black text-white">{value}</p>
+                  </div>
+                ))}
               </div>
-              {!isLoggedIn && !authLoading ? (
-                <Link href="/auth/login" className="btn-primary mt-6 w-full">Log in to run scan</Link>
-              ) : null}
+              {!isLoggedIn && !authLoading ? <Link href="/auth/login" className="btn-primary mt-5 w-full">Login to save scans</Link> : null}
             </CardShell>
 
             <CardShell>
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan">Workspace</p>
-                  <h2 className="mt-1 text-xl font-black text-white">Projects & history</h2>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan">History</p>
+                  <h2 className="mt-1 text-xl font-black text-white">Recent scans</h2>
                 </div>
                 <button className="btn-secondary !px-3 !py-2 text-xs" type="button" onClick={() => void loadWorkspaceQuickData()} disabled={!isLoggedIn || historyLoading}>
-                  Refresh
+                  {historyLoading ? "Loading" : "Refresh"}
                 </button>
               </div>
-              <div className="mt-4 space-y-4">
-                <FieldLabel label="Scan history" helper="Load a previous unified scan or reuse saved inputs.">
-                  <select className="select" value={selectedHistoryId} onChange={(event) => applyHistory(event.target.value)} disabled={!isLoggedIn || historyLoading}>
-                    <option value="">Select saved scan</option>
-                    {scanHistory.map((scan) => (
-                      <option key={scan.id} value={scan.id}>{scan.project_name || getHistoryWebsite(scan)} · {formatDateTime(scan.created_at)}</option>
-                    ))}
-                  </select>
-                </FieldLabel>
-                <FieldLabel label="Project mode">
-                  <select className="select" value={projectMode} onChange={(event) => { const value = event.target.value as ProjectMode; if (value === "new") startNewProject(); else setProjectMode("existing"); }}>
-                    <option value="new">Create new project</option>
-                    <option value="existing">Use existing project</option>
-                  </select>
-                </FieldLabel>
-                <FieldLabel label="Existing project" required={projectMode === "existing"}>
-                  <select className="select" value={selectedProjectId} onChange={(event) => applyProject(event.target.value)} disabled={projectMode !== "existing" || !isLoggedIn || !projects.length}>
-                    <option value="">Select project</option>
-                    {projects.map((project) => (
-                      <option key={project.id} value={project.id}>{project.name} · {formatDateTime(project.updated_at || project.created_at)}</option>
-                    ))}
-                  </select>
-                </FieldLabel>
+              <div className="mt-4 space-y-2">
+                {!isLoggedIn && !authLoading ? (
+                  <p className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 text-sm leading-6 text-slate-400">Login ke baad yahan tumhare saved scan reports quick history ki tarah dikhenge.</p>
+                ) : scanHistory.length ? (
+                  scanHistory.slice(0, 8).map((scan) => (
+                    <button
+                      key={scan.id}
+                      type="button"
+                      onClick={() => applyHistory(scan.id)}
+                      className={`w-full rounded-2xl border p-3 text-left transition hover:border-cyan/25 hover:bg-cyan/[0.05] ${selectedHistoryId === scan.id ? "border-cyan/30 bg-cyan/[0.08]" : "border-white/[0.07] bg-white/[0.03]"}`}
+                    >
+                      <p className="truncate text-sm font-black text-white">{scan.project_name || getHistoryWebsite(scan)}</p>
+                      <p className="mt-1 text-xs text-slate-500">{formatDateTime(scan.created_at)}</p>
+                    </button>
+                  ))
+                ) : (
+                  <p className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 text-sm leading-6 text-slate-400">No saved scan yet. Run your first readiness scan and save the report.</p>
+                )}
               </div>
-              {selectedProject ? <p className="mt-4 rounded-xl border border-cyan/15 bg-cyan/10 p-3 text-xs text-cyan-50">Loaded: {selectedProject.name}</p> : null}
-              {selectedHistory ? <p className="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/10 p-3 text-xs text-amber-100">Last selected: {formatDateTime(selectedHistory.created_at)}</p> : null}
+              <button type="button" className="btn-secondary mt-4 w-full" onClick={startNewProject}>New scan</button>
               {historyError ? <p className="mt-3 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-xs text-red-100">{historyError}</p> : null}
             </CardShell>
           </aside>
@@ -970,27 +961,22 @@ export function UnifiedUrlScannerClient() {
             <CardShell className="card-glow">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="section-label">Required setup</p>
-                  <h2 className="mt-2 text-2xl font-black text-white">Project input</h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">Required fields keep the report traceable and prevent misleading empty scans.</p>
+                  <p className="section-label">Readiness input</p>
+                  <h2 className="mt-2 text-2xl font-black text-white">Paste your Web3 project URL</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">URL se basic surface scan start hota hai. Contract, API, GitHub aur Solidity evidence optional hai.</p>
                 </div>
                 <span className={`badge ${missingRequiredFields.length ? "badge-amber" : "badge-green"}`}>
-                  {missingRequiredFields.length ? `${missingRequiredFields.length} item(s) needed` : "Ready"}
+                  {missingRequiredFields.length ? "Needs input" : "Ready"}
                 </span>
               </div>
 
               <div className="mt-6 grid gap-4 lg:grid-cols-12">
-                <div className="lg:col-span-5">
+                <div className="lg:col-span-7">
                   <FieldLabel label="Website / dApp URL" required>
                     <input className="input" value={websiteUrl} onChange={(event) => setWebsiteUrl(event.target.value)} placeholder="https://yourproject.com" />
                   </FieldLabel>
                 </div>
-                <div className="lg:col-span-3">
-                  <FieldLabel label="Project name" required>
-                    <input className="input" value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="My Web3 Project" />
-                  </FieldLabel>
-                </div>
-                <div className="lg:col-span-4">
+                <div className="lg:col-span-5">
                   <FieldLabel label="Project type" required>
                     <select className="select" value={projectType} onChange={(event) => setProjectType(event.target.value)}>
                       {projectTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
@@ -998,13 +984,13 @@ export function UnifiedUrlScannerClient() {
                   </FieldLabel>
                 </div>
                 {projectType === "Other" ? (
-                  <div className="lg:col-span-4">
+                  <div className="lg:col-span-6">
                     <FieldLabel label="Custom project type" required>
                       <input className="input" value={customProjectType} onChange={(event) => setCustomProjectType(event.target.value)} placeholder="Example: RWA, DePIN" />
                     </FieldLabel>
                   </div>
                 ) : null}
-                <div className="lg:col-span-4">
+                <div className="lg:col-span-6">
                   <FieldLabel label="Chain">
                     <select className="select" value={chain} onChange={(event) => setChain(event.target.value)}>
                       {chainOptions.map((option) => <option key={option} value={option}>{option}</option>)}
@@ -1012,7 +998,7 @@ export function UnifiedUrlScannerClient() {
                   </FieldLabel>
                 </div>
                 {chain === "Other" ? (
-                  <div className="lg:col-span-4">
+                  <div className="lg:col-span-6">
                     <FieldLabel label="Custom chain">
                       <input className="input" value={customChain} onChange={(event) => setCustomChain(event.target.value)} placeholder="Example: Sui, Aptos" />
                     </FieldLabel>
@@ -1024,7 +1010,7 @@ export function UnifiedUrlScannerClient() {
                 <button type="button" onClick={() => setAdvancedOpen((value) => !value)} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left">
                   <div>
                     <p className="text-sm font-black text-white">Optional evidence</p>
-                    <p className="mt-1 text-xs text-slate-500">Add more inputs for stronger launch confidence.</p>
+                    <p className="mt-1 text-xs text-slate-500">Contract, API, GitHub, wallet and code evidence add stronger context.</p>
                   </div>
                   <span className="badge badge-cyan">{advancedOpen ? "Hide" : "Add evidence"}</span>
                 </button>
@@ -1040,7 +1026,7 @@ export function UnifiedUrlScannerClient() {
                       <input className="input" value={githubRepoUrl} onChange={(event) => setGithubRepoUrl(event.target.value)} placeholder="https://github.com/org/repo" />
                     </FieldLabel>
                     <div className="lg:col-span-3">
-                      <FieldLabel label="Solidity source" helper="Optional. Used only for passive rule-based review.">
+                      <FieldLabel label="Solidity source" helper="Optional source for rule-based review.">
                         <textarea className="textarea" value={solidityCode} onChange={(event) => setSolidityCode(event.target.value)} placeholder="Paste Solidity source here for local rule checks." />
                       </FieldLabel>
                     </div>
@@ -1065,8 +1051,7 @@ export function UnifiedUrlScannerClient() {
                 <button type="button" onClick={() => void runScan()} disabled={!canRunScan} className="btn-primary sm:w-auto">
                   {loading ? "Scanning evidence..." : "Run Unified Scan →"}
                 </button>
-                <Link href="/limitations" className="btn-secondary sm:w-auto">Read limitations</Link>
-                <p className="text-xs leading-5 text-slate-500">Scanner performs passive checks and supplied-evidence analysis only.</p>
+                {!isLoggedIn && !authLoading ? <Link href="/auth/login" className="btn-secondary sm:w-auto">Login first</Link> : null}
               </div>
             </CardShell>
 
