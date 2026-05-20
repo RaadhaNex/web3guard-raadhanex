@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { API_BASE, apiGet, apiPost } from "@/lib/api";
 import { getCurrentUserId, getSessionToken } from "@/lib/supabase";
+import { clearLatestUnifiedScan, saveLatestUnifiedScan } from "@/lib/latestUnifiedScan";
 import type {
   ProjectRecord,
   ScanHistoryRecord,
@@ -25,7 +26,7 @@ const scanStages = [
   "Report package",
 ];
 
-const moduleOrder = ["website", "dapp", "api", "contract", "wallet", "admin_opsec", "github"];
+const moduleOrder = ["website", "dapp", "api", "github", "contract", "static_analysis", "wallet", "admin_opsec"];
 
 const projectTypeOptions = [
   "Website / dApp Frontend",
@@ -569,8 +570,13 @@ function ModuleCard({ card }: { card: UnifiedModuleCard }) {
       {card.required_input?.length ? (
         <div className="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
           <p className="font-black">Evidence needed</p>
-          <p className="mt-1">{card.required_input[0]}</p>
+          <ul className="mt-1 space-y-1">
+            {card.required_input.slice(0, 3).map((item) => <li key={item}>• {item}</li>)}
+          </ul>
         </div>
+      ) : null}
+      {card.limitations?.length ? (
+        <p className="mt-3 text-[11px] leading-5 text-slate-500">Limit: {card.limitations[0]}</p>
       ) : null}
     </div>
   );
@@ -709,6 +715,7 @@ export function UnifiedUrlScannerClient() {
     setSolidityCode("");
     setAdvancedOpen(false);
     setResult(null);
+    clearLatestUnifiedScan();
     setError(null);
     setFieldPrompt(null);
     setExportStatus(null);
@@ -734,6 +741,7 @@ export function UnifiedUrlScannerClient() {
     }
     if (looksLikeUnifiedResult(payload)) {
       setResult(payload);
+      saveLatestUnifiedScan(payload);
       setSaveMessage(`Loaded saved scan from ${formatDateTime(scan.created_at)}.`);
     } else {
       setSaveMessage(`Loaded saved inputs from ${formatDateTime(scan.created_at)}. Run a fresh scan for a new result.`);
@@ -825,6 +833,7 @@ export function UnifiedUrlScannerClient() {
       setStageIndex(scanStages.length - 1);
       setProgress(100);
       setResult(data);
+      saveLatestUnifiedScan(data);
     } catch (err) {
       setError(readableClientError(err));
       setProgress(0);

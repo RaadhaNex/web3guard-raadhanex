@@ -27,7 +27,7 @@ const columns = [
       { label: "First 10 users", href: "/launch-pack" },
       { label: "Payment validation", href: "/payment-validation" },
       { label: "Risk intelligence", href: "/risk-intelligence" },
-      { label: "Advanced tools", href: "/advanced" },
+      { label: "More hub", href: "/more" },
     ],
   },
 ];

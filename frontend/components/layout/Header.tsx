@@ -105,11 +105,12 @@ const moreGroups: MoreGroup[] = [
         status: "beta",
       },
       {
-        href: "/advanced",
-        label: "Advanced tools",
-        description: "Provider setup, workers, monitoring, launch ops, and internal tools.",
+        href: "/more",
+        label: "More hub",
+        description: "Grouped docs, output pages, scanner surfaces, providers, workers, and setup tools.",
         icon: "advanced",
         status: "setup",
+        activePrefixes: ["/more", "/advanced"],
       },
       {
         href: "/payment-validation",
