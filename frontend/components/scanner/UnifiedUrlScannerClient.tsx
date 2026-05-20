@@ -581,16 +581,16 @@ export function UnifiedUrlScannerClient() {
   const [projectName, setProjectName] = useState("");
   const [projectMode, setProjectMode] = useState<ProjectMode>("new");
   const [selectedProjectId, setSelectedProjectId] = useState("");
-  const [projectType, setProjectType] = useState(projectTypeOptions[0]);
+  const [projectType, setProjectType] = useState("");
   const [customProjectType, setCustomProjectType] = useState("");
-  const [chain, setChain] = useState("Web only");
+  const [chain, setChain] = useState("");
   const [customChain, setCustomChain] = useState("");
   const [contractAddress, setContractAddress] = useState("");
   const [apiBaseUrl, setApiBaseUrl] = useState("");
   const [githubRepoUrl, setGithubRepoUrl] = useState("");
   const [solidityCode, setSolidityCode] = useState("");
   const [authorized, setAuthorized] = useState(false);
-  const [realOnly, setRealOnly] = useState(true);
+  const [realOnly, setRealOnly] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const [authLoading, setAuthLoading] = useState(true);
@@ -615,17 +615,20 @@ export function UnifiedUrlScannerClient() {
   const selectedHistory = scanHistory.find((scan) => scan.id === selectedHistoryId) || null;
   const currentStage = scanStages[Math.min(stageIndex, scanStages.length - 1)];
 
-  const resolvedProjectType = useMemo(() => projectType === "Other" ? customProjectType.trim() || "Other" : projectType.trim(), [customProjectType, projectType]);
+  const resolvedProjectType = useMemo(() => projectType === "Other" ? customProjectType.trim() || "Other" : projectType.trim() || "Not selected", [customProjectType, projectType]);
   const resolvedChain = useMemo(() => chain === "Other" ? customChain.trim() || "Other" : chain.trim() || "Web only", [chain, customChain]);
 
   const missingRequiredFields = useMemo(() => {
     const missing: string[] = [];
     if (!websiteUrl.trim()) missing.push("Website / dApp URL");
+    if (!projectType.trim()) missing.push("Project type");
     if (projectType === "Other" && !customProjectType.trim()) missing.push("Custom project type");
+    if (!chain.trim()) missing.push("Chain / surface");
+    if (chain === "Other" && !customChain.trim()) missing.push("Custom chain");
     if (!authorized) missing.push("Authorization confirmation");
     if (!realOnly) missing.push("Evidence-only acknowledgement");
     return missing;
-  }, [authorized, customProjectType, projectType, realOnly, websiteUrl]);
+  }, [authorized, chain, customChain, customProjectType, projectType, realOnly, websiteUrl]);
 
   const canRunScan = !loading && !authLoading;
   const cards = result?.module_cards ? sortModuleCards(result.module_cards) : [];
@@ -694,6 +697,17 @@ export function UnifiedUrlScannerClient() {
     setSelectedProjectId("");
     setSelectedHistoryId("");
     setProjectName("");
+    setProjectType("");
+    setCustomProjectType("");
+    setChain("");
+    setCustomChain("");
+    setAuthorized(false);
+    setRealOnly(false);
+    setContractAddress("");
+    setApiBaseUrl("");
+    setGithubRepoUrl("");
+    setSolidityCode("");
+    setAdvancedOpen(false);
     setResult(null);
     setError(null);
     setFieldPrompt(null);
@@ -895,127 +909,80 @@ export function UnifiedUrlScannerClient() {
   }
 
   return (
-    <main className="relative overflow-hidden scanner-console-page">
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[0.72fr_1.28fr]">
-          <aside className="space-y-5 lg:sticky lg:top-20 lg:self-start">
-            <CardShell className="card-glow">
-              <div className="flex items-start gap-4">
-                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-cyan/20 bg-cyan/10 text-xl shadow-[0_0_28px_rgba(34,211,238,.18)]">⌁</div>
-                <div>
-                  <p className="section-label">Scan console</p>
-                  <h1 className="mt-2 text-2xl font-black text-white">Evidence-first launch scan</h1>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">Enter your public URL, add optional evidence, and generate a clear readiness report.</p>
-                </div>
-              </div>
-              <div className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-                {[
-                  [authLoading ? "Checking" : isLoggedIn ? "Logged in" : "Login needed", "Session"],
-                  ["PDF · HTML · MD · JSON", "Exports"],
-                  ["No wallet signing", "Safety"],
-                ].map(([value, label]) => (
-                  <div key={label} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
-                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-                    <p className="mt-1 text-sm font-black text-white">{value}</p>
+    <main className="relative overflow-hidden scanner-console-page scanner-focus-page">
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-5xl space-y-6">
+          <CardShell className="scanner-launch-card card-glow">
+            <div className="scanner-form-shell">
+              <div className="scanner-form-strip" aria-hidden="true" />
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="scanner-mini-mark">✦</div>
+                  <div>
+                    <p className="section-label">Scan console</p>
+                    <h1 className="mt-2 text-2xl font-black text-white sm:text-3xl">Start readiness scan</h1>
                   </div>
-                ))}
-              </div>
-              {!isLoggedIn && !authLoading ? <Link href="/auth/login" className="btn-primary mt-5 w-full">Login to save scans</Link> : null}
-            </CardShell>
-
-            <CardShell>
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan">History</p>
-                  <h2 className="mt-1 text-xl font-black text-white">Recent scans</h2>
-                </div>
-                <button className="btn-secondary !px-3 !py-2 text-xs" type="button" onClick={() => void loadWorkspaceQuickData()} disabled={!isLoggedIn || historyLoading}>
-                  {historyLoading ? "Loading" : "Refresh"}
-                </button>
-              </div>
-              <div className="mt-4 space-y-2">
-                {!isLoggedIn && !authLoading ? (
-                  <p className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 text-sm leading-6 text-slate-400">Login ke baad yahan tumhare saved scan reports quick history ki tarah dikhenge.</p>
-                ) : scanHistory.length ? (
-                  scanHistory.slice(0, 8).map((scan) => (
-                    <button
-                      key={scan.id}
-                      type="button"
-                      onClick={() => applyHistory(scan.id)}
-                      className={`w-full rounded-2xl border p-3 text-left transition hover:border-cyan/25 hover:bg-cyan/[0.05] ${selectedHistoryId === scan.id ? "border-cyan/30 bg-cyan/[0.08]" : "border-white/[0.07] bg-white/[0.03]"}`}
-                    >
-                      <p className="truncate text-sm font-black text-white">{scan.project_name || getHistoryWebsite(scan)}</p>
-                      <p className="mt-1 text-xs text-slate-500">{formatDateTime(scan.created_at)}</p>
-                    </button>
-                  ))
-                ) : (
-                  <p className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 text-sm leading-6 text-slate-400">No saved scan yet. Run your first readiness scan and save the report.</p>
-                )}
-              </div>
-              <button type="button" className="btn-secondary mt-4 w-full" onClick={startNewProject}>New scan</button>
-              {historyError ? <p className="mt-3 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-xs text-red-100">{historyError}</p> : null}
-            </CardShell>
-          </aside>
-
-          <div className="space-y-6">
-            <CardShell className="card-glow">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="section-label">Readiness input</p>
-                  <h2 className="mt-2 text-2xl font-black text-white">Paste your Web3 project URL</h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">URL se basic surface scan start hota hai. Contract, API, GitHub aur Solidity evidence optional hai.</p>
                 </div>
                 <span className={`badge ${missingRequiredFields.length ? "badge-amber" : "badge-green"}`}>
                   {missingRequiredFields.length ? "Needs input" : "Ready"}
                 </span>
               </div>
 
-              <div className="mt-6 grid gap-4 lg:grid-cols-12">
-                <div className="lg:col-span-7">
+              <div className="mt-7 grid gap-4 lg:grid-cols-12">
+                <div className="lg:col-span-12">
                   <FieldLabel label="Website / dApp URL" required>
-                    <input className="input" value={websiteUrl} onChange={(event) => setWebsiteUrl(event.target.value)} placeholder="https://yourproject.com" />
+                    <input className="input scanner-input-xl" value={websiteUrl} onChange={(event) => setWebsiteUrl(event.target.value)} placeholder="https://yourproject.com" />
                   </FieldLabel>
                 </div>
-                <div className="lg:col-span-5">
+
+                <div className="lg:col-span-6">
                   <FieldLabel label="Project type" required>
-                    <select className="select" value={projectType} onChange={(event) => setProjectType(event.target.value)}>
+                    <select className="select scanner-choice-select" value={projectType} onChange={(event) => setProjectType(event.target.value)}>
+                      <option value="" disabled>Select project type</option>
                       {projectTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
                     </select>
                   </FieldLabel>
                 </div>
-                {projectType === "Other" ? (
-                  <div className="lg:col-span-6">
-                    <FieldLabel label="Custom project type" required>
-                      <input className="input" value={customProjectType} onChange={(event) => setCustomProjectType(event.target.value)} placeholder="Example: RWA, DePIN" />
-                    </FieldLabel>
-                  </div>
-                ) : null}
+
                 <div className="lg:col-span-6">
-                  <FieldLabel label="Chain">
-                    <select className="select" value={chain} onChange={(event) => setChain(event.target.value)}>
+                  <FieldLabel label="Chain / surface" required>
+                    <select className="select scanner-choice-select" value={chain} onChange={(event) => setChain(event.target.value)}>
+                      <option value="" disabled>Select chain</option>
                       {chainOptions.map((option) => <option key={option} value={option}>{option}</option>)}
                     </select>
                   </FieldLabel>
                 </div>
+
+                {projectType === "Other" ? (
+                  <div className="lg:col-span-6">
+                    <FieldLabel label="Custom project type" required>
+                      <input className="input" value={customProjectType} onChange={(event) => setCustomProjectType(event.target.value)} placeholder="Example: RWA, DePIN, AI x Web3" />
+                    </FieldLabel>
+                  </div>
+                ) : null}
+
                 {chain === "Other" ? (
                   <div className="lg:col-span-6">
-                    <FieldLabel label="Custom chain">
-                      <input className="input" value={customChain} onChange={(event) => setCustomChain(event.target.value)} placeholder="Example: Sui, Aptos" />
+                    <FieldLabel label="Custom chain" required>
+                      <input className="input" value={customChain} onChange={(event) => setCustomChain(event.target.value)} placeholder="Example: Sui, Aptos, Monad" />
                     </FieldLabel>
                   </div>
                 ) : null}
               </div>
 
-              <div className="mt-6 rounded-2xl border border-white/[0.07] bg-white/[0.03]">
-                <button type="button" onClick={() => setAdvancedOpen((value) => !value)} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left">
-                  <div>
-                    <p className="text-sm font-black text-white">Optional evidence</p>
-                    <p className="mt-1 text-xs text-slate-500">Contract, API, GitHub, wallet and code evidence add stronger context.</p>
+              <div className="mt-6 rounded-[1.5rem] border border-cyan/15 bg-cyan/[0.035] p-4 shadow-[0_0_32px_rgba(6,182,212,.08)]">
+                <button type="button" onClick={() => setAdvancedOpen((value) => !value)} className="flex w-full items-center justify-between gap-4 text-left">
+                  <div className="flex items-center gap-3">
+                    <span className="scanner-chip-icon">＋</span>
+                    <div>
+                      <p className="text-sm font-black text-white">Add optional evidence</p>
+                      <p className="mt-1 text-xs text-slate-500">Contract, API, GitHub and Solidity evidence can improve context.</p>
+                    </div>
                   </div>
-                  <span className="badge badge-cyan">{advancedOpen ? "Hide" : "Add evidence"}</span>
+                  <span className="badge badge-cyan">{advancedOpen ? "Hide" : "Open"}</span>
                 </button>
                 {advancedOpen ? (
-                  <div className="grid gap-4 border-t border-white/[0.07] p-5 lg:grid-cols-3">
+                  <div className="mt-5 grid gap-4 border-t border-cyan/10 pt-5 lg:grid-cols-3">
                     <FieldLabel label="Contract address">
                       <input className="input" value={contractAddress} onChange={(event) => setContractAddress(event.target.value)} placeholder="0x..." />
                     </FieldLabel>
@@ -1034,14 +1001,20 @@ export function UnifiedUrlScannerClient() {
                 ) : null}
               </div>
 
-              <div className="mt-6 grid gap-3 rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4 text-sm leading-6 text-amber-50">
-                <label className="flex gap-3">
-                  <input type="checkbox" className="mt-1" checked={authorized} onChange={(event) => setAuthorized(event.target.checked)} />
-                  <span>I own this project or have permission to review the supplied evidence. <strong>*</strong></span>
+              <div className="mt-6 grid gap-3 md:grid-cols-2">
+                <label className={`scanner-check-card ${authorized ? "scanner-check-card-on" : ""}`}>
+                  <input type="checkbox" checked={authorized} onChange={(event) => setAuthorized(event.target.checked)} />
+                  <span>
+                    <strong>Permission confirmed</strong>
+                    <small>I own this project or have permission to review the supplied evidence.</small>
+                  </span>
                 </label>
-                <label className="flex gap-3">
-                  <input type="checkbox" className="mt-1" checked={realOnly} onChange={(event) => setRealOnly(event.target.checked)} />
-                  <span>I understand unavailable modules will be marked Not Assessed. <strong>*</strong></span>
+                <label className={`scanner-check-card ${realOnly ? "scanner-check-card-on" : ""}`}>
+                  <input type="checkbox" checked={realOnly} onChange={(event) => setRealOnly(event.target.checked)} />
+                  <span>
+                    <strong>Evidence-only result</strong>
+                    <small>Unavailable modules stay Not Assessed instead of guessed.</small>
+                  </span>
                 </label>
               </div>
 
@@ -1049,186 +1022,168 @@ export function UnifiedUrlScannerClient() {
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <button type="button" onClick={() => void runScan()} disabled={!canRunScan} className="btn-primary sm:w-auto">
-                  {loading ? "Scanning evidence..." : "Run Unified Scan →"}
+                  {loading ? "Scanning evidence..." : "Run scan →"}
                 </button>
                 {!isLoggedIn && !authLoading ? <Link href="/auth/login" className="btn-secondary sm:w-auto">Login first</Link> : null}
               </div>
+            </div>
+          </CardShell>
+
+        {loading ? (
+          <CardShell>
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="section-label">Scan running</p>
+                <h2 className="mt-2 text-2xl font-black text-white">{currentStage}</h2>
+                <p className="mt-2 text-sm text-slate-400">Building a traceable report from current evidence.</p>
+              </div>
+              <ScoreOrb score={progress} label="progress" />
+            </div>
+            <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/[0.06]">
+              <div className="h-full rounded-full bg-gradient-to-r from-cyan via-blue-500 to-purple-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+            </div>
+            <div className="mt-5 grid gap-2 sm:grid-cols-3">
+              {scanStages.map((stage, index) => (
+                <div key={stage} className={`rounded-xl border p-3 text-xs font-bold ${index <= stageIndex ? "border-cyan/25 bg-cyan/10 text-cyan-50" : "border-white/[0.07] bg-white/[0.03] text-slate-500"}`}>
+                  {stage}
+                </div>
+              ))}
+            </div>
+          </CardShell>
+        ) : null}
+
+        {error ? (
+          <CardShell className="border-red-400/25 bg-red-500/10">
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-red-200">Action needed</p>
+            <p className="mt-3 text-sm leading-6 text-red-100">{error}</p>
+          </CardShell>
+        ) : null}
+
+        {saveMessage ? (
+          <CardShell className="border-emerald-400/20 bg-emerald-400/10">
+            <p className="text-sm font-black text-emerald-100">{saveMessage}</p>
+          </CardShell>
+        ) : null}
+
+        {result ? (
+          <div className="space-y-6">
+            <CardShell className="card-glow">
+              <div className="grid gap-6 lg:grid-cols-[auto_1fr] lg:items-center">
+                <ScoreOrb score={result.overall_score ?? result.available_score ?? null} label="confidence" />
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`badge ${riskBadgeClass(result.risk_label)}`}>{result.risk_label || "Not Assessed"}</span>
+                    <span className="badge badge-cyan">Report {result.report_id}</span>
+                    <span className="badge">{formatDateTime(result.generated_at)}</span>
+                  </div>
+                  <h2 className="mt-4 text-3xl font-black text-white">{result.project_name || result.website_url}</h2>
+                  <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{result.safe_public_summary || "Launch readiness result generated from supplied evidence."}</p>
+                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Assessed</p>
+                      <p className="mt-1 text-2xl font-black text-white">{result.assessed_modules?.length || result.live_module_count || 0}</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Not Assessed</p>
+                      <p className="mt-1 text-2xl font-black text-white">{result.not_assessed_modules?.length || 0}</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Actions</p>
+                      <p className="mt-1 text-2xl font-black text-white">{result.priority_actions?.length || 0}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardShell>
 
-            {loading ? (
-              <CardShell>
-                <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="section-label">Scan running</p>
-                    <h2 className="mt-2 text-2xl font-black text-white">{currentStage}</h2>
-                    <p className="mt-2 text-sm text-slate-400">Building a traceable report from current evidence.</p>
-                  </div>
-                  <ScoreOrb score={progress} label="progress" />
+            <CardShell>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="section-label">Split scores</p>
+                  <h2 className="mt-2 text-2xl font-black text-white">Launch confidence, not audit score</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">Each score explains its evidence basis. Missing evidence stays outside the score instead of being guessed.</p>
                 </div>
-                <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/[0.06]">
-                  <div className="h-full rounded-full bg-gradient-to-r from-cyan via-blue-500 to-purple-500 transition-all duration-500" style={{ width: `${progress}%` }} />
-                </div>
-                <div className="mt-5 grid gap-2 sm:grid-cols-3">
-                  {scanStages.map((stage, index) => (
-                    <div key={stage} className={`rounded-xl border p-3 text-xs font-bold ${index <= stageIndex ? "border-cyan/25 bg-cyan/10 text-cyan-50" : "border-white/[0.07] bg-white/[0.03] text-slate-500"}`}>
-                      {stage}
-                    </div>
-                  ))}
-                </div>
-              </CardShell>
-            ) : null}
-
-            {error ? (
-              <CardShell className="border-red-400/25 bg-red-500/10">
-                <p className="text-sm font-black uppercase tracking-[0.2em] text-red-200">Action needed</p>
-                <p className="mt-3 text-sm leading-6 text-red-100">{error}</p>
-              </CardShell>
-            ) : null}
-
-            {saveMessage ? (
-              <CardShell className="border-emerald-400/20 bg-emerald-400/10">
-                <p className="text-sm font-black text-emerald-100">{saveMessage}</p>
-              </CardShell>
-            ) : null}
-
-            {!result && !loading ? (
-              <CardShell>
-                <p className="section-label">What you will get</p>
-                <div className="mt-5 grid gap-4 md:grid-cols-3">
-                  {[
-                    ["Split confidence", "Website, contract, evidence, and overall launch confidence are separated."],
-                    ["Fix guidance", "Findings include where to fix, why it matters, and how to verify."],
-                    ["Export-ready", "Download PDF, HTML, Markdown, and JSON from the same scan result."],
-                  ].map(([title, text]) => (
-                    <div key={title} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
-                      <p className="font-black text-white">{title}</p>
-                      <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardShell>
-            ) : null}
-
-            {result ? (
-              <div className="space-y-6">
-                <CardShell className="card-glow">
-                  <div className="grid gap-6 lg:grid-cols-[auto_1fr] lg:items-center">
-                    <ScoreOrb score={result.overall_score ?? result.available_score ?? null} label="confidence" />
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={`badge ${riskBadgeClass(result.risk_label)}`}>{result.risk_label || "Not Assessed"}</span>
-                        <span className="badge badge-cyan">Report {result.report_id}</span>
-                        <span className="badge">{formatDateTime(result.generated_at)}</span>
-                      </div>
-                      <h2 className="mt-4 text-3xl font-black text-white">{result.project_name || result.website_url}</h2>
-                      <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{result.safe_public_summary || "Launch readiness result generated from supplied evidence."}</p>
-                      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
-                          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Assessed</p>
-                          <p className="mt-1 text-2xl font-black text-white">{result.assessed_modules?.length || result.live_module_count || 0}</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
-                          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Not Assessed</p>
-                          <p className="mt-1 text-2xl font-black text-white">{result.not_assessed_modules?.length || 0}</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
-                          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Actions</p>
-                          <p className="mt-1 text-2xl font-black text-white">{result.priority_actions?.length || 0}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardShell>
-
-                <CardShell>
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="section-label">Split scores</p>
-                      <h2 className="mt-2 text-2xl font-black text-white">Launch confidence, not audit score</h2>
-                      <p className="mt-2 text-sm leading-6 text-slate-400">Each score explains its evidence basis. Missing evidence stays outside the score instead of being guessed.</p>
-                    </div>
-                    {scoreSplit?.note ? <span className="badge badge-amber">Pre-audit only</span> : null}
-                  </div>
-                  <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    {splitCards.map((item) => <SplitScoreCard key={item.key} item={item} />)}
-                  </div>
-                </CardShell>
-
-                <CardShell>
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="section-label">Exports</p>
-                      <h2 className="mt-2 text-2xl font-black text-white">Report artifacts</h2>
-                      <p className="mt-2 text-sm text-slate-400">Exports are built from this scan result and keep limitations visible.</p>
-                    </div>
-                    <button className="btn-secondary sm:w-auto" type="button" onClick={() => void saveUnifiedScanToDashboard()} disabled={saveLoading}>
-                      {saveLoading ? "Saving..." : "Save to dashboard"}
-                    </button>
-                  </div>
-                  <div className="mt-5 grid gap-3 sm:grid-cols-4">
-                    {(["pdf", "html", "markdown", "json"] as ExportFormat[]).map((format) => (
-                      <button key={format} type="button" className="btn-primary !px-4 !py-3 text-xs" onClick={() => void exportCurrentReport(format)}>
-                        Download {format === "markdown" ? "MD" : format.toUpperCase()}
-                      </button>
-                    ))}
-                  </div>
-                  {exportStatus ? <p className="mt-4 rounded-xl border border-cyan/20 bg-cyan/10 p-3 text-sm text-cyan-50">{exportStatus}</p> : null}
-                </CardShell>
-
-                <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-                  <CardShell>
-                    <p className="section-label">Priority actions</p>
-                    <h2 className="mt-2 text-2xl font-black text-white">Findings with fix hints</h2>
-                    <div className="mt-5 space-y-3">
-                      {result.priority_actions?.length ? result.priority_actions.map((action, index) => <FindingCard key={`${action.title}-${index}`} action={action} />) : <p className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">No priority findings were returned for the assessed evidence.</p>}
-                    </div>
-                  </CardShell>
-
-                  <CardShell>
-                    <p className="section-label">Evidence gaps</p>
-                    <h2 className="mt-2 text-2xl font-black text-white">Not Assessed queue</h2>
-                    <div className="mt-5 space-y-3">
-                      {requiredInputs.length ? requiredInputs.map(({ label, item, guide }) => (
-                        <div key={`${label}-${item}`} className="rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4">
-                          <p className="text-sm font-black text-amber-50">{label}</p>
-                          <p className="mt-2 text-sm leading-6 text-amber-100/90">{item}</p>
-                          <p className="mt-3 text-xs leading-5 text-amber-100/70">{guide}</p>
-                        </div>
-                      )) : <p className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">No missing evidence listed in this result.</p>}
-                    </div>
-                  </CardShell>
-                </div>
-
-                <CardShell>
-                  <p className="section-label">Module matrix</p>
-                  <h2 className="mt-2 text-2xl font-black text-white">Assessed vs Not Assessed</h2>
-                  <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {cards.map((card) => <ModuleCard key={card.module} card={card} />)}
-                  </div>
-                </CardShell>
-
-                {result.warnings?.length || result.blocked_claims?.length ? (
-                  <CardShell>
-                    <p className="section-label">Boundaries</p>
-                    <div className="mt-5 grid gap-4 md:grid-cols-2">
-                      {result.warnings?.length ? (
-                        <div className="rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4">
-                          <p className="font-black text-amber-50">Warnings</p>
-                          <ul className="mt-3 space-y-2 text-sm leading-6 text-amber-100/85">{result.warnings.map((item) => <li key={item}>• {item}</li>)}</ul>
-                        </div>
-                      ) : null}
-                      {result.blocked_claims?.length ? (
-                        <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-4">
-                          <p className="font-black text-red-100">Do not claim</p>
-                          <ul className="mt-3 space-y-2 text-sm leading-6 text-red-100/85">{result.blocked_claims.map((item) => <li key={item}>• {item}</li>)}</ul>
-                        </div>
-                      ) : null}
-                    </div>
-                  </CardShell>
-                ) : null}
+                {scoreSplit?.note ? <span className="badge badge-amber">Pre-audit only</span> : null}
               </div>
+              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {splitCards.map((item) => <SplitScoreCard key={item.key} item={item} />)}
+              </div>
+            </CardShell>
+
+            <CardShell>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="section-label">Exports</p>
+                  <h2 className="mt-2 text-2xl font-black text-white">Report artifacts</h2>
+                  <p className="mt-2 text-sm text-slate-400">Exports are built from this scan result and keep limitations visible.</p>
+                </div>
+                <button className="btn-secondary sm:w-auto" type="button" onClick={() => void saveUnifiedScanToDashboard()} disabled={saveLoading}>
+                  {saveLoading ? "Saving..." : "Save to dashboard"}
+                </button>
+              </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-4">
+                {(["pdf", "html", "markdown", "json"] as ExportFormat[]).map((format) => (
+                  <button key={format} type="button" className="btn-primary !px-4 !py-3 text-xs" onClick={() => void exportCurrentReport(format)}>
+                    Download {format === "markdown" ? "MD" : format.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              {exportStatus ? <p className="mt-4 rounded-xl border border-cyan/20 bg-cyan/10 p-3 text-sm text-cyan-50">{exportStatus}</p> : null}
+            </CardShell>
+
+            <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+              <CardShell>
+                <p className="section-label">Priority actions</p>
+                <h2 className="mt-2 text-2xl font-black text-white">Findings with fix hints</h2>
+                <div className="mt-5 space-y-3">
+                  {result.priority_actions?.length ? result.priority_actions.map((action, index) => <FindingCard key={`${action.title}-${index}`} action={action} />) : <p className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">No priority findings were returned for the assessed evidence.</p>}
+                </div>
+              </CardShell>
+
+              <CardShell>
+                <p className="section-label">Evidence gaps</p>
+                <h2 className="mt-2 text-2xl font-black text-white">Not Assessed queue</h2>
+                <div className="mt-5 space-y-3">
+                  {requiredInputs.length ? requiredInputs.map(({ label, item, guide }) => (
+                    <div key={`${label}-${item}`} className="rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4">
+                      <p className="text-sm font-black text-amber-50">{label}</p>
+                      <p className="mt-2 text-sm leading-6 text-amber-100/90">{item}</p>
+                      <p className="mt-3 text-xs leading-5 text-amber-100/70">{guide}</p>
+                    </div>
+                  )) : <p className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">No missing evidence listed in this result.</p>}
+                </div>
+              </CardShell>
+            </div>
+
+            <CardShell>
+              <p className="section-label">Module matrix</p>
+              <h2 className="mt-2 text-2xl font-black text-white">Assessed vs Not Assessed</h2>
+              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {cards.map((card) => <ModuleCard key={card.module} card={card} />)}
+              </div>
+            </CardShell>
+
+            {result.warnings?.length || result.blocked_claims?.length ? (
+              <CardShell>
+                <p className="section-label">Boundaries</p>
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  {result.warnings?.length ? (
+                    <div className="rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4">
+                      <p className="font-black text-amber-50">Warnings</p>
+                      <ul className="mt-3 space-y-2 text-sm leading-6 text-amber-100/85">{result.warnings.map((item) => <li key={item}>• {item}</li>)}</ul>
+                    </div>
+                  ) : null}
+                  {result.blocked_claims?.length ? (
+                    <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-4">
+                      <p className="font-black text-red-100">Do not claim</p>
+                      <ul className="mt-3 space-y-2 text-sm leading-6 text-red-100/85">{result.blocked_claims.map((item) => <li key={item}>• {item}</li>)}</ul>
+                    </div>
+                  ) : null}
+                </div>
+              </CardShell>
             ) : null}
           </div>
+        ) : null}
         </div>
       </section>
     </main>
