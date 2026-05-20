@@ -286,6 +286,67 @@ function ApiExposurePanel({ surface }: { surface: SurfaceRecord }) {
 }
 
 
+function BugDetectionCoveragePanel({ result }: { result: UnifiedUrlScanResponse }) {
+  const coverage = result.bug_detection_coverage;
+  const pipelineFindings = (result.findings_pipeline?.normalized_findings || []).map(findingFromRecord).filter((item): item is Finding => Boolean(item));
+  const severityRank: Record<Severity, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+  const findings = [...pipelineFindings].sort((a, b) => severityRank[a.severity] - severityRank[b.severity]);
+
+  if (!coverage && !findings.length) return null;
+
+  const severity = coverage?.by_severity || {};
+  const categories = Object.entries(coverage?.by_category || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+  return (
+    <section className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 shadow-2xl shadow-black/20">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="section-label">Phase 48 bug coverage</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Detected bugs / warnings from real evidence</h2>
+          <p className="mt-2 max-w-4xl text-sm leading-7 text-slate-300">
+            {coverage?.real_only_rule || "Only findings from assessed evidence are shown. Not assessed modules are not treated as clean."}
+          </p>
+        </div>
+        <span className={`badge ${coverage?.critical_high_count ? "badge-amber" : "badge-green"}`}>{coverage?.critical_high_count || 0} Critical/High</span>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4 lg:col-span-2"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Total visible findings</p><p className="mt-2 text-2xl font-black text-white">{coverage?.total_findings_from_assessed_modules ?? findings.length}</p></div>
+        {(["critical", "high", "medium", "low"] as Severity[]).map((key) => (
+          <div key={key} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">{key}</p><p className="mt-2 text-2xl font-black text-white">{Number(severity[key] || 0)}</p></div>
+        ))}
+      </div>
+
+      {categories.length ? (
+        <div className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+          <h3 className="font-black text-white">Finding categories</h3>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {categories.map(([category, count]) => <span key={category} className="badge badge-slate">{category}: {count}</span>)}
+          </div>
+        </div>
+      ) : null}
+
+      {findings.length ? (
+        <div className="mt-5 grid gap-3">
+          {findings.slice(0, 12).map((finding) => <FindingCard key={`visible-${finding.id}`} finding={finding} />)}
+        </div>
+      ) : (
+        <p className="mt-5 rounded-2xl border border-emerald-300/15 bg-emerald-300/10 p-4 text-sm leading-7 text-emerald-50">No visible vulnerability findings were generated from assessed evidence. This does not mean the project is fully secure because unassessed modules still need evidence/manual review.</p>
+      )}
+
+      {coverage?.coverage_added?.length ? (
+        <details className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-6 text-slate-300">
+          <summary className="cursor-pointer font-black text-white">What new real checks are included</summary>
+          <ul className="mt-3 grid gap-2 md:grid-cols-2">
+            {coverage.coverage_added.map((item) => <li key={item}>• {item}</li>)}
+          </ul>
+        </details>
+      ) : null}
+    </section>
+  );
+}
+
+
 function RealFindingsPipelinePanel({ pipeline }: { pipeline?: UnifiedUrlScanResponse["findings_pipeline"] }) {
   if (!pipeline) {
     return (
@@ -523,6 +584,8 @@ export function ResultsClient() {
           </details>
         </section>
       ) : null}
+
+      <BugDetectionCoveragePanel result={result} />
 
       <DynamicScoreTracePanel trace={dynamicScoreTrace} />
 

@@ -374,6 +374,23 @@ export type DynamicScoreTrace = {
   important_note: string;
 };
 
+
+export type BugDetectionCoverage = {
+  phase: string;
+  engine_version: string;
+  real_only_rule: string;
+  total_findings_from_assessed_modules: number;
+  critical_high_count: number;
+  by_severity: Record<string, number>;
+  by_module: Record<string, number>;
+  by_category: Record<string, number>;
+  assessed_modules: string[];
+  not_assessed_modules: string[];
+  website_passive_coverage?: Record<string, unknown>;
+  visibility_rule: string;
+  coverage_added: string[];
+};
+
 export type RealEvidenceSummary = {
   summary_rule: string;
   coverage: string;
@@ -405,6 +422,7 @@ export type UnifiedUrlScanResponse = {
   score_split?: UnifiedScoreSplit;
   coverage?: CombinedLaunchReport["coverage"];
   coverage_gate?: CoverageGate;
+  bug_detection_coverage?: BugDetectionCoverage;
   real_evidence_summary?: RealEvidenceSummary;
   dynamic_score_trace?: DynamicScoreTrace | Record<string, unknown>;
   assessed_modules: string[];

@@ -485,6 +485,52 @@ def _coverage_gate(module_cards: list[dict], combined: dict) -> dict[str, Any]:
     }
 
 
+
+
+def _bug_detection_coverage_summary(reports: list[ScanResponse], module_cards: list[dict]) -> dict[str, Any]:
+    all_findings: list[Finding] = []
+    for report in reports:
+        all_findings.extend(report.findings)
+    by_module: dict[str, int] = {}
+    by_severity = {severity: 0 for severity in ["critical", "high", "medium", "low", "info"]}
+    by_category: dict[str, int] = {}
+    for finding in all_findings:
+        by_module[finding.module] = by_module.get(finding.module, 0) + 1
+        by_severity[finding.severity] = by_severity.get(finding.severity, 0) + 1
+        category = finding.category or "general"
+        by_category[category] = by_category.get(category, 0) + 1
+    assessed_modules = [card.get("module") for card in module_cards if card.get("assessed")]
+    not_assessed_modules = [card.get("module") for card in module_cards if not card.get("assessed")]
+    website_coverage = {}
+    for report in reports:
+        if report.module_score.module == "website":
+            website_coverage = (report.scan_metadata or {}).get("bug_detection_coverage", {})
+            break
+    return {
+        "phase": "48",
+        "engine_version": "bug-detection-coverage-v1",
+        "real_only_rule": "Every visible bug/warning must come from a real assessed module finding, tool output, supplied evidence, or a clear not-assessed/manual state.",
+        "total_findings_from_assessed_modules": len(all_findings),
+        "critical_high_count": sum(1 for f in all_findings if f.severity in {"critical", "high"}),
+        "by_severity": by_severity,
+        "by_module": by_module,
+        "by_category": dict(sorted(by_category.items(), key=lambda item: item[0])),
+        "assessed_modules": assessed_modules,
+        "not_assessed_modules": not_assessed_modules,
+        "website_passive_coverage": website_coverage,
+        "visibility_rule": "Results page should show real findings clearly at the top. Not assessed modules must not be counted as passed or failed.",
+        "coverage_added": [
+            "cookie Secure/HttpOnly/SameSite evidence",
+            "CSP frame-ancestors/object-src/script-src quality",
+            "form action security and external form targets",
+            "external iframe sandbox evidence",
+            "target=_blank noopener evidence",
+            "object/embed evidence",
+            "source map hints and same-origin .map HEAD checks",
+            "security.txt launch contact evidence",
+        ],
+    }
+
 def _real_evidence_summary(website_report: ScanResponse, module_cards: list[dict]) -> dict[str, Any]:
     metadata = website_report.scan_metadata or {}
     taxonomy = metadata.get("finding_truth_taxonomy", {}) if isinstance(metadata, dict) else {}
@@ -728,7 +774,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "report_id": f"W3G-URL-LAUNCH-{_hash(safe_website_url)[:12]}",
         "generated_at": started.isoformat(),
         "project_name": payload.project_name,
-        "engine_version": "web3guard-unified-url-launch-scanner-v15.0-dynamic-evidence-scoring",
+        "engine_version": "web3guard-unified-url-launch-scanner-v16.0-bug-detection-coverage",
         "mode": "real_only_unified_url_scan",
         "website_url": safe_website_url,
         "chain": payload.chain,
@@ -740,6 +786,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "score_split": score_split,
         "coverage": combined.get("coverage"),
         "coverage_gate": _coverage_gate(module_cards, combined),
+        "bug_detection_coverage": _bug_detection_coverage_summary(reports, module_cards),
         "real_evidence_summary": _real_evidence_summary(website_report, module_cards),
         "dynamic_score_trace": (website_report.scan_metadata or {}).get("dynamic_score_trace", {}),
         "assessed_modules": assessed_modules,

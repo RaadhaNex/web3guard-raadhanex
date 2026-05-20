@@ -61,6 +61,35 @@ function exportReadyReport(result: UnifiedUrlScanResponse | null): CombinedLaunc
   return result.combined_report;
 }
 
+function BugCoverageReportCard({ result }: { result: UnifiedUrlScanResponse | null }) {
+  const coverage = result?.bug_detection_coverage;
+  if (!coverage) return null;
+  const severity = coverage.by_severity || {};
+  return (
+    <section className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 shadow-2xl shadow-black/20">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="section-label">Phase 48 bug coverage</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Report-visible bug detection coverage</h2>
+          <p className="mt-2 text-sm leading-7 text-slate-300">{coverage.visibility_rule}</p>
+        </div>
+        <span className={`badge ${coverage.critical_high_count ? "badge-amber" : "badge-green"}`}>{coverage.total_findings_from_assessed_modules} finding(s)</span>
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Critical</p><p className="mt-2 text-2xl font-black text-white">{Number(severity.critical || 0)}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">High</p><p className="mt-2 text-2xl font-black text-white">{Number(severity.high || 0)}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Medium</p><p className="mt-2 text-2xl font-black text-white">{Number(severity.medium || 0)}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Low</p><p className="mt-2 text-2xl font-black text-white">{Number(severity.low || 0)}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Info</p><p className="mt-2 text-2xl font-black text-white">{Number(severity.info || 0)}</p></div>
+      </div>
+      <details className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-6 text-slate-300">
+        <summary className="cursor-pointer font-black text-white">Coverage added in this phase</summary>
+        <ul className="mt-3 grid gap-2 md:grid-cols-2">{coverage.coverage_added.map((item) => <li key={item}>• {item}</li>)}</ul>
+      </details>
+    </section>
+  );
+}
+
 export function ReportCenterClient() {
   const [result, setResult] = useState<UnifiedUrlScanResponse | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -154,6 +183,8 @@ export function ReportCenterClient() {
           </article>
         ))}
       </section>
+
+      <BugCoverageReportCard result={result} />
 
       <section className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 shadow-2xl shadow-black/20">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

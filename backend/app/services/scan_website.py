@@ -77,17 +77,47 @@ class ScriptParser(html.parser.HTMLParser):
         self.scripts: list[str] = []
         self.inline_script_count = 0
         self.forms: list[dict[str, str]] = []
+        self.links: list[dict[str, str]] = []
+        self.iframes: list[dict[str, str]] = []
+        self.objects: list[dict[str, str]] = []
+        self.meta_tags: list[dict[str, str]] = []
+        self.base_tags: list[dict[str, str]] = []
+        self.current_form: dict[str, str] | None = None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        tag_name = tag.lower()
         attr_map = {key.lower(): value or "" for key, value in attrs}
-        if tag.lower() == "script":
+        if tag_name == "script":
             src = attr_map.get("src", "")
             if src:
                 self.scripts.append(src)
             else:
                 self.inline_script_count += 1
+        elif tag_name == "form":
+            self.current_form = dict(attr_map)
+            self.current_form.setdefault("password_input_count", "0")
+            self.current_form.setdefault("hidden_input_count", "0")
+            self.forms.append(self.current_form)
+        elif tag_name == "input" and self.current_form is not None:
+            input_type = attr_map.get("type", "text").lower()
+            if input_type == "password":
+                self.current_form["password_input_count"] = str(int(self.current_form.get("password_input_count", "0") or "0") + 1)
+            if input_type == "hidden":
+                self.current_form["hidden_input_count"] = str(int(self.current_form.get("hidden_input_count", "0") or "0") + 1)
+        elif tag_name == "a":
+            self.links.append(attr_map)
+        elif tag_name == "iframe":
+            self.iframes.append(attr_map)
+        elif tag_name in {"object", "embed"}:
+            self.objects.append({"tag": tag_name, **attr_map})
+        elif tag_name == "meta":
+            self.meta_tags.append(attr_map)
+        elif tag_name == "base":
+            self.base_tags.append(attr_map)
+
+    def handle_endtag(self, tag: str) -> None:
         if tag.lower() == "form":
-            self.forms.append(attr_map)
+            self.current_form = None
 
 
 def _finding(
@@ -140,6 +170,65 @@ def _headers_lower(headers: httpx.Headers | dict[str, str]) -> dict[str, str]:
 
 def _hash_input(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _split_set_cookie_header(value: str) -> list[str]:
+    if not value:
+        return []
+    # Good enough for scanner evidence: avoid breaking on common Expires comma by
+    # splitting only when a comma is followed by a cookie-name style token.
+    parts = re.split(r",\s*(?=[A-Za-z0-9_\-]+=)", value)
+    return [part.strip() for part in parts if part.strip()]
+
+
+def _cookie_security_evidence(set_cookie_value: str | None) -> dict:
+    cookies = []
+    insecure = []
+    missing_http_only = []
+    missing_same_site = []
+    missing_secure = []
+    for raw_cookie in _split_set_cookie_header(set_cookie_value or ""):
+        lower = raw_cookie.lower()
+        name = raw_cookie.split("=", 1)[0].strip()[:80] or "cookie"
+        info = {
+            "name": name,
+            "secure": "secure" in lower,
+            "httponly": "httponly" in lower,
+            "samesite": "samesite=" in lower,
+            "raw_preview": raw_cookie[:180],
+        }
+        cookies.append(info)
+        if not info["secure"]:
+            missing_secure.append(name)
+        if not info["httponly"]:
+            missing_http_only.append(name)
+        if not info["samesite"]:
+            missing_same_site.append(name)
+        if not info["secure"] or not info["httponly"] or not info["samesite"]:
+            insecure.append(info)
+    return {
+        "cookie_count": len(cookies),
+        "cookies": cookies[:20],
+        "missing_secure": missing_secure[:20],
+        "missing_http_only": missing_http_only[:20],
+        "missing_same_site": missing_same_site[:20],
+        "insecure_cookie_count": len(insecure),
+    }
+
+
+def _csp_analysis(csp: str) -> dict:
+    lower = csp.lower()
+    return {
+        "present": bool(csp),
+        "has_default_src": "default-src" in lower,
+        "has_script_src": "script-src" in lower,
+        "has_object_src_none": "object-src 'none'" in lower or 'object-src "none"' in lower,
+        "has_frame_ancestors": "frame-ancestors" in lower,
+        "allows_unsafe_inline": "'unsafe-inline'" in lower,
+        "allows_unsafe_eval": "'unsafe-eval'" in lower,
+        "allows_wildcard": "*" in lower,
+        "raw_preview": csp[:500],
+    }
 
 
 async def _safe_fetch(
@@ -217,6 +306,10 @@ async def _safe_fetch(
     )
 
 
+def _same_origin(url: str, base_url: str) -> bool:
+    return _host_of(urljoin(base_url, url)) == _host_of(base_url)
+
+
 def _extract_html_evidence(html: str, final_url: str) -> dict:
     parser = ScriptParser()
     try:
@@ -225,10 +318,14 @@ def _extract_html_evidence(html: str, final_url: str) -> dict:
         pass
 
     external_scripts = []
+    same_origin_scripts = []
     for src in parser.scripts:
         absolute = urljoin(final_url, src)
         domain = _domain_of_script(src, final_url)
-        external_scripts.append({"src": absolute, "domain": domain, "external": _is_external_script(src, final_url)})
+        item = {"src": absolute, "domain": domain, "external": _is_external_script(src, final_url)}
+        external_scripts.append(item)
+        if not item["external"]:
+            same_origin_scripts.append(item)
 
     mixed_content = [script for script in external_scripts if script["src"].startswith("http://")]
     risky_script_hints = [
@@ -241,19 +338,85 @@ def _extract_html_evidence(html: str, final_url: str) -> dict:
     dapp_keyword_hits = sorted({keyword for keyword in DAPP_PAGE_KEYWORDS if keyword in lowered_html})
     evm_address_hints = sorted(set(EVM_ADDRESS_HINT_RE.findall(html)))[:20]
 
+    external_link_domains = sorted({
+        _host_of(urljoin(final_url, link.get("href", "")))
+        for link in parser.links
+        if link.get("href") and _host_of(urljoin(final_url, link.get("href", ""))) and not _same_origin(link.get("href", ""), final_url)
+    })
+    target_blank_without_noopener = [
+        {"href": urljoin(final_url, link.get("href", "")), "rel": link.get("rel", "")}
+        for link in parser.links
+        if link.get("target", "").lower() == "_blank" and "noopener" not in link.get("rel", "").lower()
+    ][:20]
+
+    insecure_form_actions = []
+    external_form_actions = []
+    password_forms = []
+    for form in parser.forms:
+        action = form.get("action", "")
+        absolute_action = urljoin(final_url, action) if action else final_url
+        if absolute_action.startswith("http://"):
+            insecure_form_actions.append({"action": absolute_action, "method": form.get("method", "get")})
+        if _host_of(absolute_action) and _host_of(absolute_action) != _host_of(final_url):
+            external_form_actions.append({"action": absolute_action, "method": form.get("method", "get")})
+        if int(form.get("password_input_count", "0") or "0") > 0:
+            password_forms.append({"action": absolute_action, "method": form.get("method", "get"), "password_input_count": form.get("password_input_count", "0")})
+
+    iframe_risks = []
+    for iframe in parser.iframes:
+        src = iframe.get("src", "")
+        iframe_risks.append({
+            "src": urljoin(final_url, src) if src else "",
+            "external": bool(src and not _same_origin(src, final_url)),
+            "sandbox_present": "sandbox" in iframe,
+            "allow": iframe.get("allow", ""),
+        })
+
+    meta_refresh = []
+    noindex_tags = []
+    for meta in parser.meta_tags:
+        http_equiv = meta.get("http-equiv", "").lower()
+        name = meta.get("name", "").lower()
+        content = meta.get("content", "")
+        if http_equiv == "refresh":
+            meta_refresh.append({"content": content})
+        if name == "robots" and "noindex" in content.lower():
+            noindex_tags.append({"content": content})
+
+    base_http = [base for base in parser.base_tags if base.get("href", "").startswith("http://")]
+    source_map_hints = sorted({match.strip() for match in re.findall(r"sourceMappingURL=([^\s'\"<>]+)", html) if match.strip()})[:20]
+    source_map_hints.extend(sorted(set(re.findall(r"[A-Za-z0-9_./-]+\.js\.map", html)))[:20])
+    source_map_hints = source_map_hints[:20]
+
     return {
         "script_count": len(parser.scripts),
         "external_script_count": sum(1 for script in external_scripts if script["external"]),
         "inline_script_count": parser.inline_script_count,
         "external_scripts": external_scripts[:25],
+        "same_origin_scripts": same_origin_scripts[:25],
         "mixed_content_scripts": mixed_content[:25],
         "risky_script_hints": risky_script_hints[:25],
         "dapp_keyword_hits": dapp_keyword_hits,
         "evm_address_hints": evm_address_hints,
         "form_count": len(parser.forms),
         "forms": parser.forms[:10],
+        "password_form_count": len(password_forms),
+        "password_forms": password_forms[:10],
+        "insecure_form_actions": insecure_form_actions[:10],
+        "external_form_actions": external_form_actions[:10],
+        "link_count": len(parser.links),
+        "external_link_domain_count": len(external_link_domains),
+        "external_link_domains": external_link_domains[:30],
+        "target_blank_without_noopener": target_blank_without_noopener,
+        "iframe_count": len(parser.iframes),
+        "iframes": iframe_risks[:20],
+        "object_embed_count": len(parser.objects),
+        "objects": parser.objects[:10],
+        "meta_refresh": meta_refresh[:10],
+        "noindex_tags": noindex_tags[:10],
+        "base_http": base_http[:10],
+        "source_map_hints": source_map_hints,
     }
-
 
 def _build_response(url: str, project_name: str | None, findings: list[Finding], metadata: dict) -> ScanResponse:
     score_trace = score_findings_with_trace(findings)
@@ -386,6 +549,10 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
         header_map = page.headers
         metadata["headers_present"] = sorted([header for header in SECURITY_HEADERS if header in header_map])
         metadata["headers_missing"] = sorted([header for header in SECURITY_HEADERS if header not in header_map])
+        cookie_evidence = _cookie_security_evidence(header_map.get("set-cookie"))
+        csp_policy_analysis = _csp_analysis(header_map.get("content-security-policy", ""))
+        metadata["cookie_evidence"] = cookie_evidence
+        metadata["csp_policy_analysis"] = csp_policy_analysis
         metadata["raw_response_evidence"] = {
             "requested_url": safe_url,
             "final_url": page.url,
@@ -396,11 +563,28 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
             "security_headers_present": metadata["headers_present"],
             "security_headers_missing": metadata["headers_missing"],
             "csp_value": header_map.get("content-security-policy"),
+            "csp_policy_analysis": csp_policy_analysis,
             "hsts_value": header_map.get("strict-transport-security"),
             "cache_control_value": header_map.get("cache-control"),
+            "set_cookie_security": cookie_evidence,
             "content_type": header_map.get("content-type"),
             "evidence_note": "Captured from passive GET/HEAD responses only. This is real observed response evidence, not an exploit or certified audit result.",
         }
+        if cookie_evidence["missing_secure"]:
+            findings.append(
+                _finding(idx, "medium", "Cookie Missing Secure Flag", f"Set-Cookie header contains cookie(s) without Secure: {', '.join(cookie_evidence['missing_secure'][:5])}.", "Add Secure to session/auth cookies so browsers send them only over HTTPS.", "medium", "cookie_security", "WEB-COOKIE-SECURE")
+            )
+            idx += 1
+        if cookie_evidence["missing_http_only"]:
+            findings.append(
+                _finding(idx, "medium", "Cookie Missing HttpOnly Flag", f"Set-Cookie header contains cookie(s) without HttpOnly: {', '.join(cookie_evidence['missing_http_only'][:5])}.", "Add HttpOnly to session/auth cookies to reduce script access impact after XSS.", "medium", "cookie_security", "WEB-COOKIE-HTTPONLY")
+            )
+            idx += 1
+        if cookie_evidence["missing_same_site"]:
+            findings.append(
+                _finding(idx, "low", "Cookie Missing SameSite Attribute", f"Set-Cookie header contains cookie(s) without SameSite: {', '.join(cookie_evidence['missing_same_site'][:5])}.", "Set SameSite=Lax or Strict for session/auth cookies unless cross-site flows require None; Secure.", "medium", "cookie_security", "WEB-COOKIE-SAMESITE")
+            )
+            idx += 1
         for header, (severity, title, desc, recommendation) in SECURITY_HEADERS.items():
             if header not in header_map:
                 findings.append(
@@ -415,6 +599,21 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
             if present_weak:
                 findings.append(
                     _finding(idx, "medium", "Content-Security-Policy Uses Risky Directives", f"CSP contains risky directive(s): {', '.join(present_weak)}.", "Tighten script-src/default-src and remove unsafe-inline/unsafe-eval where possible.", "medium", "security_headers", "WEB-CSP-WEAK")
+                )
+                idx += 1
+            if not csp_policy_analysis["has_frame_ancestors"]:
+                findings.append(
+                    _finding(idx, "low", "CSP Missing frame-ancestors", "Content-Security-Policy is present but frame-ancestors was not detected.", "Add frame-ancestors 'none' or trusted origins to reduce clickjacking risk on login, mint, and wallet pages.", "medium", "clickjacking", "WEB-CSP-FRAME-ANCESTORS")
+                )
+                idx += 1
+            if not csp_policy_analysis["has_object_src_none"]:
+                findings.append(
+                    _finding(idx, "low", "CSP Missing object-src none", "Content-Security-Policy is present but object-src 'none' was not detected.", "Add object-src 'none' unless legacy plugin/embed content is intentionally required.", "medium", "security_headers", "WEB-CSP-OBJECT-SRC")
+                )
+                idx += 1
+            if not csp_policy_analysis["has_script_src"]:
+                findings.append(
+                    _finding(idx, "low", "CSP Missing script-src", "Content-Security-Policy is present but does not define script-src explicitly.", "Define script-src to restrict wallet, analytics, and dApp frontend scripts to trusted origins.", "medium", "security_headers", "WEB-CSP-SCRIPT-SRC")
                 )
                 idx += 1
 
@@ -472,16 +671,95 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
                     _finding(idx, "low", "High Inline Script Count", f"Detected {html_evidence['inline_script_count']} inline script blocks.", "Move scripts to bundled assets and combine with a stricter CSP where possible.", "medium", "frontend_supply_chain", "WEB-INLINE-SCRIPTS")
                 )
                 idx += 1
+            if html_evidence["insecure_form_actions"]:
+                findings.append(
+                    _finding(idx, "high", "Insecure Form Action Detected", "One or more public forms submit to http:// action URLs.", "Change form actions to HTTPS endpoints and review auth/session forms before launch.", "high", "form_security", "WEB-FORM-INSECURE-ACTION")
+                )
+                idx += 1
+            if html_evidence["external_form_actions"]:
+                findings.append(
+                    _finding(idx, "medium", "External Form Submission Target", "One or more forms submit to an external domain.", "Confirm external form processors are trusted, scoped, and do not collect wallet/auth secrets unexpectedly.", "medium", "form_security", "WEB-FORM-EXTERNAL-ACTION")
+                )
+                idx += 1
+            if html_evidence["password_form_count"] and not safe_url.startswith("https://"):
+                findings.append(
+                    _finding(idx, "high", "Password Form On Non-HTTPS URL", "A password input was detected while the submitted URL did not start with HTTPS.", "Serve all auth pages only over HTTPS with HSTS and secure cookies.", "high", "form_security", "WEB-PASSWORD-NON-HTTPS")
+                )
+                idx += 1
+            if html_evidence["target_blank_without_noopener"]:
+                findings.append(
+                    _finding(idx, "low", "External Links Missing noopener", "Links using target=_blank without rel=noopener were detected.", "Add rel=\"noopener noreferrer\" to target=_blank links, especially external links.", "medium", "frontend_supply_chain", "WEB-LINK-NOOPENER")
+                )
+                idx += 1
+            risky_iframes = [frame for frame in html_evidence["iframes"] if frame.get("external") and not frame.get("sandbox_present")]
+            if risky_iframes:
+                findings.append(
+                    _finding(idx, "medium", "External iframe Without Sandbox", "External iframe(s) were detected without a sandbox attribute.", "Add sandbox restrictions or remove untrusted embeds from launch/wallet pages.", "medium", "embedded_content", "WEB-IFRAME-NO-SANDBOX")
+                )
+                idx += 1
+            if html_evidence["object_embed_count"]:
+                findings.append(
+                    _finding(idx, "medium", "Object/Embed Element Present", "object/embed elements were detected on the public homepage.", "Remove legacy plugin/embed content unless intentionally required and covered by CSP object-src restrictions.", "medium", "embedded_content", "WEB-OBJECT-EMBED")
+                )
+                idx += 1
+            if html_evidence["meta_refresh"]:
+                findings.append(
+                    _finding(idx, "low", "Meta Refresh Redirect Present", "A meta refresh directive was detected in the homepage HTML.", "Prefer server-side redirects and review refresh targets for phishing/confusion risk.", "medium", "navigation_security", "WEB-META-REFRESH")
+                )
+                idx += 1
+            if html_evidence["base_http"]:
+                findings.append(
+                    _finding(idx, "medium", "HTTP Base URL In HTML", "A base href using http:// was detected.", "Use HTTPS base URLs so relative assets/forms do not downgrade to insecure origins.", "medium", "transport_security", "WEB-BASE-HTTP")
+                )
+                idx += 1
+            if html_evidence["noindex_tags"]:
+                findings.append(
+                    _finding(idx, "info", "Page Marked noindex", "A robots noindex meta tag was detected on the homepage.", "If this is a public launch page, remove noindex before launch. If intentional, document it.", "medium", "launch_readiness", "WEB-META-NOINDEX")
+                )
+                idx += 1
+            if html_evidence["source_map_hints"]:
+                findings.append(
+                    _finding(idx, "info", "Source Map Hint Found In HTML", "The public HTML references source map hints.", "Confirm production source maps do not expose sensitive internal code or env-like config.", "low", "frontend_supply_chain", "WEB-SOURCEMAP-HINT")
+                )
+                idx += 1
 
-        for public_path in ["/robots.txt", "/sitemap.xml"]:
+            same_origin_scripts = [script for script in html_evidence.get("same_origin_scripts", []) if isinstance(script, dict)]
+            source_map_results = []
+            for script in same_origin_scripts[:8]:
+                src = str(script.get("src") or "")
+                if not src or src.endswith(".map"):
+                    continue
+                map_url = src + ".map"
+                map_result = await _safe_fetch(client, "HEAD", map_url, read_body=False)
+                source_map_results.append({"script": src, "map_url": map_url, "status_code": map_result.status_code, "error": map_result.error})
+                if map_result.status_code == 200:
+                    findings.append(
+                        _finding(idx, "medium", "Public JavaScript Source Map Exposed", f"A same-origin source map returned HTTP 200: {map_url}", "Disable public production source maps or ensure they contain no secrets/internal implementation details.", "medium", "frontend_supply_chain", "WEB-SOURCEMAP-PUBLIC")
+                    )
+                    idx += 1
+            if source_map_results:
+                metadata.setdefault("raw_response_evidence", {})["source_map_results"] = source_map_results
+                metadata["source_map_results"] = source_map_results
+
+        for public_path in ["/robots.txt", "/sitemap.xml", "/.well-known/security.txt"]:
             path_url = urljoin(page.url, public_path)
             path_result = await _safe_fetch(client, "HEAD", path_url, read_body=False)
             status = path_result.status_code
-            key = "robots_status" if public_path == "/robots.txt" else "sitemap_status"
+            if public_path == "/robots.txt":
+                key = "robots_status"
+            elif public_path == "/sitemap.xml":
+                key = "sitemap_status"
+            else:
+                key = "security_txt_status"
             metadata[key] = status
             if status is None:
                 continue
-            if status >= 400:
+            if public_path == "/.well-known/security.txt" and status >= 400:
+                findings.append(
+                    _finding(idx, "info", "security.txt Not Found", f"/.well-known/security.txt returned HTTP {status} in passive check.", "Add security.txt with a safe vulnerability disclosure contact before public launch if appropriate.", "low", "launch_readiness", "WEB-SECURITYTXT-MISSING")
+                )
+                idx += 1
+            elif status >= 400:
                 findings.append(
                     _finding(idx, "info", f"{public_path} Not Found", f"{public_path} returned HTTP {status} in passive check.", "Add if useful for SEO/launch clarity. This is not always a security issue.", "low", "launch_readiness", f"WEB-{public_path.upper()}-MISSING")
                 )
@@ -520,7 +798,7 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
             "confidence": item.confidence,
             "source": item.source,
         }
-        if item.category in {"availability", "transport_security", "security_headers", "sensitive_paths", "frontend_supply_chain"}:
+        if item.category in {"availability", "transport_security", "security_headers", "sensitive_paths", "frontend_supply_chain", "cookie_security", "form_security", "embedded_content", "clickjacking", "navigation_security"}:
             confirmed_observed.append(entry)
         else:
             potential_hardening.append(entry)
@@ -531,6 +809,29 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
         "confirmed_observed_issues": confirmed_observed[:30],
         "potential_hardening_hints": potential_hardening[:30],
         "wording_rule": "Observed issues are real response/source observations. They are not automatically confirmed exploitable bugs unless the evidence proves exposure, exploitability, and impact.",
+    }
+    metadata["bug_detection_coverage"] = {
+        "phase": "48",
+        "engine_version": "website-coverage-v3.0",
+        "coverage_scope": [
+            "reachability/status",
+            "HTTPS/redirects",
+            "security headers",
+            "CSP directive quality",
+            "cookie flags",
+            "HTML forms",
+            "external/inline/mixed scripts",
+            "iframes/object embeds",
+            "target=_blank noopener",
+            "source-map hints",
+            "robots/sitemap/security.txt",
+            "limited sensitive path hints",
+        ],
+        "finding_count": len(findings),
+        "observed_issue_count": len(confirmed_observed),
+        "hardening_hint_count": len(potential_hardening),
+        "severity_breakdown": severity_breakdown(findings),
+        "real_only_note": "Coverage was increased with passive evidence only. Findings are created only from fetched headers/HTML/path status/tool output; no exploit payloads or fake bugs are generated.",
     }
 
     return _build_response(safe_url, project_name, findings, metadata)
