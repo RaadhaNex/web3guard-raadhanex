@@ -46,13 +46,6 @@ export function Footer() {
               </span>
             </Link>
 
-            <p className="mt-4 max-w-sm text-xs leading-6 text-slate-400">
-              India-first founder security OS for pre-audit launch readiness. Real evidence only; unavailable tools stay visible instead of being guessed.
-            </p>
-
-            <div className="mt-5 rounded-2xl border border-amber-300/15 bg-amber-300/[0.055] p-4 text-xs leading-6 text-amber-100/80">
-              <strong className="text-amber-100">Important:</strong> {brand.disclaimer} Does not replace professional security review.
-            </div>
           </div>
 
           {columns.map(({ title, links }) => (

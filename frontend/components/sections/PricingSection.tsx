@@ -7,43 +7,43 @@ const plans = [
     tone: "green",
     price: "₹0",
     subprice: "Free public beta",
-    description: "Best first step for founders who want to understand launch-surface gaps before spending on manual review.",
+    description: "Quick launch readiness scan for founders who want to see visible website, dApp, API, wallet, and launch-surface gaps.",
     cta: "Start free scan →",
     href: "/scanner/unified-url",
     live: true,
     features: [
-      "Unified launch readiness scan",
-      "Assessed vs Not Assessed separation",
-      "Basic fix priorities",
-      "Report export when payload is available",
+      "Unified readiness scan",
+      "Assessed vs Not Assessed split",
+      "Basic launch priorities",
+      "Export when scan data exists",
       "No private key or wallet signing",
     ],
   },
   {
     name: "Pilot Readiness Report",
-    badge: "Validate before sale",
+    badge: "Verified flow",
     tone: "cyan",
     price: "₹999",
     subprice: "Per pilot report",
-    description: "Clear early-user offer for a founder-ready pre-audit report. Access must unlock only after verified Razorpay/UPI payment.",
+    description: "Founder-ready pre-audit report path for early users. Access should unlock only after backend-verified payment.",
     cta: "Validate ₹999 flow",
     href: "/payment-validation",
     live: true,
     features: [
-      "Founder-ready report workflow",
-      "Evidence summary and limitations",
+      "Evidence summary",
+      "Limitations clearly shown",
       "Priority fix checklist",
-      "Payment must be backend-verified",
+      "Payment verification required",
       "Not a certified audit",
     ],
   },
   {
     name: "Manual / Pro Review",
-    badge: "Scope manually",
+    badge: "Scoped manually",
     tone: "amber",
     price: "Custom",
     subprice: "After scope review",
-    description: "For teams that need deeper manual review, audit preparation, provider setup, or post-scan launch support.",
+    description: "For teams that need manual evidence review, audit preparation, provider setup, or post-scan launch support.",
     cta: "Request scope",
     href: "/contact",
     live: false,
@@ -65,23 +65,12 @@ function badgeClass(tone: string) {
 
 export function PricingSection() {
   return (
-    <section className="cinematic-section mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="section-label">Plans</p>
-          <h2 className="mt-3 text-3xl font-black sm:text-4xl">Simple pricing for the first 10 beta users.</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">
-            Keep the user journey simple: free scan, review results, then offer the ₹999 pilot readiness report only when payment validation is live. Missing providers and missing tools remain visible.
-          </p>
-        </div>
-        <Link href="/limitations" className="btn-secondary shrink-0">See limitations →</Link>
-      </div>
-
-      <div className="mt-10 grid gap-4 lg:grid-cols-3">
+    <section className="cinematic-section mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8">
+      <div className="grid gap-4 lg:grid-cols-3">
         {plans.map((plan) => (
-          <div key={plan.name} className={`card cinematic-card flex flex-col p-6 ${plan.live ? "card-glow" : "opacity-80"}`}>
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-xl font-black text-white">{plan.name}</h3>
+          <div key={plan.name} className={`card cinematic-card flex flex-col p-6 ${plan.live ? "card-glow" : "opacity-85"}`}>
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="text-xl font-black text-white">{plan.name}</h2>
               <span className={badgeClass(plan.tone)}>{plan.badge}</span>
             </div>
 
@@ -107,11 +96,6 @@ export function PricingSection() {
             </Link>
           </div>
         ))}
-      </div>
-
-      <div className="mt-8 rounded-2xl border border-amber-300/15 bg-amber-300/[0.055] p-4 text-center text-xs leading-6 text-amber-100/85">
-        Pre-audit readiness only · Not a certified audit · No security guarantee · No fake payment success ·{" "}
-        <Link href="/limitations" className="font-bold text-amber-50 hover:underline">See limitations</Link>
       </div>
     </section>
   );
