@@ -446,6 +446,7 @@ export type UnifiedUrlScanResponse = {
   accuracy_upgrade?: Record<string, unknown>;
   detection_expansion?: Record<string, unknown>;
   deep_evidence_accuracy?: Record<string, unknown>;
+  deep_scan_orchestrator?: Record<string, unknown>;
 };
 
 export type ProjectRecord = {

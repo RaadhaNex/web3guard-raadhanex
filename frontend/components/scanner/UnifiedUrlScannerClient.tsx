@@ -20,8 +20,8 @@ import { SeverityBadge } from "@/components/ui/SeverityBadge";
 const scanStages = [
   "Session check",
   "URL validation",
-  "Passive website review",
-  "Optional evidence mapping",
+  "Auto public website scan",
+  "Deep evidence orchestration",
   "Readiness scoring",
   "Report package",
 ];
@@ -58,7 +58,29 @@ const chainOptions = [
   "Other",
 ];
 
+const scanModeOptions: Array<{ id: ScanMode; title: string; subtitle: string; bullets: string[] }> = [
+  {
+    id: "quick",
+    title: "Quick Scan",
+    subtitle: "URL-only scan for normal founders/users.",
+    bullets: ["Website headers/CSP/cookies", "Public exposure paths", "JS/API discovery", "No technical evidence required"],
+  },
+  {
+    id: "deep",
+    title: "Deep Scan",
+    subtitle: "Add repo/API/contract evidence for stronger results.",
+    bullets: ["GitHub + OSV", "API base/OpenAPI", "Solidity/contract", "Backend tools if enabled"],
+  },
+  {
+    id: "expert",
+    title: "Expert Evidence",
+    subtitle: "Paste tool artifacts and reviewer evidence.",
+    bullets: ["Slither/Semgrep JSON", "HAR/auth/API artifacts", "Wallet/DeFi evidence", "Manual review context"],
+  },
+];
+
 type ProjectMode = "new" | "existing";
+type ScanMode = "quick" | "deep" | "expert";
 type ExportFormat = "pdf" | "html" | "markdown" | "json";
 
 type FixGuide = {
@@ -691,8 +713,9 @@ export function UnifiedUrlScannerClient() {
   const [invariantArtifactJson, setInvariantArtifactJson] = useState("");
   const [accuracyFeedbackJson, setAccuracyFeedbackJson] = useState("");
   const [authorized, setAuthorized] = useState(false);
-  const [realOnly, setRealOnly] = useState(false);
+  const [realOnly, setRealOnly] = useState(true);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [scanMode, setScanMode] = useState<ScanMode>("quick");
 
   const [authLoading, setAuthLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -716,20 +739,22 @@ export function UnifiedUrlScannerClient() {
   const selectedHistory = scanHistory.find((scan) => scan.id === selectedHistoryId) || null;
   const currentStage = scanStages[Math.min(stageIndex, scanStages.length - 1)];
 
-  const resolvedProjectType = useMemo(() => projectType === "Other" ? customProjectType.trim() || "Other" : projectType.trim() || "Not selected", [customProjectType, projectType]);
+  const resolvedProjectType = useMemo(() => projectType === "Other" ? customProjectType.trim() || "Other" : projectType.trim() || "Website / dApp Frontend", [customProjectType, projectType]);
   const resolvedChain = useMemo(() => chain === "Other" ? customChain.trim() || "Other" : chain.trim() || "Web only", [chain, customChain]);
 
   const missingRequiredFields = useMemo(() => {
     const missing: string[] = [];
     if (!websiteUrl.trim()) missing.push("Website / dApp URL");
-    if (!projectType.trim()) missing.push("Project type");
-    if (projectType === "Other" && !customProjectType.trim()) missing.push("Custom project type");
-    if (!chain.trim()) missing.push("Chain / surface");
-    if (chain === "Other" && !customChain.trim()) missing.push("Custom chain");
+    if (scanMode !== "quick") {
+      if (!projectType.trim()) missing.push("Project type");
+      if (projectType === "Other" && !customProjectType.trim()) missing.push("Custom project type");
+      if (!chain.trim()) missing.push("Chain / surface");
+      if (chain === "Other" && !customChain.trim()) missing.push("Custom chain");
+    }
     if (!authorized) missing.push("Authorization confirmation");
     if (!realOnly) missing.push("Evidence-only acknowledgement");
     return missing;
-  }, [authorized, chain, customChain, customProjectType, projectType, realOnly, websiteUrl]);
+  }, [authorized, chain, customChain, customProjectType, projectType, realOnly, scanMode, websiteUrl]);
 
   const canRunScan = !loading && !authLoading;
   const cards = result?.module_cards ? sortModuleCards(result.module_cards) : [];
@@ -827,6 +852,7 @@ export function UnifiedUrlScannerClient() {
     setProtocolContextJson("");
     setReviewContextJson("");
     setAdvancedOpen(false);
+    setScanMode("quick");
     setResult(null);
     clearLatestUnifiedScan();
     setError(null);
@@ -958,6 +984,9 @@ export function UnifiedUrlScannerClient() {
           echidna_output_json: echidnaOutputJson.trim() || null,
           invariant_artifact_json: invariantArtifactJson.trim() || null,
           accuracy_feedback_json: accuracyFeedbackJson.trim() || null,
+          scan_mode: scanMode,
+          deep_scan_requested: scanMode === "deep" || scanMode === "expert",
+          expert_evidence_requested: scanMode === "expert",
           authorization_confirmed: authorized,
           real_only_acknowledged: realOnly,
         },
@@ -1065,14 +1094,14 @@ export function UnifiedUrlScannerClient() {
                   </FieldLabel>
 
                   <div className="scanner-field-row">
-                    <FieldLabel label="Project type" required>
+                    <FieldLabel label="Project type" required={scanMode !== "quick"}>
                       <select className="select scanner-choice-select" value={projectType} onChange={(event) => setProjectType(event.target.value)}>
                         <option value="" disabled>Select project type</option>
                         {projectTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
                       </select>
                     </FieldLabel>
 
-                    <FieldLabel label="Chain / surface" required>
+                    <FieldLabel label="Chain / surface" required={scanMode !== "quick"}>
                       <select className="select scanner-choice-select" value={chain} onChange={(event) => setChain(event.target.value)}>
                         <option value="" disabled>Select chain</option>
                         {chainOptions.map((option) => <option key={option} value={option}>{option}</option>)}
@@ -1097,23 +1126,68 @@ export function UnifiedUrlScannerClient() {
                   ) : null}
                 </div>
 
+
+                <div className="rounded-[1.5rem] border border-cyan-300/10 bg-cyan-300/[0.035] p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-200">Scan mode</p>
+                      <h3 className="mt-1 text-lg font-black text-white">Start simple. Add evidence only when needed.</h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-400">Quick Scan auto-runs public website evidence. Deep/Expert modes unlock optional inputs for stronger coverage. Missing evidence is marked Not Assessed, never guessed.</p>
+                    </div>
+                    <span className="badge badge-cyan">Phase 78 orchestrator</span>
+                  </div>
+                  <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                    {scanModeOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => {
+                          setScanMode(option.id);
+                          setAdvancedOpen(option.id !== "quick");
+                        }}
+                        className={`rounded-2xl border p-4 text-left transition ${scanMode === option.id ? "border-cyan-300/50 bg-cyan-300/10 shadow-[0_0_25px_rgba(34,211,238,0.10)]" : "border-white/10 bg-white/[0.025] hover:border-cyan-300/25"}`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <strong className="text-sm text-white">{option.title}</strong>
+                          <span className={`badge ${scanMode === option.id ? "badge-cyan" : ""}`}>{scanMode === option.id ? "Selected" : option.id}</span>
+                        </div>
+                        <p className="mt-2 text-xs leading-5 text-slate-400">{option.subtitle}</p>
+                        <ul className="mt-3 space-y-1 text-[11px] leading-5 text-slate-500">
+                          {option.bullets.map((bullet) => <li key={bullet}>• {bullet}</li>)}
+                        </ul>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="scanner-evidence-panel">
-                  <button type="button" onClick={() => setAdvancedOpen((value) => !value)} className="scanner-evidence-toggle">
+                  <button type="button" onClick={() => {
+                      if (scanMode === "quick") {
+                        setScanMode("deep");
+                        setAdvancedOpen(true);
+                        return;
+                      }
+                      setAdvancedOpen((value) => !value);
+                    }} className="scanner-evidence-toggle">
                     <span className="scanner-chip-icon">＋</span>
                     <span>
-                      <strong>Optional evidence</strong>
-                      <small>Contract, API, GitHub, Solidity source, and Slither/Semgrep artifacts can add real evidence.</small>
+                      <strong>{scanMode === "quick" ? "Auto public evidence" : scanMode === "deep" ? "Deep evidence" : "Expert evidence"}</strong>
+                      <small>{scanMode === "quick" ? "No manual evidence required. URL scan will auto-run safe public checks." : scanMode === "deep" ? "Add GitHub/API/contract evidence for deeper real findings." : "Advanced tool artifacts and reviewer evidence for expert workflows."}</small>
                     </span>
-                    <b>{advancedOpen ? 'Close' : 'Add'}</b>
+                    <b>{scanMode === "quick" ? "Auto" : advancedOpen ? "Close" : "Add"}</b>
                   </button>
 
-                  {!advancedOpen ? (
+                  {scanMode === "quick" ? (
+                    <div className="scanner-evidence-chips" aria-label="Auto evidence types">
+                      {["Headers/CSP", "Cookies", "Public exposure paths", "JS/API discovery", "Score proof", "Coverage gate"].map((item) => <span key={item}>{item}</span>)}
+                    </div>
+                  ) : !advancedOpen ? (
                     <div className="scanner-evidence-chips" aria-label="Optional evidence types">
-                      {['Contract address', 'API base', 'GitHub repo', 'Solidity source', 'Slither/Semgrep JSON', 'API/wallet/business evidence'].map((item) => <span key={item}>{item}</span>)}
+                      {(scanMode === "deep" ? ["Contract address", "API base", "GitHub repo", "Solidity source"] : ["Slither/Semgrep JSON", "HAR/API evidence", "Wallet evidence", "Business/DeFi evidence"]).map((item) => <span key={item}>{item}</span>)}
                     </div>
                   ) : null}
 
-                  {advancedOpen ? (
+                  {advancedOpen && scanMode !== "quick" ? (
                     <div className="scanner-evidence-grid">
                       <FieldLabel label="Contract address">
                         <input className="input" value={contractAddress} onChange={(event) => setContractAddress(event.target.value)} placeholder="0x..." />
@@ -1129,6 +1203,7 @@ export function UnifiedUrlScannerClient() {
                           <textarea className="textarea" value={solidityCode} onChange={(event) => setSolidityCode(event.target.value)} placeholder="Paste Solidity source here for local rule checks and optional backend Slither/Semgrep execution." />
                         </FieldLabel>
                       </div>
+                      {scanMode === "expert" ? (
                       <div className="scanner-evidence-wide rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.04] p-4">
                         <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-100">Real static-analysis artifacts</p>
                         <p className="mt-2 text-xs leading-5 text-slate-400">If you already ran Slither/Semgrep locally, paste raw JSON here. Web3Guard will parse it as user-supplied tool evidence, not as a fake backend run or certified audit.</p>
@@ -1144,9 +1219,11 @@ export function UnifiedUrlScannerClient() {
                           </FieldLabel>
                         </div>
                       </div>
+                      ) : null}
 
+                      {scanMode === "expert" ? (
                       <div className="scanner-evidence-wide rounded-2xl border border-purple-300/10 bg-purple-300/[0.04] p-4">
-                        <p className="text-xs font-black uppercase tracking-[0.16em] text-purple-100">Phases 52–58 accuracy evidence</p>
+                        <p className="text-xs font-black uppercase tracking-[0.16em] text-purple-100">Phases 52–77 accuracy evidence</p>
                         <p className="mt-2 text-xs leading-5 text-slate-400">Optional JSON evidence for OSV/OpenAPI, authorized API observations, wallet UX, business logic, DeFi simulation, reviewed-report confirmation, HAR/crawler artifacts, SCA/secrets artifacts, Foundry/Echidna outputs, and accuracy feedback. Missing evidence stays Not Assessed.</p>
                         <div className="mt-4 grid gap-4 lg:grid-cols-2">
                           <FieldLabel label="OpenAPI JSON">
@@ -1202,6 +1279,7 @@ export function UnifiedUrlScannerClient() {
                           </FieldLabel>
                         </div>
                       </div>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>

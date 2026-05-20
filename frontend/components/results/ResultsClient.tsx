@@ -348,6 +348,55 @@ function BugDetectionCoveragePanel({ result }: { result: UnifiedUrlScanResponse 
 
 
 
+
+function DeepScanOrchestratorPanel({ orchestrator }: { orchestrator?: unknown }) {
+  const data = asRecord(orchestrator);
+  if (!Object.keys(data).length) return null;
+  const summary = asRecord(data.summary);
+  const steps = asArray(data.all_steps).filter(isRecord);
+  const quick = asArray(data.quick_scan_auto_runs).filter(isRecord);
+  return (
+    <section className="rounded-[1.5rem] border border-cyan-300/15 bg-cyan-300/[0.045] p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="section-label">Phase 78 orchestrator</p>
+          <h2 className="mt-2 text-2xl font-black text-white">What actually ran vs what needs evidence</h2>
+          <p className="mt-2 text-sm leading-7 text-cyan-50/85">{asString(summary.user_message, "Quick Scan runs public evidence. Deep/Expert evidence is optional.")}</p>
+          <p className="mt-1 text-xs leading-5 text-cyan-100/70">{asString(summary.truth_rule, "Missing evidence is marked Not Assessed, not guessed.")}</p>
+        </div>
+        <span className="badge badge-cyan">Mode: {asString(data.requested_mode, "quick")}</span>
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Auto-run</p><p className="mt-2 text-2xl font-black text-white">{Number(summary.auto_run_count ?? quick.length ?? 0)}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Evidence ready</p><p className="mt-2 text-2xl font-black text-white">{Number(summary.evidence_ready_count ?? 0)}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Needs evidence</p><p className="mt-2 text-2xl font-black text-white">{Number(summary.needs_evidence_count ?? 0)}</p></div>
+      </div>
+      {steps.length ? (
+        <div className="mt-5 grid gap-3 lg:grid-cols-2">
+          {steps.slice(0, 10).map((step, index) => {
+            const needs = asArray(step.needs).filter((item): item is string => typeof item === "string");
+            const evidence = asArray(step.evidence).filter((item): item is string => typeof item === "string");
+            return (
+              <article key={`${asString(step.key, "step")}-${index}`} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-black text-white">{asString(step.label, "Scan step")}</h3>
+                    <p className="mt-1 text-xs uppercase tracking-[0.14em] text-slate-500">{asString(step.mode, "quick")}</p>
+                  </div>
+                  <span className={`badge ${statusClass(asString(step.state, "Needs Evidence"))}`}>{asString(step.state, "Needs Evidence")}</span>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-slate-300">{asString(step.note, "No extra note.")}</p>
+                {evidence.length ? <p className="mt-3 text-xs leading-5 text-cyan-100">Evidence: {evidence.join(", ")}</p> : null}
+                {needs.length ? <p className="mt-3 text-xs leading-5 text-amber-100">Needs: {needs.join(", ")}</p> : null}
+              </article>
+            );
+          })}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function AccuracyUpgradePanel({ accuracy }: { accuracy?: unknown }) {
   const root = asRecord(accuracy);
   if (!Object.keys(root).length) {
@@ -815,6 +864,7 @@ export function ResultsClient() {
       </section>
 
       <div className="mt-5 grid gap-5">
+        <DeepScanOrchestratorPanel orchestrator={(result as unknown as { deep_scan_orchestrator?: unknown }).deep_scan_orchestrator} />
         <AccuracyUpgradePanel accuracy={(result as unknown as { accuracy_upgrade?: unknown }).accuracy_upgrade} />
         <DeepDetectionExpansionPanel expansion={(result as unknown as { detection_expansion?: unknown }).detection_expansion} />
         <DeepEvidenceAccuracyPanel packageData={(result as unknown as { deep_evidence_accuracy?: unknown }).deep_evidence_accuracy} />

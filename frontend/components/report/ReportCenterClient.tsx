@@ -79,7 +79,7 @@ function missingCards(cards: UnifiedModuleCard[]) {
 
 function exportReadyReport(result: UnifiedUrlScanResponse | null): CombinedLaunchReport | null {
   if (!result?.combined_report?.report_id || !result.combined_report.report_hash) return null;
-  const extras = result as unknown as { accuracy_upgrade?: unknown; detection_expansion?: unknown; deep_evidence_accuracy?: unknown; bug_detection_coverage?: unknown; real_evidence_summary?: unknown };
+  const extras = result as unknown as { accuracy_upgrade?: unknown; detection_expansion?: unknown; deep_evidence_accuracy?: unknown; deep_scan_orchestrator?: unknown; bug_detection_coverage?: unknown; real_evidence_summary?: unknown };
   return {
     ...result.combined_report,
     json_export: {
@@ -87,10 +87,47 @@ function exportReadyReport(result: UnifiedUrlScanResponse | null): CombinedLaunc
       accuracy_upgrade: extras.accuracy_upgrade ?? null,
       detection_expansion: extras.detection_expansion ?? null,
       deep_evidence_accuracy: extras.deep_evidence_accuracy ?? null,
+      deep_scan_orchestrator: extras.deep_scan_orchestrator ?? null,
       bug_detection_coverage: extras.bug_detection_coverage ?? null,
       real_evidence_summary: extras.real_evidence_summary ?? null,
     },
   };
+}
+
+
+function DeepScanOrchestratorReportCard({ result }: { result: UnifiedUrlScanResponse | null }) {
+  const orchestrator = asRecord((result as unknown as { deep_scan_orchestrator?: unknown } | null)?.deep_scan_orchestrator);
+  if (!Object.keys(orchestrator).length) return null;
+  const summary = asRecord(orchestrator.summary);
+  const steps = asArray(orchestrator.all_steps).filter(isRecord);
+  return (
+    <section className="mt-5 rounded-[1.5rem] border border-cyan-300/15 bg-cyan-300/[0.04] p-5 shadow-2xl shadow-black/20">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="section-label">Phase 78 orchestration</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Report shows what ran vs what needed evidence</h2>
+          <p className="mt-2 text-sm leading-7 text-slate-300">{asString(summary.truth_rule, "Missing optional evidence is marked Not Assessed, not guessed.")}</p>
+        </div>
+        <span className="badge badge-cyan">Mode: {asString(orchestrator.requested_mode, "quick")}</span>
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Auto-run</p><p className="mt-2 text-2xl font-black text-white">{String(summary.auto_run_count ?? 0)}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Evidence ready</p><p className="mt-2 text-2xl font-black text-white">{String(summary.evidence_ready_count ?? 0)}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Needs evidence</p><p className="mt-2 text-2xl font-black text-white">{String(summary.needs_evidence_count ?? 0)}</p></div>
+      </div>
+      <div className="mt-5 grid gap-3 md:grid-cols-2">
+        {steps.slice(0, 8).map((step, index) => (
+          <article key={`${asString(step.key, "step")}-${index}`} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="font-black text-white">{asString(step.label, "Step")}</h3>
+              <span className={`badge ${statusClass(asString(step.state, "Needs Evidence"))}`}>{asString(step.state, "Needs Evidence")}</span>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-slate-300">{asString(step.note, "No note.")}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function BugCoverageReportCard({ result }: { result: UnifiedUrlScanResponse | null }) {
@@ -332,6 +369,7 @@ export function ReportCenterClient() {
         ))}
       </section>
 
+      <DeepScanOrchestratorReportCard result={result} />
       <BugCoverageReportCard result={result} />
       <AccuracyUpgradeReportCard result={result} />
       <DetectionExpansionReportCard result={result} />

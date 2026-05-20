@@ -151,6 +151,9 @@ class UnifiedUrlScanRequest(BaseModel):
     echidna_output_json: str | None = Field(default=None, max_length=1000000)
     invariant_artifact_json: str | None = Field(default=None, max_length=1000000)
     accuracy_feedback_json: str | None = Field(default=None, max_length=800000)
+    scan_mode: str | None = Field(default="quick", max_length=32)
+    deep_scan_requested: bool = False
+    expert_evidence_requested: bool = False
     authorization_confirmed: bool
     real_only_acknowledged: bool = True
 

@@ -19,6 +19,7 @@ from app.services.real_findings_pipeline import build_real_findings_pipeline
 from app.services.accuracy_upgrade import build_accuracy_upgrade_package
 from app.services.detection_expansion import build_detection_expansion_package
 from app.services.deep_evidence_accuracy import build_deep_evidence_accuracy_package
+from app.services.deep_scan_orchestrator import build_deep_scan_orchestrator
 
 MODULE_LABELS = {
     "website": "Website Surface",
@@ -913,7 +914,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "report_id": f"W3G-URL-LAUNCH-{_hash(safe_website_url)[:12]}",
         "generated_at": started.isoformat(),
         "project_name": payload.project_name,
-        "engine_version": "web3guard-unified-url-launch-scanner-v21.0-deep-evidence-phases-68-77",
+        "engine_version": "web3guard-unified-url-launch-scanner-v22.0-phase78-orchestrated-deep-scan",
         "mode": "real_only_unified_url_scan",
         "website_url": safe_website_url,
         "chain": payload.chain,
@@ -959,4 +960,11 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
     result["accuracy_upgrade"] = await build_accuracy_upgrade_package(result, payload)
     result["detection_expansion"] = detection_expansion
     result["deep_evidence_accuracy"] = deep_evidence_accuracy
+    deep_scan_orchestrator = build_deep_scan_orchestrator(
+        payload,
+        module_cards=result.get("module_cards", []),
+        surface_hints=result.get("surface_hints", {}),
+    )
+    result["deep_scan_orchestrator"] = deep_scan_orchestrator
+    result.setdefault("surface_hints", {})["deep_scan_orchestrator"] = deep_scan_orchestrator
     return result
