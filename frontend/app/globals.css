@@ -5755,3 +5755,14 @@ button:disabled, .btn-primary[aria-disabled="true"] { opacity: 0.45; cursor: not
 .report-final-page * {
   box-sizing: border-box;
 }
+
+
+.scanner-premium-grid-single {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: auto;
+}
+
+.scanner-input-panel-wide {
+  max-width: 920px;
+  margin-inline: auto;
+}

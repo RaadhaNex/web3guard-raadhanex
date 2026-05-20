@@ -914,38 +914,8 @@ export function UnifiedUrlScannerClient() {
         <div className="mx-auto max-w-6xl space-y-6">
           <CardShell className="scanner-premium-console card-glow">
             <div className="scanner-premium-aurora" aria-hidden="true" />
-            <div className="scanner-premium-grid">
-              <aside className="scanner-visual-panel" aria-label="Scanner readiness visual">
-                <div className="scanner-visual-topline">
-                  <span className="scanner-pulse-dot" />
-                  <span>Evidence engine</span>
-                </div>
-
-                <div className="scanner-butterfly-stage" aria-hidden="true">
-                  <div className="scanner-wing-mark">
-                    <span className="scanner-wing scanner-wing-left" />
-                    <span className="scanner-wing scanner-wing-right" />
-                    <span className="scanner-wing-core">W3</span>
-                  </div>
-                  <span className="scanner-orbit scanner-orbit-one" />
-                  <span className="scanner-orbit scanner-orbit-two" />
-                  <span className="scanner-scan-beam" />
-                </div>
-
-                <div className="scanner-visual-copy">
-                  <p className="section-label">Launch scan</p>
-                  <h1>Check your Web3 surface without fake scores.</h1>
-                  <p>URL first. Evidence optional. Missing tools stay visible as Not Assessed.</p>
-                </div>
-
-                <div className="scanner-signal-grid">
-                  {['Website', 'dApp', 'API', 'Contract', 'Wallet UX', 'OpSec'].map((item) => (
-                    <span key={item}>{item}</span>
-                  ))}
-                </div>
-              </aside>
-
-              <div className="scanner-input-panel">
+            <div className="scanner-premium-grid scanner-premium-grid-single">
+              <div className="scanner-input-panel scanner-input-panel-wide">
                 <div className="scanner-input-head">
                   <div>
                     <p className="section-label">Scan setup</p>
