@@ -437,16 +437,14 @@ def _score_split(module_cards: list[dict], combined: dict) -> dict:
     assessed_count = sum(1 for card in module_cards if card.get("assessed"))
     required_missing = sum(len(card.get("required_input") or []) for card in module_cards)
     evidence_score = max(0, min(100, round((assessed_count / total) * 100 - min(required_missing * 2, 24))))
-    overall = (combined.get("combined") or {}).get("overall_score")
-    available = (combined.get("combined") or {}).get("available_score")
     coverage = combined.get("coverage") or {}
     full_coverage = bool(coverage.get("total_modules") and coverage.get("assessed_count") == coverage.get("total_modules"))
 
     return {
-        "website_surface_score": module_score("website", "Website Surface Score", "Passive public URL evidence: HTTP/HTTPS, headers, HTML hints, robots/sitemap/policy signals."),
+        "website_surface_score": module_score("website", "Website Surface Readiness", "Passive public URL evidence: HTTP/HTTPS, headers, HTML hints, robots/sitemap/policy signals."),
         "contract_rule_score": module_score("contract", "Contract Rule Score", "Pasted Solidity or verified explorer source analyzed by local rules. External tools remain separate."),
         "launch_evidence_score": {
-            "label": "Launch Evidence Score",
+            "label": "Launch Evidence Coverage",
             "score": evidence_score,
             "status": "Evidence complete" if required_missing == 0 else "Evidence needed",
             "risk_label": "Evidence gap" if required_missing else "Evidence present",
@@ -454,13 +452,56 @@ def _score_split(module_cards: list[dict], combined: dict) -> dict:
         },
         "overall_launch_confidence": {
             "label": "Overall Launch Confidence",
-            "score": overall if full_coverage else available,
-            "status": "Full assessed confidence" if full_coverage else "Partial assessed confidence",
-            "risk_label": (combined.get("combined") or {}).get("risk_label") or "Not assessed",
-            "source": "Uses all weighted modules only when all are assessed. Otherwise uses assessed-module available score and marks confidence as partial.",
+            "score": (combined.get("combined") or {}).get("overall_score") if full_coverage else None,
+            "status": "Full assessed confidence" if full_coverage else "Insufficient evidence — overall confidence gated",
+            "risk_label": (combined.get("combined") or {}).get("risk_label") if full_coverage else "Insufficient Evidence",
+            "source": "Overall confidence is shown only when every required module has real assessed evidence. Partial URL-only scans show website readiness, not full launch confidence.",
         },
         "no_full_audit_score": not full_coverage,
         "note": "These are launch-readiness scores, not a certified audit score, penetration-test score, or guarantee of security.",
+    }
+
+
+def _coverage_gate(module_cards: list[dict], combined: dict) -> dict[str, Any]:
+    total = len(module_cards) or 0
+    assessed_count = sum(1 for card in module_cards if card.get("assessed"))
+    not_assessed = [card.get("module") for card in module_cards if not card.get("assessed")]
+    assessed = [card.get("module") for card in module_cards if card.get("assessed")]
+    coverage_percent = round((assessed_count / total) * 100) if total else 0
+    full_coverage = bool(total and assessed_count == total)
+    return {
+        "overall_confidence_allowed": full_coverage,
+        "coverage_percent": coverage_percent,
+        "assessed_count": assessed_count,
+        "total_modules": total,
+        "assessed_modules": assessed,
+        "not_assessed_modules": not_assessed,
+        "display_rule": "Show full overall launch confidence only when all modules are assessed from real evidence.",
+        "reason": "Partial URL-only scan: website surface can be scored, but full launch confidence is blocked until API, GitHub, contract/static analysis, wallet flow, and admin OpSec evidence are supplied." if not full_coverage else "All modules are assessed from supplied or live evidence.",
+        "blocked_score_fields": [] if full_coverage else ["overall_score", "overall_launch_confidence"],
+        "allowed_score_fields": ["website_surface_score", "launch_evidence_score", "available_score"],
+        "combined_available_score": (combined.get("combined") or {}).get("available_score"),
+        "combined_overall_score_raw": (combined.get("combined") or {}).get("overall_score"),
+    }
+
+
+def _real_evidence_summary(website_report: ScanResponse, module_cards: list[dict]) -> dict[str, Any]:
+    metadata = website_report.scan_metadata or {}
+    taxonomy = metadata.get("finding_truth_taxonomy", {}) if isinstance(metadata, dict) else {}
+    raw_response = metadata.get("raw_response_evidence", {}) if isinstance(metadata, dict) else {}
+    assessed_count = sum(1 for card in module_cards if card.get("assessed"))
+    total = len(module_cards)
+    return {
+        "summary_rule": "Only observed response/source evidence is counted as real. Not assessed modules are evidence gaps, not fake bugs.",
+        "coverage": f"{assessed_count}/{total} modules assessed",
+        "real_observed_issue_count": taxonomy.get("confirmed_observed_issue_count", 0),
+        "potential_hardening_hint_count": taxonomy.get("potential_hardening_hint_count", 0),
+        "confirmed_exploit_count": 0,
+        "confirmed_exploit_note": "Passive scanner does not prove exploitability. Confirmed exploit count remains 0 unless a safe owner-verified proof exists.",
+        "observed_issues": taxonomy.get("confirmed_observed_issues", []),
+        "hardening_hints": taxonomy.get("potential_hardening_hints", []),
+        "website_raw_evidence": raw_response,
+        "not_assessed_warning": "Modules without evidence are not scanned and must not be treated as passed or failed.",
     }
 
 
@@ -684,17 +725,19 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "report_id": f"W3G-URL-LAUNCH-{_hash(safe_website_url)[:12]}",
         "generated_at": started.isoformat(),
         "project_name": payload.project_name,
-        "engine_version": "web3guard-unified-url-launch-scanner-v13.0",
+        "engine_version": "web3guard-unified-url-launch-scanner-v14.0-coverage-gated",
         "mode": "real_only_unified_url_scan",
         "website_url": safe_website_url,
         "chain": payload.chain,
         "project_type": payload.project_type,
         "realness_rule": "Only modules with real input/evidence receive a score. Missing modules are shown as Not assessed instead of fake scores.",
         "available_score": combined.get("combined", {}).get("available_score"),
-        "overall_score": combined.get("combined", {}).get("overall_score"),
-        "risk_label": combined.get("combined", {}).get("risk_label"),
+        "overall_score": combined.get("combined", {}).get("overall_score") if _coverage_gate(module_cards, combined)["overall_confidence_allowed"] else None,
+        "risk_label": combined.get("combined", {}).get("risk_label") if _coverage_gate(module_cards, combined)["overall_confidence_allowed"] else "Insufficient Evidence",
         "score_split": score_split,
         "coverage": combined.get("coverage"),
+        "coverage_gate": _coverage_gate(module_cards, combined),
+        "real_evidence_summary": _real_evidence_summary(website_report, module_cards),
         "assessed_modules": assessed_modules,
         "not_assessed_modules": not_assessed_modules,
         "live_module_count": live_count,
@@ -704,12 +747,13 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "combined_report": combined,
         "feature_status_matrix": REALNESS_MATRIX,
         "warnings": warnings,
-        "safe_public_summary": "This is a preliminary URL launch-surface review. It is not a certified audit, penetration test, or guarantee of security.",
+        "safe_public_summary": "This is a preliminary URL launch-surface review. Website-surface findings are real observed evidence; full launch confidence is blocked when required modules are Not Assessed.",
         "blocked_claims": [
             "Do not say this project is certified audited.",
             "Do not claim AI/manual experts reviewed missing modules.",
             "Do not show payment/subscription success without verified payment webhook or admin verification.",
             "Do not show a full launch score unless all required modules are assessed.",
+            "Do not call URL-only hardening hints confirmed exploitable bugs without owner-verified proof.",
         ],
         "next_real_inputs_needed": [
             "Paste Solidity source or enable explorer source fetch for contract scan.",

@@ -257,12 +257,12 @@ function buildScoreSplit(result: UnifiedUrlScanResponse): UnifiedScoreSplit {
     },
     overall_launch_confidence: {
       label: "Overall Launch Confidence",
-      score: result.overall_score ?? result.available_score ?? null,
-      status: result.overall_score == null ? "Partial assessed confidence" : "Full assessed confidence",
-      risk_label: result.risk_label || "Not Assessed",
-      source: "Uses assessed modules only when evidence is present; missing modules stay outside confidence.",
+      score: (result.coverage_gate ? result.coverage_gate.overall_confidence_allowed : result.overall_score != null) ? result.overall_score ?? null : null,
+      status: (result.coverage_gate ? result.coverage_gate.overall_confidence_allowed : result.overall_score != null) ? "Full assessed confidence" : "Insufficient evidence — overall confidence gated",
+      risk_label: (result.coverage_gate ? result.coverage_gate.overall_confidence_allowed : result.overall_score != null) ? result.risk_label || "Not Assessed" : "Insufficient Evidence",
+      source: "Overall confidence is shown only when every required module has real assessed evidence. Partial scans show website readiness and evidence coverage only.",
     },
-    no_full_audit_score: result.overall_score == null,
+    no_full_audit_score: !(result.coverage_gate ? result.coverage_gate.overall_confidence_allowed : result.overall_score != null),
     note: "Launch-readiness scores are not a certified audit score, penetration-test score, or security guarantee.",
   };
 }
@@ -641,6 +641,11 @@ export function UnifiedUrlScannerClient() {
   const scoreSplit = result ? buildScoreSplit(result) : null;
   const splitCards = scoreSplit ? scoreSplitCards(scoreSplit) : [];
   const requiredInputs = result?.module_cards.flatMap((card) => (card.required_input || []).map((item) => ({ label: card.label, item, guide: moduleFixGuide(card) }))) || [];
+  const coverageGate = result?.coverage_gate;
+  const realEvidenceSummary = result?.real_evidence_summary;
+  const overallAllowed = coverageGate ? coverageGate.overall_confidence_allowed : Boolean(result?.overall_score);
+  const heroScore = overallAllowed ? result?.overall_score ?? null : scoreSplit?.website_surface_score?.score ?? null;
+  const heroLabel = overallAllowed ? "confidence" : "site score";
 
   function setKnownProjectType(value?: string | null) {
     if (!value) return;
@@ -1069,7 +1074,7 @@ export function UnifiedUrlScannerClient() {
           <div className="space-y-6">
             <CardShell className="card-glow">
               <div className="grid gap-6 lg:grid-cols-[auto_1fr] lg:items-center">
-                <ScoreOrb score={result.overall_score ?? result.available_score ?? null} label="confidence" />
+                <ScoreOrb score={heroScore} label={heroLabel} />
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`badge ${riskBadgeClass(result.risk_label)}`}>{result.risk_label || "Not Assessed"}</span>
@@ -1095,6 +1100,29 @@ export function UnifiedUrlScannerClient() {
                 </div>
               </div>
             </CardShell>
+
+            {coverageGate ? (
+              <CardShell className={overallAllowed ? "border-emerald-400/20 bg-emerald-400/10" : "border-amber-300/20 bg-amber-300/10"}>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <p className="section-label">Truth gate</p>
+                    <h2 className="mt-2 text-2xl font-black text-white">{overallAllowed ? "Overall confidence allowed" : "Overall confidence blocked"}</h2>
+                    <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-300">{coverageGate.reason}</p>
+                    <p className="mt-2 text-xs leading-5 text-slate-500">{coverageGate.display_rule}</p>
+                  </div>
+                  <div className="grid min-w-[260px] gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
+                      <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Coverage</p>
+                      <p className="mt-2 text-2xl font-black text-white">{coverageGate.assessed_count}/{coverageGate.total_modules}</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
+                      <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Overall score</p>
+                      <p className="mt-2 text-2xl font-black text-white">{overallAllowed ? result.overall_score ?? "—" : "Gated"}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardShell>
+            ) : null}
 
             <CardShell>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -1130,6 +1158,37 @@ export function UnifiedUrlScannerClient() {
               </div>
               {exportStatus ? <p className="mt-4 rounded-xl border border-cyan/20 bg-cyan/10 p-3 text-sm text-cyan-50">{exportStatus}</p> : null}
             </CardShell>
+
+            {realEvidenceSummary ? (
+              <CardShell>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <p className="section-label">Real evidence</p>
+                    <h2 className="mt-2 text-2xl font-black text-white">Observed issues vs hardening hints</h2>
+                    <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-400">{realEvidenceSummary.summary_rule}</p>
+                    <p className="mt-2 text-xs leading-5 text-slate-500">{realEvidenceSummary.confirmed_exploit_note}</p>
+                  </div>
+                  <div className="grid min-w-[300px] gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+                      <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Observed</p>
+                      <p className="mt-2 text-2xl font-black text-white">{realEvidenceSummary.real_observed_issue_count}</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+                      <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Hints</p>
+                      <p className="mt-2 text-2xl font-black text-white">{realEvidenceSummary.potential_hardening_hint_count}</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+                      <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Exploits proved</p>
+                      <p className="mt-2 text-2xl font-black text-white">{realEvidenceSummary.confirmed_exploit_count}</p>
+                    </div>
+                  </div>
+                </div>
+                <details className="mt-5 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 text-xs text-slate-400">
+                  <summary className="cursor-pointer font-black text-white">Show raw passive website evidence</summary>
+                  <pre className="mt-4 max-h-80 overflow-auto whitespace-pre-wrap break-words">{safeJsonStringify(realEvidenceSummary.website_raw_evidence)}</pre>
+                </details>
+              </CardShell>
+            ) : null}
 
             <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
               <CardShell>

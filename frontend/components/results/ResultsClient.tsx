@@ -380,6 +380,8 @@ export function ResultsClient() {
   const assessedCount = cards.filter((card) => card.assessed).length;
   const missingCount = cards.length - assessedCount;
   const priorityActions = result?.priority_actions ?? [];
+  const coverageGate = result?.coverage_gate;
+  const realEvidenceSummary = result?.real_evidence_summary;
 
   if (!loaded) {
     return <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8"><div className="card p-6 text-slate-300">Loading latest real scan output...</div></main>;
@@ -430,12 +432,43 @@ export function ResultsClient() {
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Available score</p><p className="mt-2 text-2xl font-black text-white">{scoreText(result.available_score)}</p></div>
-          <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Full score</p><p className="mt-2 text-2xl font-black text-white">{scoreText(result.overall_score)}</p></div>
+          <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Overall gate</p><p className="mt-2 text-2xl font-black text-white">{coverageGate?.overall_confidence_allowed ? scoreText(result.overall_score) : "Gated"}</p></div>
           <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Assessed</p><p className="mt-2 text-2xl font-black text-white">{assessedCount}/{cards.length}</p></div>
           <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Missing/manual</p><p className="mt-2 text-2xl font-black text-white">{missingCount}</p></div>
         </div>
         <p className="mt-5 rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4 text-sm leading-7 text-amber-50">{result.safe_public_summary}</p>
       </section>
+
+      {coverageGate ? (
+        <section className="mt-5 rounded-[1.5rem] border border-amber-300/15 bg-amber-300/10 p-5">
+          <p className="section-label">Truth gate</p>
+          <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="text-2xl font-black text-white">{coverageGate.overall_confidence_allowed ? "Overall confidence allowed" : "Overall confidence blocked"}</h2>
+              <p className="mt-2 max-w-4xl text-sm leading-7 text-amber-50/90">{coverageGate.reason}</p>
+              <p className="mt-2 text-xs leading-5 text-amber-100/70">{coverageGate.display_rule}</p>
+            </div>
+            <span className="badge badge-amber">Coverage {coverageGate.assessed_count}/{coverageGate.total_modules}</span>
+          </div>
+        </section>
+      ) : null}
+
+      {realEvidenceSummary ? (
+        <section className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+          <p className="section-label">Real evidence</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Observed issues vs hardening hints</h2>
+          <p className="mt-2 text-sm leading-7 text-slate-400">{realEvidenceSummary.summary_rule}</p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Observed</p><p className="mt-2 text-2xl font-black text-white">{realEvidenceSummary.real_observed_issue_count}</p></div>
+            <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Hints</p><p className="mt-2 text-2xl font-black text-white">{realEvidenceSummary.potential_hardening_hint_count}</p></div>
+            <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Exploits proved</p><p className="mt-2 text-2xl font-black text-white">{realEvidenceSummary.confirmed_exploit_count}</p></div>
+          </div>
+          <details className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-xs text-slate-400">
+            <summary className="cursor-pointer font-black text-white">Show raw passive website evidence</summary>
+            <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-words">{formatJson(realEvidenceSummary.website_raw_evidence)}</pre>
+          </details>
+        </section>
+      ) : null}
 
       <section className="mt-5 grid gap-4 lg:grid-cols-2" aria-label="Module evidence">
         {cards.map((card) => <ModuleEvidenceCard key={card.module} card={card} />)}

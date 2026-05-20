@@ -326,6 +326,35 @@ export type RealFindingsPipeline = {
   admin_panel_note: string;
 };
 
+
+export type CoverageGate = {
+  overall_confidence_allowed: boolean;
+  coverage_percent: number;
+  assessed_count: number;
+  total_modules: number;
+  assessed_modules: string[];
+  not_assessed_modules: string[];
+  display_rule: string;
+  reason: string;
+  blocked_score_fields: string[];
+  allowed_score_fields: string[];
+  combined_available_score?: number | null;
+  combined_overall_score_raw?: number | null;
+};
+
+export type RealEvidenceSummary = {
+  summary_rule: string;
+  coverage: string;
+  real_observed_issue_count: number;
+  potential_hardening_hint_count: number;
+  confirmed_exploit_count: number;
+  confirmed_exploit_note: string;
+  observed_issues: Array<Record<string, unknown>>;
+  hardening_hints: Array<Record<string, unknown>>;
+  website_raw_evidence: Record<string, unknown>;
+  not_assessed_warning: string;
+};
+
 export type UnifiedUrlScanResponse = {
   report_id: string;
   generated_at: string;
@@ -341,6 +370,8 @@ export type UnifiedUrlScanResponse = {
   risk_label?: string | null;
   score_split?: UnifiedScoreSplit;
   coverage?: CombinedLaunchReport["coverage"];
+  coverage_gate?: CoverageGate;
+  real_evidence_summary?: RealEvidenceSummary;
   assessed_modules: string[];
   not_assessed_modules: string[];
   live_module_count: number;

@@ -373,6 +373,21 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
         header_map = page.headers
         metadata["headers_present"] = sorted([header for header in SECURITY_HEADERS if header in header_map])
         metadata["headers_missing"] = sorted([header for header in SECURITY_HEADERS if header not in header_map])
+        metadata["raw_response_evidence"] = {
+            "requested_url": safe_url,
+            "final_url": page.url,
+            "http_status": page.status_code,
+            "response_time_ms": page.elapsed_ms,
+            "redirect_count": len(page.redirect_chain),
+            "redirect_chain": page.redirect_chain,
+            "security_headers_present": metadata["headers_present"],
+            "security_headers_missing": metadata["headers_missing"],
+            "csp_value": header_map.get("content-security-policy"),
+            "hsts_value": header_map.get("strict-transport-security"),
+            "cache_control_value": header_map.get("cache-control"),
+            "content_type": header_map.get("content-type"),
+            "evidence_note": "Captured from passive GET/HEAD responses only. This is real observed response evidence, not an exploit or certified audit result.",
+        }
         for header, (severity, title, desc, recommendation) in SECURITY_HEADERS.items():
             if header not in header_map:
                 findings.append(
@@ -408,6 +423,17 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
         if "text/html" in content_type or page.body_text.strip().startswith("<"):
             html_evidence = _extract_html_evidence(page.body_text, page.url)
             metadata["html_evidence"] = html_evidence
+            metadata.setdefault("raw_response_evidence", {})["html_script_evidence"] = {
+                "script_count": html_evidence.get("script_count", 0),
+                "external_script_count": html_evidence.get("external_script_count", 0),
+                "inline_script_count": html_evidence.get("inline_script_count", 0),
+                "mixed_content_script_count": len(html_evidence.get("mixed_content_scripts", []) or []),
+                "risky_script_hint_count": len(html_evidence.get("risky_script_hints", []) or []),
+                "form_count": html_evidence.get("form_count", 0),
+                "dapp_keyword_hits": html_evidence.get("dapp_keyword_hits", []),
+                "evm_address_hint_count": len(html_evidence.get("evm_address_hints", []) or []),
+                "evidence_note": "HTML was parsed from the fetched public homepage only. Counts are real observations; they are not proof of exploitability by themselves.",
+            }
             if page.truncated:
                 findings.append(
                     _finding(idx, "info", "Homepage Body Was Truncated For Safety", "The scanner stopped reading the homepage after the configured max body size.", "This is expected for large pages. Deep content review requires owner-verified scanning.", "low", "scanner_safety", "WEB-BODY-TRUNCATED")
@@ -468,5 +494,30 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
                     )
                 )
                 idx += 1
+
+    confirmed_observed = []
+    potential_hardening = []
+    for item in findings:
+        entry = {
+            "id": item.id,
+            "severity": item.severity,
+            "title": item.title,
+            "category": item.category,
+            "rule_id": item.rule_id,
+            "confidence": item.confidence,
+            "source": item.source,
+        }
+        if item.category in {"availability", "transport_security", "security_headers", "sensitive_paths", "frontend_supply_chain"}:
+            confirmed_observed.append(entry)
+        else:
+            potential_hardening.append(entry)
+
+    metadata["finding_truth_taxonomy"] = {
+        "confirmed_observed_issue_count": len(confirmed_observed),
+        "potential_hardening_hint_count": len(potential_hardening),
+        "confirmed_observed_issues": confirmed_observed[:30],
+        "potential_hardening_hints": potential_hardening[:30],
+        "wording_rule": "Observed issues are real response/source observations. They are not automatically confirmed exploitable bugs unless the evidence proves exposure, exploitability, and impact.",
+    }
 
     return _build_response(safe_url, project_name, findings, metadata)
