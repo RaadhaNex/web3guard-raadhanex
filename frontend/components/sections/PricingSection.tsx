@@ -2,115 +2,93 @@ import Link from "next/link";
 
 const plans = [
   {
-    name: "Free Readiness Scan",
+    name: "Free Scan",
     badge: "Start here",
     price: "₹0",
-    subprice: "Public beta scan",
-    description: "A clean first scan for Web3 founders who want to see visible launch gaps before paying for deeper review.",
-    cta: "Start free scan",
+    description: "Run a first readiness scan and see what is assessed, missing, or manual.",
+    cta: "Start scan",
     href: "/scanner/unified-url",
     featured: false,
-    features: [
-      "Website, dApp, API, wallet, GitHub, and admin evidence inputs",
-      "Assessed vs Not Assessed states",
-      "Missing tools stay visible instead of guessed",
-      "No private key, seed phrase, wallet signing, or exploit automation",
-    ],
+    features: ["URL-based readiness input", "Assessed / Not Assessed states", "No fake pass or fake score", "Pre-audit only"],
   },
   {
-    name: "Pilot Readiness Report",
-    badge: "Best for first users",
+    name: "Pilot Report",
+    badge: "Most useful",
     price: "₹999",
-    subprice: "Per pilot report path",
-    description: "Founder-friendly pre-audit readiness report flow for early users who need a structured launch checklist.",
+    description: "A founder-friendly report path for early beta users after scan evidence is ready.",
     cta: "Open ₹999 flow",
     href: "/payment-validation",
     featured: true,
-    features: [
-      "Evidence summary and visible coverage gaps",
-      "Priority fix checklist for launch decisions",
-      "Clear limitations and safe wording",
-      "Payment must be backend-verified before access is treated as paid",
-    ],
+    features: ["Evidence summary", "Priority fix checklist", "Clear limitations", "Payment verification required"],
   },
   {
-    name: "Manual / Pro Review",
-    badge: "Scoped manually",
+    name: "Manual Review",
+    badge: "Scoped",
     price: "Custom",
-    subprice: "After scope check",
-    description: "For teams that need human review, provider setup, report cleanup, or audit-preparation support.",
+    description: "For teams that need human review, provider setup, or launch-readiness support.",
     cta: "Request scope",
     href: "/contact",
     featured: false,
-    features: [
-      "Manual evidence triage",
-      "Tool/provider setup support",
-      "Pre-audit pack guidance",
-      "No certified audit or security guarantee claim",
-    ],
+    features: ["Manual evidence triage", "Tool/provider setup guidance", "Report cleanup", "No certified-audit claim"],
   },
-];
-
-const compareRows = [
-  ["Quick scan", "Included", "Included", "Included"],
-  ["Report path", "Preview only", "₹999 pilot", "Scoped"],
-  ["Manual reviewer", "No", "Limited by scope", "Yes"],
-  ["Certified audit claim", "No", "No", "No"],
 ];
 
 export function PricingSection() {
   return (
-    <section className="pricing-final-page mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-      <div className="pricing-final-head scroll-motion-ready">
-        <p className="video-section-kicker">Pricing</p>
-        <h1>Simple pricing for first Web3 founders.</h1>
-        <p>
-          Start free, then use the ₹999 pilot report path only when the scan evidence is ready. Manual review stays scoped and honest.
+    <main className="pricing-final-page mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <section className="rounded-[2rem] border border-cyan-300/15 bg-slate-950/70 p-5 shadow-2xl shadow-cyan-950/20 sm:p-8">
+        <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-200/80">Pricing</p>
+        <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-[-0.06em] text-white sm:text-6xl">
+          Simple pricing for Web3 founders.
+        </h1>
+        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
+          Start with a free readiness scan. Use the ₹999 pilot report only when evidence is available. Manual review stays scoped and honest.
         </p>
-      </div>
+      </section>
 
-      <div className="pricing-final-grid mt-8">
+      <section className="mt-8 grid gap-4 lg:grid-cols-3" aria-label="Pricing plans">
         {plans.map((plan) => (
-          <article key={plan.name} className={`pricing-final-card scroll-motion-ready ${plan.featured ? "pricing-final-card-featured" : ""}`}>
-            <div className="pricing-card-glow" />
-            <div className="pricing-card-top">
-              <span>{plan.badge}</span>
-              {plan.featured ? <b>Recommended</b> : null}
+          <article
+            key={plan.name}
+            className={`relative overflow-hidden rounded-[1.7rem] border p-5 shadow-2xl sm:p-6 ${
+              plan.featured
+                ? "border-cyan-300/30 bg-cyan-300/[0.07] shadow-cyan-950/30"
+                : "border-white/10 bg-white/[0.035] shadow-black/20"
+            }`}
+          >
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-cyan-300/10 to-transparent" />
+            <div className="relative flex items-center justify-between gap-3">
+              <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-slate-200">
+                {plan.badge}
+              </span>
+              {plan.featured ? <span className="rounded-full bg-cyan-300/15 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-cyan-100">Recommended</span> : null}
             </div>
-            <h2>{plan.name}</h2>
-            <p className="pricing-card-desc">{plan.description}</p>
-            <div className="pricing-card-price">
-              <strong>{plan.price}</strong>
-              <small>{plan.subprice}</small>
-            </div>
-            <ul>
-              {plan.features.map((item) => (
-                <li key={item}>{item}</li>
+            <h2 className="relative mt-5 text-2xl font-black text-white">{plan.name}</h2>
+            <p className="relative mt-3 text-sm leading-7 text-slate-300">{plan.description}</p>
+            <strong className="relative mt-6 block text-5xl font-black tracking-[-0.07em] text-white">{plan.price}</strong>
+            <ul className="relative mt-6 grid gap-3 text-sm text-slate-300">
+              {plan.features.map((feature) => (
+                <li key={feature} className="flex gap-2">
+                  <span className="mt-1 h-2 w-2 rounded-full bg-cyan-300" />
+                  <span>{feature}</span>
+                </li>
               ))}
             </ul>
-            <Link href={plan.href} className={plan.featured ? "video-hero-primary" : "video-hero-secondary"}>
+            <Link
+              href={plan.href}
+              className={`relative mt-7 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-black transition hover:-translate-y-0.5 ${
+                plan.featured ? "bg-cyan-200 text-slate-950" : "border border-white/10 bg-white/[0.06] text-white"
+              }`}
+            >
               {plan.cta} →
             </Link>
           </article>
         ))}
-      </div>
+      </section>
 
-      <div className="pricing-compare-panel scroll-motion-ready">
-        <div>
-          <p className="video-section-kicker">Decision guide</p>
-          <h2>Which option should a user choose?</h2>
-        </div>
-        <div className="pricing-compare-table" role="table" aria-label="Pricing decision guide">
-          {compareRows.map(([label, free, pilot, manual]) => (
-            <div key={label} className="pricing-compare-row" role="row">
-              <strong>{label}</strong>
-              <span>{free}</span>
-              <span>{pilot}</span>
-              <span>{manual}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
+      <section className="mt-6 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 text-sm leading-7 text-slate-300">
+        <b className="text-white">Trust rule:</b> Web3Guard AI is a pre-audit readiness product. It does not claim certified audit, penetration test, 100% security, or complete vulnerability coverage.
+      </section>
+    </main>
   );
 }

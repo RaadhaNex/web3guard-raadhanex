@@ -5719,3 +5719,39 @@ button:disabled, .btn-primary[aria-disabled="true"] { opacity: 0.45; cursor: not
 @media (prefers-reduced-motion: reduce) {
   .more-menu-panel-rich { animation: none !important; }
 }
+
+/* Blank screen hotfix: critical public pages must never stay hidden if scroll animation JS delays/fails. */
+.motion-enhanced .pricing-final-page .scroll-motion-ready,
+.motion-enhanced .docs-final-page .scroll-motion-ready,
+.motion-enhanced .more-hub-page .scroll-motion-ready,
+.motion-enhanced .results-final-page .scroll-motion-ready,
+.motion-enhanced .report-final-page .scroll-motion-ready,
+.motion-enhanced .pricing-final-page [data-scroll-motion],
+.motion-enhanced .docs-final-page [data-scroll-motion],
+.motion-enhanced .more-hub-page [data-scroll-motion],
+.motion-enhanced .results-final-page [data-scroll-motion],
+.motion-enhanced .report-final-page [data-scroll-motion] {
+  opacity: 1 !important;
+  translate: 0 0 !important;
+  scale: 1 !important;
+  rotate: none !important;
+  filter: none !important;
+}
+
+.pricing-final-page,
+.docs-final-page,
+.more-hub-page,
+.results-final-page,
+.report-final-page {
+  min-height: 65vh;
+  color: rgb(226 232 240);
+  isolation: isolate;
+}
+
+.pricing-final-page *,
+.docs-final-page *,
+.more-hub-page *,
+.results-final-page *,
+.report-final-page * {
+  box-sizing: border-box;
+}

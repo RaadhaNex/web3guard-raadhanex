@@ -1,76 +1,62 @@
 import Link from "next/link";
 
-const docGroups = [
+const groups = [
   {
     title: "Start here",
-    text: "Use these pages to understand what Web3Guard checks and what it never claims.",
+    text: "Understand what Web3Guard checks, what it cannot check, and how to use it safely.",
     links: [
-      ["Methodology", "/methodology", "How evidence, confidence, and Not Assessed states are handled."],
-      ["Limitations", "/limitations", "Where professional security review is still required."],
-      ["Responsible use", "/responsible-use", "No private keys, no wallet signing, no exploit automation, no unauthorized scanning."],
+      ["Methodology", "/methodology", "How evidence and states are separated."],
+      ["Limitations", "/limitations", "What still needs professional review."],
+      ["Responsible use", "/responsible-use", "No keys, no signing, no exploit automation."],
     ],
   },
   {
-    title: "Report and payment",
-    text: "Use these when a founder wants a clean report path or paid pilot flow.",
+    title: "Scan and report",
+    text: "Pages useful after a founder submits a project URL or evidence.",
     links: [
-      ["Report center", "/report", "Convert scan evidence into a pre-audit readiness report path."],
-      ["Scope & refund", "/scope-refund", "Keep paid pilot-review scope clear and fair."],
-      ["Payment validation", "/payment-validation", "Check Razorpay/UPI verification states before treating a payment as complete."],
+      ["Scanner", "/scanner/unified-url", "Start the readiness input flow."],
+      ["Results", "/results", "See assessed, missing, and manual states."],
+      ["Report", "/report", "Prepare a founder-ready report path."],
     ],
   },
   {
-    title: "Setup and advanced",
-    text: "Use only when enabling provider keys, workers, or deeper tooling.",
+    title: "Setup",
+    text: "Use these only when enabling real providers, workers, or payment checks.",
     links: [
-      ["Provider live", "/provider-live", "Explorer, advisory, GitHub, and external-provider states."],
-      ["Worker execution", "/worker-execution", "Slither, Semgrep, Mythril, and worker-required boundaries."],
-      ["Advanced tools", "/advanced", "All non-core screens organized in one simple More hub."],
+      ["Feature status", "/feature-status", "Live, beta, manual, and setup states."],
+      ["Advanced tools", "/advanced", "All non-core tools in one hub."],
+      ["Payment validation", "/payment-validation", "Razorpay/UPI verification state."],
     ],
   },
-];
-
-const quickRules = [
-  "Pre-audit readiness only",
-  "Not a certified audit",
-  "No security guarantee",
-  "Unavailable tools stay visible",
 ];
 
 export const metadata = {
   title: "Docs | Web3Guard AI",
-  description: "Simple Web3Guard docs for methodology, limitations, payment validation, provider setup, and responsible use.",
+  description: "Simple docs for Web3Guard AI methodology, limitations, reports, providers, and responsible use.",
 };
 
 export default function DocsPage() {
   return (
-    <main className="docs-final-page mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-      <section className="docs-final-hero scroll-motion-ready">
-        <div>
-          <p className="video-section-kicker">Docs</p>
-          <h1>Clear docs, no confusing beta clutter.</h1>
-          <p>
-            These pages explain what Web3Guard is useful for, where evidence comes from, and what must stay manual or not assessed.
-          </p>
-        </div>
-        <div className="docs-rule-card">
-          {quickRules.map((rule) => (
-            <span key={rule}>{rule}</span>
-          ))}
-        </div>
+    <main className="docs-final-page mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <section className="rounded-[2rem] border border-cyan-300/15 bg-slate-950/70 p-5 shadow-2xl shadow-cyan-950/20 sm:p-8">
+        <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-200/80">Docs</p>
+        <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-[-0.06em] text-white sm:text-6xl">Everything explained clearly.</h1>
+        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
+          Short, useful documentation for founders: what to scan, how to read results, and what must stay manual before a professional audit.
+        </p>
       </section>
 
-      <section className="docs-group-grid mt-8">
-        {docGroups.map((group) => (
-          <article key={group.title} className="docs-group-card scroll-motion-ready">
-            <h2>{group.title}</h2>
-            <p>{group.text}</p>
-            <div className="docs-link-stack">
+      <section className="mt-8 grid gap-4 lg:grid-cols-3">
+        {groups.map((group) => (
+          <article key={group.title} className="rounded-[1.7rem] border border-white/10 bg-white/[0.035] p-5 shadow-2xl shadow-black/20">
+            <h2 className="text-2xl font-black text-white">{group.title}</h2>
+            <p className="mt-3 text-sm leading-7 text-slate-300">{group.text}</p>
+            <div className="mt-5 grid gap-3">
               {group.links.map(([label, href, text]) => (
-                <Link key={href} href={href} className="docs-link-card">
-                  <b>{label}</b>
-                  <small>{text}</small>
-                  <span>Open →</span>
+                <Link key={href} href={href} className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.05]">
+                  <b className="block text-white">{label}</b>
+                  <small className="mt-1 block text-sm leading-6 text-slate-400">{text}</small>
+                  <span className="mt-2 block text-xs font-black uppercase tracking-[0.16em] text-cyan-200">Open →</span>
                 </Link>
               ))}
             </div>
