@@ -716,6 +716,7 @@ export function UnifiedUrlScannerClient() {
   const [realOnly, setRealOnly] = useState(true);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [scanMode, setScanMode] = useState<ScanMode>("quick");
+  const [activeEvidenceEditor, setActiveEvidenceEditor] = useState<string | null>(null);
 
   const [authLoading, setAuthLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -739,6 +740,183 @@ export function UnifiedUrlScannerClient() {
   const selectedHistory = scanHistory.find((scan) => scan.id === selectedHistoryId) || null;
   const currentStage = scanStages[Math.min(stageIndex, scanStages.length - 1)];
   const activeScanMode = scanModeOptions.find((option) => option.id === scanMode) ?? scanModeOptions[0];
+
+  const deepEditorFields = [
+    {
+      id: "solidity-source",
+      label: "Solidity source",
+      value: solidityCode,
+      setValue: setSolidityCode,
+      placeholder: "Paste Solidity source here for local rule checks and optional backend Slither/Semgrep execution.",
+      rows: 12,
+    },
+  ];
+
+  const expertEditorFields = [
+    {
+      id: "slither-json",
+      label: "Slither JSON",
+      value: slitherJson,
+      setValue: setSlitherJson,
+      placeholder: '{ "results": { "detectors": [...] } }',
+      rows: 8,
+    },
+    {
+      id: "semgrep-json",
+      label: "Semgrep JSON",
+      value: semgrepJson,
+      setValue: setSemgrepJson,
+      placeholder: '{ "results": [...] }',
+      rows: 8,
+    },
+    {
+      id: "aderyn-json",
+      label: "Aderyn JSON",
+      value: aderynJson,
+      setValue: setAderynJson,
+      placeholder: '{ "issues": [...] }',
+      rows: 8,
+    },
+    {
+      id: "openapi-json",
+      label: "OpenAPI JSON",
+      value: openapiJson,
+      setValue: setOpenapiJson,
+      placeholder: '{ "openapi": "3.0.0", "paths": { ... } }',
+      rows: 8,
+    },
+    {
+      id: "authorized-api-observations",
+      label: "Authorized API observations JSON array",
+      value: apiObservationsJson,
+      setValue: setApiObservationsJson,
+      placeholder: '[{"endpoint":"/api/orders/123","role":"userA","status_code":200,"cross_account_access_proved":true,"response_hash":"sha256..."}]',
+      rows: 8,
+    },
+    {
+      id: "wallet-evidence-json",
+      label: "Wallet evidence JSON",
+      value: walletEvidenceJson,
+      setValue: setWalletEvidenceJson,
+      placeholder: '{ "expected_chain_id":"1", "copy":"No seed phrase requested" }',
+      rows: 8,
+    },
+    {
+      id: "transaction-samples-json",
+      label: "Transaction samples JSON array",
+      value: transactionSamplesJson,
+      setValue: setTransactionSamplesJson,
+      placeholder: '[{"chain_id":"1","approval":"unlimited"}]',
+      rows: 8,
+    },
+    {
+      id: "signature-samples-json",
+      label: "Signature samples JSON array",
+      value: signatureSamplesJson,
+      setValue: setSignatureSamplesJson,
+      placeholder: '[{"message":"Claim airdrop","human_readable_purpose":""}]',
+      rows: 8,
+    },
+    {
+      id: "business-context-json",
+      label: "Business context JSON",
+      value: businessContextJson,
+      setValue: setBusinessContextJson,
+      placeholder: '{ "roles":["owner","user"], "critical_actions":["report unlock"], "asset_flows":["payment to report"] }',
+      rows: 8,
+    },
+    {
+      id: "defi-simulation-json",
+      label: "DeFi simulation artifact JSON",
+      value: defiSimulationJson,
+      setValue: setDefiSimulationJson,
+      placeholder: '{ "invariants":[{"name":"assets conserved","passed":false,"evidence":"local test output"}] }',
+      rows: 8,
+    },
+    {
+      id: "protocol-context-json",
+      label: "Protocol context JSON",
+      value: protocolContextJson,
+      setValue: setProtocolContextJson,
+      placeholder: '{ "uses_oracle": true, "has_flash_loan_surface": true }',
+      rows: 8,
+    },
+    {
+      id: "reviewed-confirmation-json",
+      label: "Reviewed confirmation JSON",
+      value: reviewContextJson,
+      setValue: setReviewContextJson,
+      placeholder: '{ "reviewer":"name", "triaged_findings_count":8, "unresolved_critical_high_count":0, "payment_verified":true }',
+      rows: 8,
+    },
+    {
+      id: "har-json",
+      label: "HAR / browser network capture JSON",
+      value: harJson,
+      setValue: setHarJson,
+      placeholder: '{ "log": { "entries": [{ "request": {"url":"https://example.com/api/me","method":"GET"}, "response": {"status": 200} }] } }',
+      rows: 8,
+    },
+    {
+      id: "crawler-artifact-json",
+      label: "Crawler artifact JSON",
+      value: crawlerArtifactJson,
+      setValue: setCrawlerArtifactJson,
+      placeholder: '{ "entries": [{"url":"https://example.com/admin","status":200,"method":"GET"}] }',
+      rows: 8,
+    },
+    {
+      id: "authorized-api-test-context-json",
+      label: "Authorized API test context JSON",
+      value: authTestContextJson,
+      setValue: setAuthTestContextJson,
+      placeholder: '[{"endpoint":"/api/orders/123","expected_status":403,"actual_status":200,"cross_account_access_proved":true,"response_hash":"sha256..."}]',
+      rows: 8,
+    },
+    {
+      id: "sca-secrets-tool-artifact-json",
+      label: "SCA / secrets tool artifact JSON",
+      value: securityToolArtifactsJson,
+      setValue: setSecurityToolArtifactsJson,
+      placeholder: '{ "gitleaks": [{"RuleID":"generic-api-key","File":"src/config.ts"}], "npm_audit": {"vulnerabilities": []} }',
+      rows: 8,
+    },
+    {
+      id: "foundry-forge-test-output",
+      label: "Foundry / forge test output",
+      value: foundryTestOutput,
+      setValue: setFoundryTestOutput,
+      placeholder: 'Paste forge test output. Failure markers become evidence-backed local test findings.',
+      rows: 8,
+    },
+    {
+      id: "echidna-output-json",
+      label: "Echidna output JSON",
+      value: echidnaOutputJson,
+      setValue: setEchidnaOutputJson,
+      placeholder: '[{"name":"echidna_balance_never_drops","status":"falsified","counterexample":"..."}]',
+      rows: 8,
+    },
+    {
+      id: "invariant-simulation-artifact-json",
+      label: "Invariant / simulation artifact JSON",
+      value: invariantArtifactJson,
+      setValue: setInvariantArtifactJson,
+      placeholder: '{ "invariants": [{"name":"assets conserved","status":"failed","evidence":"local fork test"}] }',
+      rows: 8,
+    },
+    {
+      id: "accuracy-feedback-json",
+      label: "Accuracy feedback / triage benchmark JSON",
+      value: accuracyFeedbackJson,
+      setValue: setAccuracyFeedbackJson,
+      placeholder: '[{"finding_id":"abc","status":"confirmed"},{"finding_id":"def","status":"false_positive"}]',
+      rows: 8,
+    },
+  ];
+
+  const visibleEditorFields = scanMode === "expert" ? [...deepEditorFields, ...expertEditorFields] : deepEditorFields;
+  const activeEvidenceField = visibleEditorFields.find((field) => field.id === activeEvidenceEditor) ?? null;
 
   const resolvedProjectType = useMemo(() => projectType === "Other" ? customProjectType.trim() || "Other" : projectType.trim() || "Website / dApp Frontend", [customProjectType, projectType]);
   const resolvedChain = useMemo(() => chain === "Other" ? customChain.trim() || "Other" : chain.trim() || "Web only", [chain, customChain]);
@@ -1129,173 +1307,128 @@ export function UnifiedUrlScannerClient() {
 
 
                 <div className="rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.03] p-3">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-200">Scan mode</p>
-                      <p className="mt-1 text-xs leading-5 text-slate-400">Select how deep Web3Guard should scan. Start with Quick Scan; add evidence only when needed.</p>
-                    </div>
-                    <span className="badge badge-cyan">Phase 78</span>
-                  </div>
-
-                  <div className="mt-3 overflow-x-auto">
-                    <div className="inline-flex min-w-full gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-1 sm:min-w-0">
-                      {scanModeOptions.map((option) => {
-                        const selected = scanMode === option.id;
-
-                        return (
-                          <button
-                            key={option.id}
-                            type="button"
-                            onClick={() => {
-                              setScanMode(option.id);
-                              setAdvancedOpen(option.id !== "quick");
-                            }}
-                            className={`min-w-[122px] rounded-xl border px-3 py-2 text-left transition sm:min-w-0 sm:flex-1 ${selected ? "border-cyan-300/40 bg-cyan-300/10 text-white shadow-[0_0_18px_rgba(34,211,238,0.10)]" : "border-transparent bg-transparent text-slate-300 hover:border-cyan-300/20 hover:bg-white/[0.03]"}`}
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-sm font-semibold">{option.title}</span>
-                              {selected ? <span className="rounded-full bg-cyan-300/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-cyan-200">Active</span> : null}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
-                    <p className="text-xs leading-5 text-slate-300">{activeScanMode.subtitle}</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {activeScanMode.bullets.map((bullet) => (
-                        <span key={bullet} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-slate-400">
-                          {bullet}
-                        </span>
-                      ))}
+                  <div className="grid gap-3 lg:grid-cols-[minmax(0,220px)_1fr] lg:items-end">
+                    <FieldLabel label="Scan mode">
+                      <select
+                        className="input"
+                        value={scanMode}
+                        onChange={(event) => {
+                          const nextMode = event.target.value as ScanMode;
+                          setScanMode(nextMode);
+                          setAdvancedOpen(nextMode !== "quick");
+                          setActiveEvidenceEditor(null);
+                        }}
+                      >
+                        {scanModeOptions.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.title}
+                          </option>
+                        ))}
+                      </select>
+                    </FieldLabel>
+                    <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
+                      <p className="text-xs text-slate-300">{activeScanMode.subtitle}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {activeScanMode.bullets.map((bullet) => (
+                          <span key={bullet} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-slate-400">
+                            {bullet}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="scanner-evidence-panel">
-                  <button type="button" onClick={() => {
-                      if (scanMode === "quick") {
-                        setScanMode("deep");
-                        setAdvancedOpen(true);
-                        return;
-                      }
-                      setAdvancedOpen((value) => !value);
-                    }} className="scanner-evidence-toggle">
-                    <span className="scanner-chip-icon">＋</span>
-                    <span>
-                      <strong>{scanMode === "quick" ? "Auto public evidence" : scanMode === "deep" ? "Deep evidence" : "Expert evidence"}</strong>
-                      <small>{scanMode === "quick" ? "No manual evidence required. URL scan will auto-run safe public checks." : scanMode === "deep" ? "Add GitHub/API/contract evidence for deeper real findings." : "Advanced tool artifacts and reviewer evidence for expert workflows."}</small>
-                    </span>
-                    <b>{scanMode === "quick" ? "Auto" : advancedOpen ? "Close" : "Add"}</b>
-                  </button>
-
-                  {scanMode === "quick" ? (
-                    <div className="scanner-evidence-chips" aria-label="Auto evidence types">
-                      {["Headers/CSP", "Cookies", "Public exposure paths", "JS/API discovery", "Score proof", "Coverage gate"].map((item) => <span key={item}>{item}</span>)}
-                    </div>
-                  ) : !advancedOpen ? (
-                    <div className="scanner-evidence-chips" aria-label="Optional evidence types">
-                      {(scanMode === "deep" ? ["Contract address", "API base", "GitHub repo", "Solidity source"] : ["Slither/Semgrep JSON", "HAR/API evidence", "Wallet evidence", "Business/DeFi evidence"]).map((item) => <span key={item}>{item}</span>)}
-                    </div>
-                  ) : null}
-
-                  {advancedOpen && scanMode !== "quick" ? (
-                    <div className="scanner-evidence-grid">
-                      <FieldLabel label="Contract address">
-                        <input className="input" value={contractAddress} onChange={(event) => setContractAddress(event.target.value)} placeholder="0x..." />
-                      </FieldLabel>
-                      <FieldLabel label="API base URL">
-                        <input className="input" value={apiBaseUrl} onChange={(event) => setApiBaseUrl(event.target.value)} placeholder="https://api.yourproject.com" />
-                      </FieldLabel>
-                      <FieldLabel label="GitHub repo URL">
-                        <input className="input" value={githubRepoUrl} onChange={(event) => setGithubRepoUrl(event.target.value)} placeholder="https://github.com/org/repo" />
-                      </FieldLabel>
-                      <div className="scanner-evidence-wide">
-                        <FieldLabel label="Solidity source">
-                          <textarea className="textarea" value={solidityCode} onChange={(event) => setSolidityCode(event.target.value)} placeholder="Paste Solidity source here for local rule checks and optional backend Slither/Semgrep execution." />
-                        </FieldLabel>
+                  <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-white">{scanMode === "quick" ? "Auto public evidence" : scanMode === "deep" ? "Deep evidence" : "Expert evidence"}</p>
+                        <p className="mt-1 text-[11px] leading-5 text-slate-400">
+                          {scanMode === "quick"
+                            ? "URL-only scan auto-runs safe public checks."
+                            : scanMode === "deep"
+                              ? "Add repo, API, contract, or source evidence when needed."
+                              : "Keep fields compact. Open only the editor you want to paste into."}
+                        </p>
                       </div>
-                      {scanMode === "expert" ? (
-                      <div className="scanner-evidence-wide rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.04] p-4">
-                        <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-100">Real static-analysis artifacts</p>
-                        <p className="mt-2 text-xs leading-5 text-slate-400">If you already ran Slither/Semgrep locally, paste raw JSON here. Web3Guard will parse it as user-supplied tool evidence, not as a fake backend run or certified audit.</p>
-                        <div className="mt-4 grid gap-4 lg:grid-cols-3">
-                          <FieldLabel label="Slither JSON">
-                            <textarea className="textarea min-h-[140px]" value={slitherJson} onChange={(event) => setSlitherJson(event.target.value)} placeholder='{ "results": { "detectors": [...] } }' />
+                      {scanMode === "quick" ? (
+                        <span className="badge badge-cyan">Auto</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setAdvancedOpen((value) => !value)}
+                          className="rounded-full border border-cyan-300/20 bg-cyan-300/[0.08] px-3 py-1.5 text-[11px] font-semibold text-cyan-100 transition hover:border-cyan-300/40 hover:bg-cyan-300/[0.14]"
+                        >
+                          {advancedOpen ? "Hide fields" : "Open fields"}
+                        </button>
+                      )}
+                    </div>
+
+                    {scanMode === "quick" ? (
+                      <div className="scanner-evidence-chips" aria-label="Auto evidence types">
+                        {["Headers/CSP", "Cookies", "Public exposure paths", "JS/API discovery", "Score proof", "Coverage gate"].map((item) => <span key={item}>{item}</span>)}
+                      </div>
+                    ) : null}
+
+                    {scanMode !== "quick" && advancedOpen ? (
+                      <>
+                        <div className="grid gap-3 lg:grid-cols-3">
+                          <FieldLabel label="Contract address">
+                            <input className="input" value={contractAddress} onChange={(event) => setContractAddress(event.target.value)} placeholder="0x..." />
                           </FieldLabel>
-                          <FieldLabel label="Semgrep JSON">
-                            <textarea className="textarea min-h-[140px]" value={semgrepJson} onChange={(event) => setSemgrepJson(event.target.value)} placeholder='{ "results": [...] }' />
+                          <FieldLabel label="API base URL">
+                            <input className="input" value={apiBaseUrl} onChange={(event) => setApiBaseUrl(event.target.value)} placeholder="https://api.yourproject.com" />
                           </FieldLabel>
-                          <FieldLabel label="Aderyn JSON">
-                            <textarea className="textarea min-h-[140px]" value={aderynJson} onChange={(event) => setAderynJson(event.target.value)} placeholder='{ "issues": [...] }' />
+                          <FieldLabel label="GitHub repo URL">
+                            <input className="input" value={githubRepoUrl} onChange={(event) => setGithubRepoUrl(event.target.value)} placeholder="https://github.com/org/repo" />
                           </FieldLabel>
                         </div>
-                      </div>
-                      ) : null}
 
-                      {scanMode === "expert" ? (
-                      <div className="scanner-evidence-wide rounded-2xl border border-purple-300/10 bg-purple-300/[0.04] p-4">
-                        <p className="text-xs font-black uppercase tracking-[0.16em] text-purple-100">Phases 52–77 accuracy evidence</p>
-                        <p className="mt-2 text-xs leading-5 text-slate-400">Optional JSON evidence for OSV/OpenAPI, authorized API observations, wallet UX, business logic, DeFi simulation, reviewed-report confirmation, HAR/crawler artifacts, SCA/secrets artifacts, Foundry/Echidna outputs, and accuracy feedback. Missing evidence stays Not Assessed.</p>
-                        <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                          <FieldLabel label="OpenAPI JSON">
-                            <textarea className="textarea min-h-[120px]" value={openapiJson} onChange={(event) => setOpenapiJson(event.target.value)} placeholder='{ "openapi": "3.0.0", "paths": { ... } }' />
-                          </FieldLabel>
-                          <FieldLabel label="Authorized API observations JSON array">
-                            <textarea className="textarea min-h-[120px]" value={apiObservationsJson} onChange={(event) => setApiObservationsJson(event.target.value)} placeholder='[{"endpoint":"/api/orders/123","role":"userA","status_code":200,"cross_account_access_proved":true,"response_hash":"sha256..."}]' />
-                          </FieldLabel>
-                          <FieldLabel label="Wallet evidence JSON">
-                            <textarea className="textarea min-h-[120px]" value={walletEvidenceJson} onChange={(event) => setWalletEvidenceJson(event.target.value)} placeholder='{ "expected_chain_id":"1", "copy":"No seed phrase requested" }' />
-                          </FieldLabel>
-                          <FieldLabel label="Transaction samples JSON array">
-                            <textarea className="textarea min-h-[120px]" value={transactionSamplesJson} onChange={(event) => setTransactionSamplesJson(event.target.value)} placeholder='[{"chain_id":"1","approval":"unlimited"}]' />
-                          </FieldLabel>
-                          <FieldLabel label="Signature samples JSON array">
-                            <textarea className="textarea min-h-[120px]" value={signatureSamplesJson} onChange={(event) => setSignatureSamplesJson(event.target.value)} placeholder='[{"message":"Claim airdrop","human_readable_purpose":""}]' />
-                          </FieldLabel>
-                          <FieldLabel label="Business context JSON">
-                            <textarea className="textarea min-h-[120px]" value={businessContextJson} onChange={(event) => setBusinessContextJson(event.target.value)} placeholder='{ "roles":["owner","user"], "critical_actions":["report unlock"], "asset_flows":["payment to report"] }' />
-                          </FieldLabel>
-                          <FieldLabel label="DeFi simulation artifact JSON">
-                            <textarea className="textarea min-h-[120px]" value={defiSimulationJson} onChange={(event) => setDefiSimulationJson(event.target.value)} placeholder='{ "invariants":[{"name":"assets conserved","passed":false,"evidence":"local test output"}] }' />
-                          </FieldLabel>
-                          <FieldLabel label="Protocol context JSON">
-                            <textarea className="textarea min-h-[120px]" value={protocolContextJson} onChange={(event) => setProtocolContextJson(event.target.value)} placeholder='{ "uses_oracle": true, "has_flash_loan_surface": true }' />
-                          </FieldLabel>
-                          <FieldLabel label="Reviewed confirmation JSON">
-                            <textarea className="textarea min-h-[120px]" value={reviewContextJson} onChange={(event) => setReviewContextJson(event.target.value)} placeholder='{ "reviewer":"name", "triaged_findings_count":8, "unresolved_critical_high_count":0, "payment_verified":true }' />
-                          </FieldLabel>
-                          <FieldLabel label="HAR / browser network capture JSON">
-                            <textarea className="textarea min-h-[120px]" value={harJson} onChange={(event) => setHarJson(event.target.value)} placeholder='{ "log": { "entries": [{ "request": {"url":"https://example.com/api/me","method":"GET"}, "response": {"status": 200} }] } }' />
-                          </FieldLabel>
-                          <FieldLabel label="Crawler artifact JSON">
-                            <textarea className="textarea min-h-[120px]" value={crawlerArtifactJson} onChange={(event) => setCrawlerArtifactJson(event.target.value)} placeholder='{ "entries": [{"url":"https://example.com/admin","status":200,"method":"GET"}] }' />
-                          </FieldLabel>
-                          <FieldLabel label="Authorized API test context JSON">
-                            <textarea className="textarea min-h-[120px]" value={authTestContextJson} onChange={(event) => setAuthTestContextJson(event.target.value)} placeholder='[{"endpoint":"/api/orders/123","expected_status":403,"actual_status":200,"cross_account_access_proved":true,"response_hash":"sha256..."}]' />
-                          </FieldLabel>
-                          <FieldLabel label="SCA / secrets tool artifact JSON">
-                            <textarea className="textarea min-h-[120px]" value={securityToolArtifactsJson} onChange={(event) => setSecurityToolArtifactsJson(event.target.value)} placeholder='{ "gitleaks": [{"RuleID":"generic-api-key","File":"src/config.ts"}], "npm_audit": {"vulnerabilities": []} }' />
-                          </FieldLabel>
-                          <FieldLabel label="Foundry / forge test output">
-                            <textarea className="textarea min-h-[120px]" value={foundryTestOutput} onChange={(event) => setFoundryTestOutput(event.target.value)} placeholder='Paste forge test output. Failure markers become evidence-backed local test findings.' />
-                          </FieldLabel>
-                          <FieldLabel label="Echidna output JSON">
-                            <textarea className="textarea min-h-[120px]" value={echidnaOutputJson} onChange={(event) => setEchidnaOutputJson(event.target.value)} placeholder='[{"name":"echidna_balance_never_drops","status":"falsified","counterexample":"..."}]' />
-                          </FieldLabel>
-                          <FieldLabel label="Invariant / simulation artifact JSON">
-                            <textarea className="textarea min-h-[120px]" value={invariantArtifactJson} onChange={(event) => setInvariantArtifactJson(event.target.value)} placeholder='{ "invariants": [{"name":"assets conserved","status":"failed","evidence":"local fork test"}] }' />
-                          </FieldLabel>
-                          <FieldLabel label="Accuracy feedback / triage benchmark JSON">
-                            <textarea className="textarea min-h-[120px]" value={accuracyFeedbackJson} onChange={(event) => setAccuracyFeedbackJson(event.target.value)} placeholder='[{"finding_id":"abc","status":"confirmed"},{"finding_id":"def","status":"false_positive"}]' />
-                          </FieldLabel>
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3">
+                          <div className="flex flex-wrap gap-2">
+                            {visibleEditorFields.map((field) => {
+                              const selected = activeEvidenceEditor === field.id;
+                              const filled = field.value.trim().length > 0;
+                              return (
+                                <button
+                                  key={field.id}
+                                  type="button"
+                                  onClick={() => setActiveEvidenceEditor((current) => current === field.id ? null : field.id)}
+                                  className={`rounded-lg border px-3 py-1.5 text-left text-[11px] font-semibold transition ${selected ? "border-cyan-300/40 bg-cyan-300/[0.10] text-cyan-100" : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-cyan-300/20 hover:bg-white/[0.05]"}`}
+                                >
+                                  <span className="block">{field.label}</span>
+                                  <span className={`mt-1 block text-[10px] ${filled ? "text-emerald-300" : "text-slate-500"}`}>{filled ? "Filled" : "Tap to open"}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {activeEvidenceField ? (
+                            <div className="mt-3 rounded-2xl border border-cyan-300/15 bg-slate-950/50 p-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-sm font-semibold text-white">{activeEvidenceField.label}</p>
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveEvidenceEditor(null)}
+                                  className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 transition hover:border-white/20 hover:text-slate-200"
+                                >
+                                  Hide
+                                </button>
+                              </div>
+                              <textarea
+                                className="textarea mt-3"
+                                rows={activeEvidenceField.rows}
+                                value={activeEvidenceField.value}
+                                onChange={(event) => activeEvidenceField.setValue(event.target.value)}
+                                placeholder={activeEvidenceField.placeholder}
+                              />
+                            </div>
+                          ) : null}
                         </div>
-                      </div>
-                      ) : null}
-                    </div>
-                  ) : null}
+                      </>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div className="scanner-consent-grid">
