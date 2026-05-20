@@ -18,6 +18,7 @@ const groups = [
       ["Scanner correlation", "/scanner-correlation", "Prioritize real findings into P0/P1/P2/P3 and attack-path hints."],
       ["Static artifact bridge", "/static-artifact-bridge", "Parse real Slither/Semgrep JSON artifacts when backend tools are unavailable."],
       ["Manual expert review", "/manual-review", "Triage findings, remove false positives, add reviewer notes, and gate reviewed reports."],
+      ["Accuracy upgrade", "/accuracy-upgrade", "Phases 52–58: OSV, static worker, API evidence, wallet UX, business logic, DeFi simulation, and reviewed confirmation."],
       ["Truth validation", "/scanner-truth-validation", "Check latest scan output for real evidence mapping, missing states, and fake-claim blockers."],
       ["OpenZeppelin patterns", "/openzeppelin-pattern", "Compare Solidity evidence against common OpenZeppelin-style secure patterns."],
       ["Authorized Web DAST", "/web-dast", "Safe authorized web baseline checks with no exploit automation."],

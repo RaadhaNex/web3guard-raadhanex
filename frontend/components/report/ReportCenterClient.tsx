@@ -48,6 +48,27 @@ function statusClass(value?: string | null) {
   return "badge-slate";
 }
 
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
+}
+
+function asString(value: unknown, fallback = "—") {
+  return typeof value === "string" && value.trim() ? value : fallback;
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function formatJson(value: unknown) {
+  try { return JSON.stringify(value, null, 2); } catch { return String(value); }
+}
+
 function scoreText(score?: number | null) {
   return typeof score === "number" ? `${score}/100` : "Not Assessed";
 }
@@ -86,6 +107,44 @@ function BugCoverageReportCard({ result }: { result: UnifiedUrlScanResponse | nu
       <details className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-6 text-slate-300">
         <summary className="cursor-pointer font-black text-white">Coverage added in this phase</summary>
         <ul className="mt-3 grid gap-2 md:grid-cols-2">{coverage.coverage_added.map((item) => <li key={item}>• {item}</li>)}</ul>
+      </details>
+    </section>
+  );
+}
+
+
+function AccuracyUpgradeReportCard({ result }: { result: UnifiedUrlScanResponse | null }) {
+  const accuracy = asRecord((result as unknown as { accuracy_upgrade?: unknown } | null)?.accuracy_upgrade);
+  if (!Object.keys(accuracy).length) return null;
+  const phases = Object.entries(asRecord(accuracy.phases));
+  return (
+    <section className="mt-5 rounded-[1.5rem] border border-cyan-300/15 bg-cyan-300/[0.04] p-5 shadow-2xl shadow-black/20">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="section-label">Phases 52–58 accuracy stack</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Report accuracy upgrade attached</h2>
+          <p className="mt-2 text-sm leading-7 text-slate-300">{asString(accuracy.output_authenticity_guarantee, "Findings must be evidence-backed; missing coverage stays Not Assessed.")}</p>
+        </div>
+        <Link href="/accuracy-upgrade" className="btn-secondary">Open accuracy hub</Link>
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {phases.map(([key, value]) => {
+          const phase = asRecord(value);
+          const state = asString(phase.state, "Not Assessed");
+          const proofCount = asArray(phase.findings).length || asArray(phase.confirmed_simulation_findings).length || Number(asRecord(phase.osv).vulnerability_count || 0);
+          return (
+            <article key={key} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{key}</p>
+              <h3 className="mt-2 font-black text-white">{asString(phase.engine, key)}</h3>
+              <p className="mt-2 text-sm text-slate-300">State: <b>{state}</b></p>
+              <p className="mt-1 text-sm text-slate-300">Proofs: <b>{proofCount}</b></p>
+            </article>
+          );
+        })}
+      </div>
+      <details className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-6 text-slate-300">
+        <summary className="cursor-pointer font-black text-white">Raw accuracy package</summary>
+        <pre className="mt-4 max-h-[360px] overflow-auto text-xs">{formatJson(accuracy)}</pre>
       </details>
     </section>
   );
@@ -186,6 +245,7 @@ export function ReportCenterClient() {
       </section>
 
       <BugCoverageReportCard result={result} />
+      <AccuracyUpgradeReportCard result={result} />
 
       <section className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 shadow-2xl shadow-black/20">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

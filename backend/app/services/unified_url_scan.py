@@ -16,6 +16,7 @@ from app.services.scan_contract_address import scan_contract_address
 from app.services.static_analysis_tools import run_static_analysis, static_analysis_status
 from app.services.static_analysis_artifacts import analyze_static_artifacts
 from app.services.real_findings_pipeline import build_real_findings_pipeline
+from app.services.accuracy_upgrade import build_accuracy_upgrade_package
 
 MODULE_LABELS = {
     "website": "Website Surface",
@@ -855,7 +856,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "report_id": f"W3G-URL-LAUNCH-{_hash(safe_website_url)[:12]}",
         "generated_at": started.isoformat(),
         "project_name": payload.project_name,
-        "engine_version": "web3guard-unified-url-launch-scanner-v18.0-static-artifact-bridge",
+        "engine_version": "web3guard-unified-url-launch-scanner-v19.0-accuracy-upgrade-phases-52-58",
         "mode": "real_only_unified_url_scan",
         "website_url": safe_website_url,
         "chain": payload.chain,
@@ -898,4 +899,5 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "disclaimer": "This is a preliminary security review and does not replace a full manual audit. URL-only scans are partial by design.",
     }
     result["findings_pipeline"] = build_real_findings_pipeline(result)
+    result["accuracy_upgrade"] = await build_accuracy_upgrade_package(result, payload)
     return result

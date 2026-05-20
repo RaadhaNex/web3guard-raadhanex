@@ -134,6 +134,15 @@ class UnifiedUrlScanRequest(BaseModel):
     slither_json: str | None = Field(default=None, max_length=1000000)
     semgrep_json: str | None = Field(default=None, max_length=1000000)
     aderyn_json: str | None = Field(default=None, max_length=1000000)
+    openapi_json: str | None = Field(default=None, max_length=600000)
+    api_observations_json: str | None = Field(default=None, max_length=600000)
+    wallet_evidence_json: str | None = Field(default=None, max_length=600000)
+    signature_samples_json: str | None = Field(default=None, max_length=600000)
+    transaction_samples_json: str | None = Field(default=None, max_length=600000)
+    business_context_json: str | None = Field(default=None, max_length=600000)
+    defi_simulation_json: str | None = Field(default=None, max_length=600000)
+    protocol_context_json: str | None = Field(default=None, max_length=600000)
+    review_context_json: str | None = Field(default=None, max_length=600000)
     authorization_confirmed: bool
     real_only_acknowledged: bool = True
 

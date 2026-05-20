@@ -443,6 +443,7 @@ export type UnifiedUrlScanResponse = {
   next_real_inputs_needed: string[];
   disclaimer: string;
   findings_pipeline?: RealFindingsPipeline;
+  accuracy_upgrade?: Record<string, unknown>;
 };
 
 export type ProjectRecord = {

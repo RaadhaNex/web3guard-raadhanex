@@ -347,6 +347,57 @@ function BugDetectionCoveragePanel({ result }: { result: UnifiedUrlScanResponse 
 }
 
 
+
+function AccuracyUpgradePanel({ accuracy }: { accuracy?: unknown }) {
+  const root = asRecord(accuracy);
+  if (!Object.keys(root).length) {
+    return (
+      <section className="rounded-[1.5rem] border border-amber-300/15 bg-amber-300/10 p-5 text-sm leading-7 text-amber-50">
+        <p className="section-label">Phases 52–58</p>
+        <h2 className="mt-2 text-2xl font-black text-white">Accuracy upgrade not attached</h2>
+        <p className="mt-3">Run a fresh unified scan after applying the Phase 52–58 patch.</p>
+      </section>
+    );
+  }
+  const phases = asRecord(root.phases);
+  const entries = Object.entries(phases);
+  return (
+    <section className="rounded-[1.5rem] border border-cyan-300/15 bg-cyan-300/[0.04] p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="section-label">Phases 52–58 accuracy stack</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Real evidence accuracy upgrade</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">Dependency advisories, backend static worker, authorized API evidence, wallet UX, business-logic tests, DeFi simulation artifacts, and reviewed-report confirmation. Missing proof stays Not Assessed.</p>
+        </div>
+        <Link href="/accuracy-upgrade" className="btn-secondary">Open hub</Link>
+      </div>
+      <p className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-7 text-slate-300">{asString(root.output_authenticity_guarantee, "Every visible finding must be backed by evidence.")}</p>
+      <div className="mt-5 grid gap-3 lg:grid-cols-2">
+        {entries.map(([key, value]) => {
+          const phase = asRecord(value);
+          const state = asString(phase.state, "Not Assessed");
+          const engine = asString(phase.engine, key);
+          const findings = asArray(phase.findings).length || asArray(phase.confirmed_simulation_findings).length || asNumber(asRecord(phase.osv).vulnerability_count) || 0;
+          return (
+            <article key={key} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="font-black text-white">{engine}</h3>
+                <span className={`badge ${statusClass(state)}`}>{state}</span>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-slate-500">{key}</p>
+              <p className="mt-3 text-sm leading-6 text-slate-300">Visible findings/proofs: <b className="text-white">{String(findings)}</b></p>
+            </article>
+          );
+        })}
+      </div>
+      <details className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-6 text-slate-300">
+        <summary className="cursor-pointer font-black text-white">Raw accuracy package</summary>
+        <pre className="mt-4 max-h-[420px] overflow-auto text-xs text-slate-300">{formatJson(root)}</pre>
+      </details>
+    </section>
+  );
+}
+
 function RealFindingsPipelinePanel({ pipeline }: { pipeline?: UnifiedUrlScanResponse["findings_pipeline"] }) {
   if (!pipeline) {
     return (
@@ -638,6 +689,7 @@ export function ResultsClient() {
       </section>
 
       <div className="mt-5 grid gap-5">
+        <AccuracyUpgradePanel accuracy={(result as unknown as { accuracy_upgrade?: unknown }).accuracy_upgrade} />
         <RealFindingsPipelinePanel pipeline={result.findings_pipeline} />
         <StaticAnalysisPanel surface={surface} />
         <GithubDependencyPanel surface={surface} />

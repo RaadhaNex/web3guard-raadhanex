@@ -671,6 +671,15 @@ export function UnifiedUrlScannerClient() {
   const [slitherJson, setSlitherJson] = useState("");
   const [semgrepJson, setSemgrepJson] = useState("");
   const [aderynJson, setAderynJson] = useState("");
+  const [openapiJson, setOpenapiJson] = useState("");
+  const [apiObservationsJson, setApiObservationsJson] = useState("");
+  const [walletEvidenceJson, setWalletEvidenceJson] = useState("");
+  const [signatureSamplesJson, setSignatureSamplesJson] = useState("");
+  const [transactionSamplesJson, setTransactionSamplesJson] = useState("");
+  const [businessContextJson, setBusinessContextJson] = useState("");
+  const [defiSimulationJson, setDefiSimulationJson] = useState("");
+  const [protocolContextJson, setProtocolContextJson] = useState("");
+  const [reviewContextJson, setReviewContextJson] = useState("");
   const [authorized, setAuthorized] = useState(false);
   const [realOnly, setRealOnly] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -798,6 +807,15 @@ export function UnifiedUrlScannerClient() {
     setSlitherJson("");
     setSemgrepJson("");
     setAderynJson("");
+    setOpenapiJson("");
+    setApiObservationsJson("");
+    setWalletEvidenceJson("");
+    setSignatureSamplesJson("");
+    setTransactionSamplesJson("");
+    setBusinessContextJson("");
+    setDefiSimulationJson("");
+    setProtocolContextJson("");
+    setReviewContextJson("");
     setAdvancedOpen(false);
     setResult(null);
     clearLatestUnifiedScan();
@@ -913,6 +931,15 @@ export function UnifiedUrlScannerClient() {
           slither_json: slitherJson.trim() || null,
           semgrep_json: semgrepJson.trim() || null,
           aderyn_json: aderynJson.trim() || null,
+          openapi_json: openapiJson.trim() || null,
+          api_observations_json: apiObservationsJson.trim() || null,
+          wallet_evidence_json: walletEvidenceJson.trim() || null,
+          signature_samples_json: signatureSamplesJson.trim() || null,
+          transaction_samples_json: transactionSamplesJson.trim() || null,
+          business_context_json: businessContextJson.trim() || null,
+          defi_simulation_json: defiSimulationJson.trim() || null,
+          protocol_context_json: protocolContextJson.trim() || null,
+          review_context_json: reviewContextJson.trim() || null,
           authorization_confirmed: authorized,
           real_only_acknowledged: realOnly,
         },
@@ -1064,7 +1091,7 @@ export function UnifiedUrlScannerClient() {
 
                   {!advancedOpen ? (
                     <div className="scanner-evidence-chips" aria-label="Optional evidence types">
-                      {['Contract address', 'API base', 'GitHub repo', 'Solidity source', 'Slither/Semgrep JSON'].map((item) => <span key={item}>{item}</span>)}
+                      {['Contract address', 'API base', 'GitHub repo', 'Solidity source', 'Slither/Semgrep JSON', 'API/wallet/business evidence'].map((item) => <span key={item}>{item}</span>)}
                     </div>
                   ) : null}
 
@@ -1096,6 +1123,40 @@ export function UnifiedUrlScannerClient() {
                           </FieldLabel>
                           <FieldLabel label="Aderyn JSON">
                             <textarea className="textarea min-h-[140px]" value={aderynJson} onChange={(event) => setAderynJson(event.target.value)} placeholder='{ "issues": [...] }' />
+                          </FieldLabel>
+                        </div>
+                      </div>
+
+                      <div className="scanner-evidence-wide rounded-2xl border border-purple-300/10 bg-purple-300/[0.04] p-4">
+                        <p className="text-xs font-black uppercase tracking-[0.16em] text-purple-100">Phases 52–58 accuracy evidence</p>
+                        <p className="mt-2 text-xs leading-5 text-slate-400">Optional JSON evidence for OSV/OpenAPI, authorized API observations, wallet UX, business logic, DeFi simulation, and reviewed-report confirmation. Missing evidence stays Not Assessed.</p>
+                        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                          <FieldLabel label="OpenAPI JSON">
+                            <textarea className="textarea min-h-[120px]" value={openapiJson} onChange={(event) => setOpenapiJson(event.target.value)} placeholder='{ "openapi": "3.0.0", "paths": { ... } }' />
+                          </FieldLabel>
+                          <FieldLabel label="Authorized API observations JSON array">
+                            <textarea className="textarea min-h-[120px]" value={apiObservationsJson} onChange={(event) => setApiObservationsJson(event.target.value)} placeholder='[{"endpoint":"/api/orders/123","role":"userA","status_code":200,"cross_account_access_proved":true,"response_hash":"sha256..."}]' />
+                          </FieldLabel>
+                          <FieldLabel label="Wallet evidence JSON">
+                            <textarea className="textarea min-h-[120px]" value={walletEvidenceJson} onChange={(event) => setWalletEvidenceJson(event.target.value)} placeholder='{ "expected_chain_id":"1", "copy":"No seed phrase requested" }' />
+                          </FieldLabel>
+                          <FieldLabel label="Transaction samples JSON array">
+                            <textarea className="textarea min-h-[120px]" value={transactionSamplesJson} onChange={(event) => setTransactionSamplesJson(event.target.value)} placeholder='[{"chain_id":"1","approval":"unlimited"}]' />
+                          </FieldLabel>
+                          <FieldLabel label="Signature samples JSON array">
+                            <textarea className="textarea min-h-[120px]" value={signatureSamplesJson} onChange={(event) => setSignatureSamplesJson(event.target.value)} placeholder='[{"message":"Claim airdrop","human_readable_purpose":""}]' />
+                          </FieldLabel>
+                          <FieldLabel label="Business context JSON">
+                            <textarea className="textarea min-h-[120px]" value={businessContextJson} onChange={(event) => setBusinessContextJson(event.target.value)} placeholder='{ "roles":["owner","user"], "critical_actions":["report unlock"], "asset_flows":["payment to report"] }' />
+                          </FieldLabel>
+                          <FieldLabel label="DeFi simulation artifact JSON">
+                            <textarea className="textarea min-h-[120px]" value={defiSimulationJson} onChange={(event) => setDefiSimulationJson(event.target.value)} placeholder='{ "invariants":[{"name":"assets conserved","passed":false,"evidence":"local test output"}] }' />
+                          </FieldLabel>
+                          <FieldLabel label="Protocol context JSON">
+                            <textarea className="textarea min-h-[120px]" value={protocolContextJson} onChange={(event) => setProtocolContextJson(event.target.value)} placeholder='{ "uses_oracle": true, "has_flash_loan_surface": true }' />
+                          </FieldLabel>
+                          <FieldLabel label="Reviewed confirmation JSON">
+                            <textarea className="textarea min-h-[120px]" value={reviewContextJson} onChange={(event) => setReviewContextJson(event.target.value)} placeholder='{ "reviewer":"name", "triaged_findings_count":8, "unresolved_critical_high_count":0, "payment_verified":true }' />
                           </FieldLabel>
                         </div>
                       </div>
