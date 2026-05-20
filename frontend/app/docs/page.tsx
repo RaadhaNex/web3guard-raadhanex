@@ -38,15 +38,13 @@ export const metadata = {
 export default function DocsPage() {
   return (
     <main className="docs-final-page mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      <section className="rounded-[2rem] border border-cyan-300/15 bg-slate-950/70 p-5 shadow-2xl shadow-cyan-950/20 sm:p-8">
-        <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-200/80">Docs</p>
-        <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-[-0.06em] text-white sm:text-6xl">Everything explained clearly.</h1>
-        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
-          Short, useful documentation for founders: what to scan, how to read results, and what must stay manual before a professional audit.
-        </p>
-      </section>
+      <div className="docs-clean-head">
+        <span className="pricing-clean-chip">Methodology</span>
+        <span className="pricing-clean-chip">Limitations</span>
+        <span className="pricing-clean-chip">Responsible use</span>
+      </div>
 
-      <section className="mt-8 grid gap-4 lg:grid-cols-3">
+      <section className="mt-6 grid gap-4 lg:grid-cols-3">
         {groups.map((group) => (
           <article key={group.title} className="rounded-[1.7rem] border border-white/10 bg-white/[0.035] p-5 shadow-2xl shadow-black/20">
             <h2 className="text-2xl font-black text-white">{group.title}</h2>

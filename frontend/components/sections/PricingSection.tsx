@@ -36,17 +36,13 @@ const plans = [
 export function PricingSection() {
   return (
     <main className="pricing-final-page mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      <section className="rounded-[2rem] border border-cyan-300/15 bg-slate-950/70 p-5 shadow-2xl shadow-cyan-950/20 sm:p-8">
-        <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-200/80">Pricing</p>
-        <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-[-0.06em] text-white sm:text-6xl">
-          Simple pricing for Web3 founders.
-        </h1>
-        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
-          Start with a free readiness scan. Use the ₹999 pilot report only when evidence is available. Manual review stays scoped and honest.
-        </p>
-      </section>
+      <div className="pricing-clean-head">
+        <span className="pricing-clean-chip">Free scan</span>
+        <span className="pricing-clean-chip">₹999 pilot path</span>
+        <span className="pricing-clean-chip">Manual review</span>
+      </div>
 
-      <section className="mt-8 grid gap-4 lg:grid-cols-3" aria-label="Pricing plans">
+      <section className="mt-6 grid gap-4 lg:grid-cols-3" aria-label="Pricing plans">
         {plans.map((plan) => (
           <article
             key={plan.name}
@@ -84,10 +80,6 @@ export function PricingSection() {
             </Link>
           </article>
         ))}
-      </section>
-
-      <section className="mt-6 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 text-sm leading-7 text-slate-300">
-        <b className="text-white">Trust rule:</b> Web3Guard AI is a pre-audit readiness product. It does not claim certified audit, penetration test, 100% security, or complete vulnerability coverage.
       </section>
     </main>
   );
