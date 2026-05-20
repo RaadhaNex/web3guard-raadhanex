@@ -738,6 +738,7 @@ export function UnifiedUrlScannerClient() {
   const selectedProject = projects.find((project) => project.id === selectedProjectId) || null;
   const selectedHistory = scanHistory.find((scan) => scan.id === selectedHistoryId) || null;
   const currentStage = scanStages[Math.min(stageIndex, scanStages.length - 1)];
+  const activeScanMode = scanModeOptions.find((option) => option.id === scanMode) ?? scanModeOptions[0];
 
   const resolvedProjectType = useMemo(() => projectType === "Other" ? customProjectType.trim() || "Other" : projectType.trim() || "Website / dApp Frontend", [customProjectType, projectType]);
   const resolvedChain = useMemo(() => chain === "Other" ? customChain.trim() || "Other" : chain.trim() || "Web only", [chain, customChain]);
@@ -1127,36 +1128,49 @@ export function UnifiedUrlScannerClient() {
                 </div>
 
 
-                <div className="rounded-[1.5rem] border border-cyan-300/10 bg-cyan-300/[0.035] p-4">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div className="rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.03] p-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-200">Scan mode</p>
-                      <h3 className="mt-1 text-lg font-black text-white">Start simple. Add evidence only when needed.</h3>
-                      <p className="mt-1 text-xs leading-5 text-slate-400">Quick Scan auto-runs public website evidence. Deep/Expert modes unlock optional inputs for stronger coverage. Missing evidence is marked Not Assessed, never guessed.</p>
+                      <p className="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-200">Scan mode</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-400">Select how deep Web3Guard should scan. Start with Quick Scan; add evidence only when needed.</p>
                     </div>
-                    <span className="badge badge-cyan">Phase 78 orchestrator</span>
+                    <span className="badge badge-cyan">Phase 78</span>
                   </div>
-                  <div className="mt-4 grid gap-3 lg:grid-cols-3">
-                    {scanModeOptions.map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => {
-                          setScanMode(option.id);
-                          setAdvancedOpen(option.id !== "quick");
-                        }}
-                        className={`rounded-2xl border p-4 text-left transition ${scanMode === option.id ? "border-cyan-300/50 bg-cyan-300/10 shadow-[0_0_25px_rgba(34,211,238,0.10)]" : "border-white/10 bg-white/[0.025] hover:border-cyan-300/25"}`}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <strong className="text-sm text-white">{option.title}</strong>
-                          <span className={`badge ${scanMode === option.id ? "badge-cyan" : ""}`}>{scanMode === option.id ? "Selected" : option.id}</span>
-                        </div>
-                        <p className="mt-2 text-xs leading-5 text-slate-400">{option.subtitle}</p>
-                        <ul className="mt-3 space-y-1 text-[11px] leading-5 text-slate-500">
-                          {option.bullets.map((bullet) => <li key={bullet}>• {bullet}</li>)}
-                        </ul>
-                      </button>
-                    ))}
+
+                  <div className="mt-3 overflow-x-auto">
+                    <div className="inline-flex min-w-full gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-1 sm:min-w-0">
+                      {scanModeOptions.map((option) => {
+                        const selected = scanMode === option.id;
+
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => {
+                              setScanMode(option.id);
+                              setAdvancedOpen(option.id !== "quick");
+                            }}
+                            className={`min-w-[122px] rounded-xl border px-3 py-2 text-left transition sm:min-w-0 sm:flex-1 ${selected ? "border-cyan-300/40 bg-cyan-300/10 text-white shadow-[0_0_18px_rgba(34,211,238,0.10)]" : "border-transparent bg-transparent text-slate-300 hover:border-cyan-300/20 hover:bg-white/[0.03]"}`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-semibold">{option.title}</span>
+                              {selected ? <span className="rounded-full bg-cyan-300/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-cyan-200">Active</span> : null}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
+                    <p className="text-xs leading-5 text-slate-300">{activeScanMode.subtitle}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {activeScanMode.bullets.map((bullet) => (
+                        <span key={bullet} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-slate-400">
+                          {bullet}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
