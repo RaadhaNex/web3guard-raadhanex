@@ -112,6 +112,13 @@ const moreGroups: MoreGroup[] = [
         status: "beta",
       },
       {
+        href: "/scanner-truth-validation",
+        label: "Truth validation",
+        description: "Validate real scan evidence mapping before demos and reports.",
+        icon: "status",
+        status: "beta",
+      },
+      {
         href: "/openzeppelin-pattern",
         label: "OpenZeppelin patterns",
         description: "Check Solidity evidence against OpenZeppelin-style secure patterns.",

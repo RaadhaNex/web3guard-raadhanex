@@ -16,6 +16,7 @@ const groups = [
     items: [
       ["Risk intelligence", "/risk-intelligence", "Explain impact, future risk, fix path, and verification."],
       ["Scanner correlation", "/scanner-correlation", "Prioritize real findings into P0/P1/P2/P3 and attack-path hints."],
+      ["Truth validation", "/scanner-truth-validation", "Check latest scan output for real evidence mapping, missing states, and fake-claim blockers."],
       ["OpenZeppelin patterns", "/openzeppelin-pattern", "Compare Solidity evidence against common OpenZeppelin-style secure patterns."],
       ["Authorized Web DAST", "/web-dast", "Safe authorized web baseline checks with no exploit automation."],
       ["Admin pentest governance", "/admin-pentest", "Scope, authorization, role, and governance readiness workflow."],
