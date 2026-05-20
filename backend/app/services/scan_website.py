@@ -52,8 +52,45 @@ SECURITY_HEADERS = {
     ),
 }
 
-LIMITED_PATH_HINTS = ["/.env", "/admin", "/api", "/swagger", "/graphql", "/.git", "/backup", "/config", "/debug"]
-DANGEROUS_PATHS = {"/.env", "/.git", "/backup", "/config", "/debug"}
+LIMITED_PATH_HINTS = [
+    "/.env",
+    "/.env.local",
+    "/.git/config",
+    "/.git/HEAD",
+    "/admin",
+    "/api",
+    "/api/users",
+    "/api/debug",
+    "/docs",
+    "/swagger",
+    "/swagger.json",
+    "/openapi.json",
+    "/graphql",
+    "/backup",
+    "/config",
+    "/config.json",
+    "/debug",
+    "/phpinfo.php",
+]
+DANGEROUS_PATHS = {"/.env", "/.env.local", "/.git/config", "/.git/HEAD", "/backup", "/config", "/config.json", "/debug", "/api/debug", "/phpinfo.php"}
+PROOF_FETCH_PATHS = {
+    "/.env",
+    "/.env.local",
+    "/.git/config",
+    "/.git/HEAD",
+    "/api",
+    "/api/users",
+    "/api/debug",
+    "/docs",
+    "/swagger",
+    "/swagger.json",
+    "/openapi.json",
+    "/graphql",
+    "/config",
+    "/config.json",
+    "/debug",
+    "/phpinfo.php",
+}
 SCRIPT_RISK_KEYWORDS = ["eval", "drainer", "walletconnect", "metamask", "claim", "mint"]
 DAPP_PAGE_KEYWORDS = ["walletconnect", "metamask", "connect wallet", "mint", "claim", "airdrop", "swap", "stake", "approve", "permit", "bridge", "presale"]
 EVM_ADDRESS_HINT_RE = re.compile(r"0x[a-fA-F0-9]{40}")
@@ -229,6 +266,199 @@ def _csp_analysis(csp: str) -> dict:
         "allows_wildcard": "*" in lower,
         "raw_preview": csp[:500],
     }
+
+
+SECRET_NAME_RE = re.compile(
+    r"(?i)(secret|token|password|passwd|pwd|private[_-]?key|mnemonic|seed[_-]?phrase|database_url|db_url|service[_-]?role|razorpay[_-]?key[_-]?secret|openai[_-]?api[_-]?key|aws[_-]?(access|secret))"
+)
+ENV_ASSIGNMENT_RE = re.compile(r"(?m)^\s*([A-Z0-9_]*(?:SECRET|TOKEN|KEY|PASSWORD|PASS|PRIVATE|MNEMONIC|DATABASE_URL|DB_URL|SERVICE_ROLE)[A-Z0-9_]*)\s*=\s*([^\n#]+)")
+JSON_SECRET_RE = re.compile(r"(?i)[\"']([a-z0-9_.-]*(?:secret|token|password|private|mnemonic|database_url|service_role)[a-z0-9_.-]*)[\"']\s*:\s*[\"']([^\"']{6,})[\"']")
+
+
+def _redact_secret_text(value: str) -> str:
+    text = value[:4000]
+    text = re.sub(
+        r"(?m)^\s*([A-Z0-9_]*(?:SECRET|TOKEN|KEY|PASSWORD|PASS|PRIVATE|MNEMONIC|DATABASE_URL|DB_URL|SERVICE_ROLE)[A-Z0-9_]*\s*=\s*)([^\n#]+)",
+        lambda m: m.group(1) + "<redacted>",
+        text,
+    )
+    text = re.sub(
+        r"(?i)([\"']?[a-z0-9_.-]*(?:secret|token|password|private|mnemonic|database_url|service_role)[a-z0-9_.-]*[\"']?\s*:\s*[\"'])([^\"']{6,})([\"'])",
+        lambda m: m.group(1) + "<redacted>" + m.group(3),
+        text,
+    )
+    text = re.sub(r"AKIA[0-9A-Z]{16}", "AKIA<redacted>", text)
+    text = re.sub(r"(?i)(bearer\s+)[a-z0-9._=-]{16,}", r"\1<redacted>", text)
+    text = re.sub(r"0x[a-fA-F0-9]{64}", "0x<redacted-private-key-like-value>", text)
+    return text[:900]
+
+
+def _secret_keys_in_text(text: str) -> list[str]:
+    keys = set()
+    for match in ENV_ASSIGNMENT_RE.finditer(text[:5000]):
+        value = (match.group(2) or "").strip().strip("'\"")
+        if value and value.lower() not in {"changeme", "example", "placeholder", "your_key_here", "null", "none"}:
+            keys.add(match.group(1)[:80])
+    for match in JSON_SECRET_RE.finditer(text[:5000]):
+        keys.add(match.group(1)[:80])
+    return sorted(keys)[:20]
+
+
+def _proof_evidence(path: str, status_code: int | None, content_type: str, body: str) -> dict | None:
+    if status_code != 200 or not body:
+        return None
+    lower_path = path.lower()
+    lower_body = body[:12000].lower()
+    content_type_lower = content_type.lower()
+    secret_keys = _secret_keys_in_text(body)
+
+    if lower_path in {"/.env", "/.env.local"} and (secret_keys or "=" in body[:2000]):
+        return {
+            "kind": "exposed_env_file",
+            "severity": "critical" if secret_keys else "high",
+            "title": "Public .env File Exposure Confirmed",
+            "category": "confirmed_secret_exposure",
+            "confidence": "high",
+            "evidence": f"{path} returned HTTP 200 and exposed env-style keys: {', '.join(secret_keys[:8]) or 'env-style assignments'}",
+            "recommendation": "Immediately remove public .env files, rotate exposed secrets, and block dotfiles at the edge/server.",
+            "raw_preview": _redact_secret_text(body),
+        }
+
+    if lower_path == "/.git/config" and "[core]" in lower_body and ("[remote" in lower_body or "repositoryformatversion" in lower_body):
+        return {
+            "kind": "exposed_git_config",
+            "severity": "critical",
+            "title": "Public .git Repository Metadata Exposure Confirmed",
+            "category": "confirmed_repo_exposure",
+            "confidence": "high",
+            "evidence": "/.git/config returned HTTP 200 with Git config markers.",
+            "recommendation": "Block .git access immediately and rotate any secrets that may have existed in repository history.",
+            "raw_preview": _redact_secret_text(body),
+        }
+
+    if lower_path == "/.git/head" and "ref: refs/" in lower_body:
+        return {
+            "kind": "exposed_git_head",
+            "severity": "high",
+            "title": "Public .git HEAD Exposure Confirmed",
+            "category": "confirmed_repo_exposure",
+            "confidence": "high",
+            "evidence": "/.git/HEAD returned HTTP 200 with refs marker.",
+            "recommendation": "Block .git paths at the web server/CDN and confirm repository objects are not accessible.",
+            "raw_preview": _redact_secret_text(body),
+        }
+
+    if secret_keys and (lower_path.endswith(".json") or lower_path in {"/config", "/config.json"} or "javascript" in content_type_lower):
+        return {
+            "kind": "public_config_secret",
+            "severity": "critical",
+            "title": "Public Config/Asset Contains Secret-Like Key",
+            "category": "confirmed_secret_exposure",
+            "confidence": "high",
+            "evidence": f"{path} returned HTTP 200 and contains secret-like keys: {', '.join(secret_keys[:8])}.",
+            "recommendation": "Remove secrets from public assets/configs and rotate affected credentials immediately.",
+            "raw_preview": _redact_secret_text(body),
+        }
+
+    if lower_path.endswith(".map") and ("\"sources\"" in lower_body and "\"mappings\"" in lower_body):
+        return {
+            "kind": "public_source_map",
+            "severity": "medium",
+            "title": "Public JavaScript Source Map Confirmed",
+            "category": "confirmed_source_exposure",
+            "confidence": "high",
+            "evidence": f"{path} returned HTTP 200 and contains source-map markers.",
+            "recommendation": "Disable public production source maps or verify they contain no secrets/internal implementation details.",
+            "raw_preview": _redact_secret_text(body),
+        }
+
+    if lower_path in {"/openapi.json", "/swagger.json"} and ("\"openapi\"" in lower_body or "\"swagger\"" in lower_body):
+        return {
+            "kind": "public_api_schema",
+            "severity": "medium",
+            "title": "Public API Schema Exposure Confirmed",
+            "category": "confirmed_api_exposure",
+            "confidence": "high",
+            "evidence": f"{path} returned HTTP 200 with OpenAPI/Swagger markers.",
+            "recommendation": "Keep public API docs intentional, remove sensitive/internal endpoints, and require auth for admin-only docs.",
+            "raw_preview": _redact_secret_text(body),
+        }
+
+    if lower_path in {"/docs", "/swagger"} and ("swagger-ui" in lower_body or "openapi" in lower_body or "api docs" in lower_body):
+        return {
+            "kind": "public_api_docs",
+            "severity": "low",
+            "title": "Public API Documentation Surface Confirmed",
+            "category": "confirmed_api_exposure",
+            "confidence": "high",
+            "evidence": f"{path} returned HTTP 200 with API documentation markers.",
+            "recommendation": "Confirm this documentation is intended for public users and does not reveal admin/internal operations.",
+            "raw_preview": _redact_secret_text(body),
+        }
+
+    if lower_path == "/graphql" and ("graphql" in lower_body or "must provide query" in lower_body or "graphiql" in lower_body):
+        return {
+            "kind": "public_graphql",
+            "severity": "medium",
+            "title": "Public GraphQL Endpoint Surface Confirmed",
+            "category": "confirmed_api_exposure",
+            "confidence": "high",
+            "evidence": "/graphql returned HTTP 200 with GraphQL markers.",
+            "recommendation": "Disable public GraphiQL/introspection if not needed and require auth/rate limits for sensitive resolvers.",
+            "raw_preview": _redact_secret_text(body),
+        }
+
+    if lower_path in {"/debug", "/api/debug", "/phpinfo.php"} and any(marker in lower_body for marker in ["traceback", "stack trace", "werkzeug", "phpinfo()", "environment", "debugger"]):
+        return {
+            "kind": "public_debug_endpoint",
+            "severity": "high",
+            "title": "Public Debug/Diagnostics Endpoint Confirmed",
+            "category": "confirmed_debug_exposure",
+            "confidence": "high",
+            "evidence": f"{path} returned HTTP 200 with debug/diagnostic markers.",
+            "recommendation": "Disable public debug endpoints and review logs/config exposure before launch.",
+            "raw_preview": _redact_secret_text(body),
+        }
+
+    if lower_path == "/admin" and any(marker in lower_body for marker in ["admin", "dashboard", "sign in", "login", "password"]):
+        return {
+            "kind": "public_admin_surface",
+            "severity": "low",
+            "title": "Public Admin/Login Surface Detected",
+            "category": "confirmed_admin_surface",
+            "confidence": "medium",
+            "evidence": "/admin returned HTTP 200 with admin/login-like markers.",
+            "recommendation": "Confirm admin routes require strong auth/MFA and are intentionally public. Consider IP allow-listing or moving admin off public paths.",
+            "raw_preview": _redact_secret_text(body),
+        }
+
+    if lower_path in {"/api", "/api/users"} and ("application/json" in content_type_lower or body.strip().startswith(("{", "["))):
+        if any(marker in lower_body for marker in ["email", "password", "access_token", "secret", "private", "user_id"]):
+            return {
+                "kind": "public_api_data",
+                "severity": "high",
+                "title": "Public API Data Exposure Hint Confirmed",
+                "category": "confirmed_api_exposure",
+                "confidence": "medium",
+                "evidence": f"{path} returned HTTP 200 JSON-like response with sensitive-field markers.",
+                "recommendation": "Verify this endpoint does not expose private user/project data without authentication.",
+                "raw_preview": _redact_secret_text(body),
+            }
+
+    return None
+
+
+def _proof_finding(idx: int, proof: dict, path: str) -> Finding:
+    return _finding(
+        idx,
+        str(proof.get("severity") or "medium"),
+        str(proof.get("title") or "Confirmed Public Exposure"),
+        str(proof.get("evidence") or f"{path} returned public evidence."),
+        str(proof.get("recommendation") or "Review and fix before public launch."),
+        str(proof.get("confidence") or "high"),
+        str(proof.get("category") or "confirmed_public_exposure"),
+        f"WEB-PROOF-{str(proof.get('kind') or path).upper().replace('/', '-').replace('.', '')[:60]}",
+    )
 
 
 async def _safe_fetch(
@@ -570,6 +800,8 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
             "content_type": header_map.get("content-type"),
             "evidence_note": "Captured from passive GET/HEAD responses only. This is real observed response evidence, not an exploit or certified audit result.",
         }
+        metadata["proof_based_confirmed_exposures"] = []
+        metadata["proof_fetch_results"] = []
         if cookie_evidence["missing_secure"]:
             findings.append(
                 _finding(idx, "medium", "Cookie Missing Secure Flag", f"Set-Cookie header contains cookie(s) without Secure: {', '.join(cookie_evidence['missing_secure'][:5])}.", "Add Secure to session/auth cookies so browsers send them only over HTTPS.", "medium", "cookie_security", "WEB-COOKIE-SECURE")
@@ -724,6 +956,24 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
                 idx += 1
 
             same_origin_scripts = [script for script in html_evidence.get("same_origin_scripts", []) if isinstance(script, dict)]
+            script_asset_results = []
+            for script in same_origin_scripts[:6]:
+                src = str(script.get("src") or "")
+                if not src or src.endswith(".map"):
+                    continue
+                js_result = await _safe_fetch(client, "GET", src, read_body=True)
+                js_path = urlparse(src).path or src
+                secret_proof = _proof_evidence(js_path, js_result.status_code, js_result.headers.get("content-type", ""), js_result.body_text)
+                script_asset_entry = {"script": src, "status_code": js_result.status_code, "content_type": js_result.headers.get("content-type"), "proof_kind": secret_proof.get("kind") if secret_proof else None, "error": js_result.error}
+                script_asset_results.append(script_asset_entry)
+                if secret_proof and secret_proof.get("kind") == "public_config_secret":
+                    metadata["proof_based_confirmed_exposures"].append({"path": src, **secret_proof})
+                    findings.append(_proof_finding(idx, secret_proof, src))
+                    idx += 1
+            if script_asset_results:
+                metadata.setdefault("raw_response_evidence", {})["script_asset_results"] = script_asset_results
+                metadata["script_asset_results"] = script_asset_results
+
             source_map_results = []
             for script in same_origin_scripts[:8]:
                 src = str(script.get("src") or "")
@@ -731,12 +981,20 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
                     continue
                 map_url = src + ".map"
                 map_result = await _safe_fetch(client, "HEAD", map_url, read_body=False)
-                source_map_results.append({"script": src, "map_url": map_url, "status_code": map_result.status_code, "error": map_result.error})
+                source_map_entry = {"script": src, "map_url": map_url, "status_code": map_result.status_code, "error": map_result.error}
                 if map_result.status_code == 200:
-                    findings.append(
-                        _finding(idx, "medium", "Public JavaScript Source Map Exposed", f"A same-origin source map returned HTTP 200: {map_url}", "Disable public production source maps or ensure they contain no secrets/internal implementation details.", "medium", "frontend_supply_chain", "WEB-SOURCEMAP-PUBLIC")
-                    )
+                    map_body = await _safe_fetch(client, "GET", map_url, read_body=True)
+                    proof = _proof_evidence(urlparse(map_url).path or map_url, map_body.status_code, map_body.headers.get("content-type", ""), map_body.body_text)
+                    source_map_entry["proof_kind"] = proof.get("kind") if proof else None
+                    if proof:
+                        metadata["proof_based_confirmed_exposures"].append({"path": map_url, **proof})
+                        findings.append(_proof_finding(idx, proof, map_url))
+                    else:
+                        findings.append(
+                            _finding(idx, "medium", "Public JavaScript Source Map Exposed", f"A same-origin source map returned HTTP 200: {map_url}", "Disable public production source maps or ensure they contain no secrets/internal implementation details.", "medium", "frontend_supply_chain", "WEB-SOURCEMAP-PUBLIC")
+                        )
                     idx += 1
+                source_map_results.append(source_map_entry)
             if source_map_results:
                 metadata.setdefault("raw_response_evidence", {})["source_map_results"] = source_map_results
                 metadata["source_map_results"] = source_map_results
@@ -768,20 +1026,52 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
         for path in LIMITED_PATH_HINTS:
             path_url = urljoin(page.url, path)
             path_result = await _safe_fetch(client, "HEAD", path_url, read_body=False)
-            metadata["limited_path_results"].append({"path": path, "status_code": path_result.status_code, "error": path_result.error})
+            path_entry = {"path": path, "status_code": path_result.status_code, "error": path_result.error, "proof_checked": False, "proof_kind": None}
             status = path_result.status_code
-            if status in {200, 401, 403}:
-                severity = "high" if path in DANGEROUS_PATHS and status == 200 else "medium"
+            if status == 200 and path in PROOF_FETCH_PATHS:
+                proof_body = await _safe_fetch(client, "GET", path_url, read_body=True)
+                proof = _proof_evidence(path, proof_body.status_code, proof_body.headers.get("content-type", ""), proof_body.body_text)
+                path_entry.update({
+                    "proof_checked": True,
+                    "content_status_code": proof_body.status_code,
+                    "content_type": proof_body.headers.get("content-type"),
+                    "proof_kind": proof.get("kind") if proof else None,
+                })
+                metadata["proof_fetch_results"].append(path_entry.copy())
+                if proof:
+                    metadata["proof_based_confirmed_exposures"].append({"path": path, **proof})
+                    findings.append(_proof_finding(idx, proof, path))
+                    idx += 1
+                    metadata["limited_path_results"].append(path_entry)
+                    continue
+
+            metadata["limited_path_results"].append(path_entry)
+            if status == 200:
+                severity = "high" if path in DANGEROUS_PATHS else "medium"
                 findings.append(
                     _finding(
                         idx,
                         severity,
                         f"Sensitive Path Hint: {path}",
-                        f"Path {path} returned HTTP {status}. This passive hint may be normal for protected routes, but public exposure should be reviewed.",
-                        "Confirm the route does not expose secrets, configs, debug tools, or admin functionality. Deep checks require ownership verification.",
+                        f"Path {path} returned HTTP 200, but the safe proof check did not confirm secret/debug/schema content.",
+                        "Manually confirm the route is intentionally public and does not expose secrets, configs, debug tools, or admin functionality.",
                         "medium" if severity == "high" else "low",
                         "sensitive_paths",
                         f"WEB-PATH-{path.strip('/').replace('.', '').upper() or 'ROOT'}",
+                    )
+                )
+                idx += 1
+            elif status in {401, 403} and path in DANGEROUS_PATHS:
+                findings.append(
+                    _finding(
+                        idx,
+                        "info",
+                        f"Protected Sensitive Path Detected: {path}",
+                        f"Path {path} returned HTTP {status}. This indicates the route is not publicly open, but it should still be reviewed for correct access control.",
+                        "Keep protected routes authenticated and monitor for accidental public exposure.",
+                        "low",
+                        "sensitive_paths_protected",
+                        f"WEB-PATH-PROTECTED-{path.strip('/').replace('.', '').upper() or 'ROOT'}",
                     )
                 )
                 idx += 1
@@ -803,16 +1093,20 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
         else:
             potential_hardening.append(entry)
 
+    proof_exposures = metadata.get("proof_based_confirmed_exposures", []) if isinstance(metadata.get("proof_based_confirmed_exposures"), list) else []
     metadata["finding_truth_taxonomy"] = {
         "confirmed_observed_issue_count": len(confirmed_observed),
         "potential_hardening_hint_count": len(potential_hardening),
+        "confirmed_proof_exposure_count": len(proof_exposures),
+        "confirmed_bug_or_exposure_count": len(proof_exposures),
         "confirmed_observed_issues": confirmed_observed[:30],
         "potential_hardening_hints": potential_hardening[:30],
-        "wording_rule": "Observed issues are real response/source observations. They are not automatically confirmed exploitable bugs unless the evidence proves exposure, exploitability, and impact.",
+        "confirmed_proof_exposures": proof_exposures[:20],
+        "wording_rule": "Observed issues are real response/source observations. Proof-based bugs/exposures require a safe GET/HEAD response with content markers such as public .env, .git, source maps, debug pages, public API docs, or secret-like public config keys.",
     }
     metadata["bug_detection_coverage"] = {
-        "phase": "48",
-        "engine_version": "website-coverage-v3.0",
+        "phase": "49",
+        "engine_version": "website-proof-coverage-v4.0",
         "coverage_scope": [
             "reachability/status",
             "HTTPS/redirects",
@@ -830,8 +1124,11 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
         "finding_count": len(findings),
         "observed_issue_count": len(confirmed_observed),
         "hardening_hint_count": len(potential_hardening),
+        "confirmed_proof_exposure_count": len(proof_exposures),
+        "confirmed_proof_exposures": proof_exposures[:20],
+        "proof_fetch_count": len(metadata.get("proof_fetch_results", []) or []),
         "severity_breakdown": severity_breakdown(findings),
-        "real_only_note": "Coverage was increased with passive evidence only. Findings are created only from fetched headers/HTML/path status/tool output; no exploit payloads or fake bugs are generated.",
+        "real_only_note": "Coverage was increased with passive proof checks only. Findings are created only from fetched headers/HTML/path status/tool output; no exploit payloads, brute force, credential testing, DoS, or fake bugs are generated.",
     }
 
     return _build_response(safe_url, project_name, findings, metadata)

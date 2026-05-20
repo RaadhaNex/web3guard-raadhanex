@@ -69,13 +69,14 @@ function BugCoverageReportCard({ result }: { result: UnifiedUrlScanResponse | nu
     <section className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 shadow-2xl shadow-black/20">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="section-label">Phase 48 bug coverage</p>
-          <h2 className="mt-2 text-2xl font-black text-white">Report-visible bug detection coverage</h2>
+          <p className="section-label">Phase 49 proof coverage</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Report-visible bug/proof coverage</h2>
           <p className="mt-2 text-sm leading-7 text-slate-300">{coverage.visibility_rule}</p>
         </div>
         <span className={`badge ${coverage.critical_high_count ? "badge-amber" : "badge-green"}`}>{coverage.total_findings_from_assessed_modules} finding(s)</span>
       </div>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-4"><p className="text-xs uppercase tracking-[0.16em] text-red-100">Proof bugs/exposures</p><p className="mt-2 text-2xl font-black text-white">{Number(coverage.confirmed_proof_exposure_count || 0)}</p></div>
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Critical</p><p className="mt-2 text-2xl font-black text-white">{Number(severity.critical || 0)}</p></div>
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">High</p><p className="mt-2 text-2xl font-black text-white">{Number(severity.high || 0)}</p></div>
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Medium</p><p className="mt-2 text-2xl font-black text-white">{Number(severity.medium || 0)}</p></div>

@@ -387,6 +387,8 @@ export type BugDetectionCoverage = {
   assessed_modules: string[];
   not_assessed_modules: string[];
   website_passive_coverage?: Record<string, unknown>;
+  confirmed_proof_exposure_count?: number;
+  confirmed_proof_exposures?: Array<Record<string, unknown>>;
   visibility_rule: string;
   coverage_added: string[];
 };
@@ -397,8 +399,10 @@ export type RealEvidenceSummary = {
   real_observed_issue_count: number;
   potential_hardening_hint_count: number;
   confirmed_exploit_count: number;
+  confirmed_bug_or_exposure_count?: number;
   confirmed_exploit_note: string;
   observed_issues: Array<Record<string, unknown>>;
+  confirmed_proof_exposures?: Array<Record<string, unknown>>;
   hardening_hints: Array<Record<string, unknown>>;
   website_raw_evidence: Record<string, unknown>;
   dynamic_score_trace?: DynamicScoreTrace | Record<string, unknown>;

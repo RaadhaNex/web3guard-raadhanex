@@ -301,7 +301,7 @@ function BugDetectionCoveragePanel({ result }: { result: UnifiedUrlScanResponse 
     <section className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 shadow-2xl shadow-black/20">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <p className="section-label">Phase 48 bug coverage</p>
+          <p className="section-label">Phase 49 proof coverage</p>
           <h2 className="mt-2 text-2xl font-black text-white">Detected bugs / warnings from real evidence</h2>
           <p className="mt-2 max-w-4xl text-sm leading-7 text-slate-300">
             {coverage?.real_only_rule || "Only findings from assessed evidence are shown. Not assessed modules are not treated as clean."}
@@ -576,8 +576,31 @@ export function ResultsClient() {
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Observed</p><p className="mt-2 text-2xl font-black text-white">{realEvidenceSummary.real_observed_issue_count}</p></div>
             <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Hints</p><p className="mt-2 text-2xl font-black text-white">{realEvidenceSummary.potential_hardening_hint_count}</p></div>
-            <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Exploits proved</p><p className="mt-2 text-2xl font-black text-white">{realEvidenceSummary.confirmed_exploit_count}</p></div>
+            <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Proof bugs/exposures</p><p className="mt-2 text-2xl font-black text-white">{Number(realEvidenceSummary.confirmed_bug_or_exposure_count ?? realEvidenceSummary.confirmed_exploit_count ?? 0)}</p></div>
           </div>
+          {asArray(realEvidenceSummary.confirmed_proof_exposures).length ? (
+            <div className="mt-5 grid gap-3">
+              <h3 className="text-lg font-black text-white">Confirmed proof-based bugs / exposures</h3>
+              {asArray(realEvidenceSummary.confirmed_proof_exposures).filter(isRecord).slice(0, 8).map((proof, index) => (
+                <article key={`${asString(proof.kind, "proof")}-${index}`} className="rounded-2xl border border-red-400/20 bg-red-500/10 p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h4 className="font-black text-white">{asString(proof.title, "Proof-based exposure")}</h4>
+                      <p className="mt-1 break-words text-sm leading-6 text-red-50/90">{asString(proof.evidence, "Public proof evidence was captured.")}</p>
+                    </div>
+                    <span className="badge badge-red">{asString(proof.severity, "medium")}</span>
+                  </div>
+                  <p className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-slate-200">Fix: {asString(proof.recommendation, "Review and fix before launch.")}</p>
+                  <details className="mt-3 rounded-xl border border-white/[0.07] bg-black/20 p-3 text-xs text-slate-400">
+                    <summary className="cursor-pointer font-bold text-slate-200">Redacted proof preview</summary>
+                    <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap break-words">{asString(proof.raw_preview, "No preview stored.")}</pre>
+                  </details>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-7 text-slate-400">No proof-based public exposure was confirmed in this scan. Hardening warnings can still be real, but they are not counted as confirmed bugs/exposures without proof evidence.</p>
+          )}
           <details className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-xs text-slate-400">
             <summary className="cursor-pointer font-black text-white">Show raw passive website evidence</summary>
             <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-words">{formatJson(realEvidenceSummary.website_raw_evidence)}</pre>

@@ -52,7 +52,7 @@ def test_phase48_website_detects_more_real_passive_evidence(monkeypatch):
     assert 'Object/Embed Element Present' in titles
     assert 'Public JavaScript Source Map Exposed' in titles
     coverage = result.scan_metadata['bug_detection_coverage']
-    assert coverage['phase'] == '48'
+    assert coverage['phase'] == '49'
     assert coverage['finding_count'] == len(result.findings)
     assert 'cookie flags' in ' '.join(coverage['coverage_scope'])
 
@@ -83,7 +83,7 @@ def test_phase48_unified_scan_exposes_bug_detection_coverage(monkeypatch):
         real_only_acknowledged=True,
     )))
 
-    assert result['bug_detection_coverage']['phase'] == '48'
+    assert result['bug_detection_coverage']['phase'] == '49'
     assert result['bug_detection_coverage']['total_findings_from_assessed_modules'] >= 1
     assert result['bug_detection_coverage']['by_module']['website'] >= 1
     assert result['findings_pipeline']['summary']['real_findings'] >= 1
