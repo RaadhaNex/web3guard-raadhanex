@@ -32,7 +32,7 @@ const groups = [
 
 export const metadata = {
   title: "Docs | Web3Guard AI",
-  description: "Simple docs for Web3Guard AI methodology, limitations, reports, providers, and responsible use.",
+  description: "Methodology, limitations, and setup guides for Web3Guard AI scanner. Understand what is assessed and what needs manual review.",
 };
 
 export default function DocsPage() {

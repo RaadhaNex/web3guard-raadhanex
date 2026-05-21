@@ -26,6 +26,35 @@ const scanStages = [
   "Report package",
 ];
 
+const scanProgressMessages = [
+  "Checking HTTPS and headers...",
+  "Analysing page surface...",
+  "Reviewing evidence inputs...",
+  "Building readiness output...",
+];
+
+const scanModeBulletHints: Record<string, string> = {
+  "Website headers/CSP/cookies": "Checks Content-Security-Policy, HSTS, X-Frame-Options, cookie flags, and common launch headers.",
+  "Public exposure paths": "Safely probes common sensitive paths like /admin, /debug, /.env, /.git, and public source maps.",
+  "JS/API discovery": "Finds exposed API endpoints and risky public assets referenced in page JavaScript.",
+  "No technical evidence required": "URL alone is enough for safe passive checks; no contract, keys, or code needed.",
+};
+
+function suggestedChainForProjectType(value: string) {
+  const lower = value.toLowerCase();
+  if (!value || value === "Other") return "";
+  if (lower.includes("solana")) return "Solana";
+  if (value === "Website / dApp Frontend" || value === "API / SaaS Backend") return "Web only";
+  if (value === "Smart Contract" || value === "DeFi Protocol" || value === "NFT / Marketplace") return "Ethereum";
+  return "";
+}
+
+function evidenceFieldHint(id: string) {
+  if (id === "solidity-source") return "Paste raw Solidity — enables local rule engine analysis without Slither.";
+  if (id === "slither-json" || id === "semgrep-json") return "Paste tool output JSON — enables real finding import with file/line evidence when available.";
+  return "Optional evidence. Filled fields unlock deeper assessed modules; empty fields stay Not Assessed.";
+}
+
 const moduleOrder = ["website", "dapp", "api", "github", "contract", "static_analysis", "wallet", "admin_opsec"];
 
 const projectTypeOptions = [
@@ -729,6 +758,7 @@ export function UnifiedUrlScannerClient() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [stageIndex, setStageIndex] = useState(0);
+  const [scanProgressMessage, setScanProgressMessage] = useState(scanProgressMessages[0]);
   const [error, setError] = useState<string | null>(null);
   const [fieldPrompt, setFieldPrompt] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -1093,11 +1123,25 @@ export function UnifiedUrlScannerClient() {
     if (!loading) return;
     setProgress(8);
     setStageIndex(0);
-    const timer = window.setInterval(() => {
+    setScanProgressMessage(scanProgressMessages[0]);
+    const progressTimer = window.setInterval(() => {
       setProgress((value) => (value >= 96 ? value : value + 7));
       setStageIndex((value) => (value >= scanStages.length - 2 ? value : value + 1));
     }, 800);
-    return () => window.clearInterval(timer);
+    const messageTimer = window.setInterval(() => {
+      setScanProgressMessage((current) => {
+        const index = scanProgressMessages.indexOf(current);
+        return scanProgressMessages[(index + 1) % scanProgressMessages.length];
+      });
+    }, 4000);
+    const slowTimer = window.setTimeout(() => {
+      setScanProgressMessage("Backend waking up on Render free tier. Please wait...");
+    }, 45000);
+    return () => {
+      window.clearInterval(progressTimer);
+      window.clearInterval(messageTimer);
+      window.clearTimeout(slowTimer);
+    };
   }, [loading]);
 
   async function runScan() {
@@ -1268,13 +1312,25 @@ export function UnifiedUrlScannerClient() {
               <div className="scanner-input-panel scanner-input-panel-wide">
 
                 <div className="scanner-premium-fields">
-                  <FieldLabel label="Website / dApp URL" required>
+                  <FieldLabel label="Website / dApp URL" required helper="Enter the public URL of your Web3 project. Quick Scan only needs this URL plus permission.">
                     <input className="input scanner-input-xl scanner-premium-url" value={websiteUrl} onChange={(event) => setWebsiteUrl(event.target.value)} placeholder="https://yourproject.com" />
                   </FieldLabel>
 
                   <div className="scanner-field-row">
                     <FieldLabel label="Project type" required={scanMode !== "quick"}>
-                      <select className="select scanner-choice-select" value={projectType} onChange={(event) => setProjectType(event.target.value)}>
+                      <select
+                            className="select scanner-choice-select"
+                            value={projectType}
+                            onChange={(event) => {
+                              const nextProjectType = event.target.value;
+                              setProjectType(nextProjectType);
+                              const nextChain = suggestedChainForProjectType(nextProjectType);
+                              if (nextChain) {
+                                setChain(nextChain);
+                                setCustomChain("");
+                              }
+                            }}
+                          >
                         <option value="" disabled>Select project type</option>
                         {projectTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
                       </select>
@@ -1330,7 +1386,11 @@ export function UnifiedUrlScannerClient() {
                       <p className="text-xs text-slate-300">{activeScanMode.subtitle}</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {activeScanMode.bullets.map((bullet) => (
-                          <span key={bullet} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-slate-400">
+                          <span
+                            key={bullet}
+                            title={scanModeBulletHints[bullet] || activeScanMode.subtitle}
+                            className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-slate-400"
+                          >
                             {bullet}
                           </span>
                         ))}
@@ -1367,20 +1427,24 @@ export function UnifiedUrlScannerClient() {
 
                     {scanMode === "quick" ? (
                       <div className="scanner-evidence-chips" aria-label="Auto evidence types">
-                        {["Headers/CSP", "Cookies", "Public exposure paths", "JS/API discovery", "Score proof", "Coverage gate"].map((item) => <span key={item}>{item}</span>)}
+                        {["Headers/CSP", "Cookies", "Public exposure paths", "JS/API discovery", "Score proof", "Coverage gate"].map((item) => (
+                          <span key={item} title={scanModeBulletHints[item] || "Auto-scanned evidence area. Real findings only; unavailable modules stay Not Assessed."}>
+                            {item}
+                          </span>
+                        ))}
                       </div>
                     ) : null}
 
                     {scanMode !== "quick" && advancedOpen ? (
                       <>
                         <div className="grid gap-3 lg:grid-cols-3">
-                          <FieldLabel label="Contract address">
+                          <FieldLabel label="Contract address" helper="Deployed contract address — enables ownership and upgrade signal checks.">
                             <input className="input" value={contractAddress} onChange={(event) => setContractAddress(event.target.value)} placeholder="0x..." />
                           </FieldLabel>
-                          <FieldLabel label="API base URL">
+                          <FieldLabel label="API base URL" helper="Your API root URL — enables CORS, auth, and rate-limit checks.">
                             <input className="input" value={apiBaseUrl} onChange={(event) => setApiBaseUrl(event.target.value)} placeholder="https://api.yourproject.com" />
                           </FieldLabel>
-                          <FieldLabel label="GitHub repo URL">
+                          <FieldLabel label="GitHub repo URL" helper="Public GitHub URL — enables dependency and secret exposure signals.">
                             <input className="input" value={githubRepoUrl} onChange={(event) => setGithubRepoUrl(event.target.value)} placeholder="https://github.com/org/repo" />
                           </FieldLabel>
                         </div>
@@ -1407,7 +1471,10 @@ export function UnifiedUrlScannerClient() {
                           {activeEvidenceField ? (
                             <div className="mt-3 rounded-2xl border border-cyan-300/15 bg-slate-950/50 p-3">
                               <div className="flex items-center justify-between gap-3">
-                                <p className="text-sm font-semibold text-white">{activeEvidenceField.label}</p>
+                                <div>
+                                  <p className="text-sm font-semibold text-white">{activeEvidenceField.label}</p>
+                                  <p className="mt-1 text-xs leading-5 text-slate-500">{evidenceFieldHint(activeEvidenceField.id)}</p>
+                                </div>
                                 <button
                                   type="button"
                                   onClick={() => setActiveEvidenceEditor(null)}
@@ -1452,10 +1519,23 @@ export function UnifiedUrlScannerClient() {
 
                 <div className="scanner-action-row">
                   <button type="button" onClick={() => void runScan()} disabled={!canRunScan} className="btn-primary scanner-run-button">
-                    {loading ? 'Scanning evidence...' : 'Run readiness scan →'}
+                    {loading ? (
+                      <>
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-black/25 border-t-black" aria-hidden="true" />
+                        Scanning... 15–30 seconds
+                      </>
+                    ) : (
+                      'Run readiness scan →'
+                    )}
                   </button>
                   {!isLoggedIn && !authLoading ? <Link href="/auth/login" className="btn-secondary scanner-login-button">Login first</Link> : null}
                 </div>
+
+                {loading ? (
+                  <p className="mt-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.06] px-3 py-2 text-xs font-semibold text-cyan-100" role="status" aria-live="polite">
+                    {scanProgressMessage}
+                  </p>
+                ) : null}
               </div>
             </div>
           </CardShell>

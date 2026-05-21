@@ -3,6 +3,11 @@ import { HomeAuthPrompt } from "@/components/home/HomeAuthPrompt";
 import { ButterflySignalStage } from "@/components/home/ButterflySignalStage";
 import { brand } from "@/lib/constants";
 
+export const metadata = {
+  title: "Web3Guard AI — Web3 Launch Readiness Scanner | RAADHANEX",
+  description: "India-first evidence-first scanner for Web3 founders. Check website, smart contract, API, GitHub, and admin OpSec before your launch. Public beta. Free scan.",
+};
+
 const bottomTicker = [
   "Website, dApp, API, Solidity code, wallet UX, GitHub, and admin OpSec before a professional audit.",
   "Assessed: real evidence or a configured tool/provider reviewed this area.",

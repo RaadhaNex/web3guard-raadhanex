@@ -2,7 +2,7 @@ import { PricingSection } from "@/components/sections/PricingSection";
 
 export const metadata = {
   title: "Pricing | Web3Guard AI",
-  description: "Simple Web3Guard AI pricing for free readiness scans, ₹999 pilot reports, and scoped manual review.",
+  description: "Free readiness scan for all Web3 founders. ₹999 pilot report for early beta users. Custom manual review for teams.",
 };
 
 export default function PricingPage() {
