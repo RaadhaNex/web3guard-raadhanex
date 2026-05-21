@@ -559,6 +559,11 @@ type StaticToolUiRow = {
   evidenceSource: string;
   detail: string;
   action: string;
+  runVerdict: string;
+  runBadgeClass: string;
+  beginnerMeaning: string;
+  filesScanned: number | null;
+  reason: string;
 };
 
 function boolOrNull(value: unknown) {
@@ -581,12 +586,49 @@ function toolLabel(tool: string) {
 function toolAction(state: string, label: string, evidenceSource: string) {
   const value = state.toLowerCase();
   if (evidenceSource.includes("artifact")) return `Review the parsed ${label} artifact findings and keep the raw JSON attached for reviewer verification.`;
-  if (value.includes("not assessed")) return `Add Solidity source or a verified contract/source artifact, then rerun. URL-only scans do not execute ${label}.`;
+  if (value.includes("not assessed")) return `${label === "Semgrep" ? "Provide GitHub/source code or verify worker dispatch" : "Add Solidity source or a verified contract/source artifact"}, then rerun. No fake ${label} result is generated.`;
   if (value.includes("not installed")) return `Install ${label} in the isolated tools environment, or paste a valid ${label} JSON artifact in Expert Evidence.`;
   if (value.includes("assessed")) return `Review real ${label} output and fix confirmed findings before public launch.`;
   if (value.includes("provider not configured") || value.includes("not configured")) return `Enable ${label} only in a safe tools/worker environment, or paste a valid ${label} JSON artifact.`;
   if (value.includes("manual")) return `Check backend tool logs for ${label}; if the tool cannot run safely, attach manual reviewer notes or a valid artifact.`;
-  return `Add Solidity source or a verified contract/source artifact, then rerun. URL-only scans do not execute ${label}.`;
+  return `${label === "Semgrep" ? "Provide GitHub/source code or verify worker dispatch" : "Add Solidity source or a verified contract/source artifact"}, then rerun. No fake ${label} result is generated.`;
+}
+
+function toolRunVerdict(toolId: string, label: string, status: string, state: string, realFindings: number, willRun: boolean | null, installed: boolean | null, enabledByEnv: boolean | null) {
+  const cleanStatus = status.toLowerCase();
+  const cleanState = state.toLowerCase();
+  if (cleanStatus === "completed") {
+    return {
+      runVerdict: realFindings > 0 ? "Ran — findings found" : "Ran — no matching findings",
+      runBadgeClass: realFindings > 0 ? "badge-amber" : "badge-green",
+    };
+  }
+  if (cleanStatus === "completed_with_errors") return { runVerdict: "Ran — needs log review", runBadgeClass: "badge-amber" };
+  if (cleanStatus === "timeout") return { runVerdict: "Timed out", runBadgeClass: "badge-amber" };
+  if (cleanState.includes("tool not installed") || installed === false) return { runVerdict: "Not run — tool missing", runBadgeClass: "badge" };
+  if (cleanState.includes("provider not configured") || enabledByEnv === false) return { runVerdict: "Not run — disabled", runBadgeClass: "badge" };
+  if (willRun === true) {
+    if (toolId === "semgrep") return { runVerdict: "Ready — not triggered in this result", runBadgeClass: "badge-cyan" };
+    return { runVerdict: "Ready — needs Solidity", runBadgeClass: "badge-cyan" };
+  }
+  return { runVerdict: "Not run", runBadgeClass: "badge" };
+}
+
+function toolBeginnerMeaning(toolId: string, label: string, status: string, state: string, realFindings: number, reason: string) {
+  const cleanStatus = status.toLowerCase();
+  const cleanState = state.toLowerCase();
+  const cleanReason = reason.toLowerCase();
+  if (cleanStatus === "completed") {
+    if (realFindings > 0) return `${label} actually ran and found ${realFindings} code-level item(s). These are real tool findings, but a developer/reviewer should still confirm true/false positives.`;
+    return `${label} actually ran and found no matching issue in the scanned files for the current rule set. This is good evidence, but not a guarantee that the code is fully secure.`;
+  }
+  if (cleanStatus === "completed_with_errors") return `${label} was started, but the tool returned errors. Check the worker logs/output before trusting this area.`;
+  if (cleanStatus === "timeout") return `${label} started but timed out. Reduce files or increase worker timeout before using this as evidence.`;
+  if (toolId === "semgrep" && cleanState.includes("not assessed")) return "Semgrep is the right tool for this web app. It needs fetched GitHub/source files and worker dispatch. If GitHub was provided and worker is ready, run a fresh scan after backend redeploy.";
+  if ((toolId === "slither" || toolId === "aderyn") && (cleanReason.includes("no solidity") || cleanState.includes("not assessed"))) return `${label} is mainly for Solidity smart contracts. It will stay Not Assessed for a normal Next.js/FastAPI web app unless .sol contract source is provided.`;
+  if (cleanState.includes("tool not installed")) return `${label} is enabled in configuration but the binary is not installed on the isolated worker.`;
+  if (cleanState.includes("provider not configured")) return `${label} is disabled or not configured on the isolated worker.`;
+  return `${label} did not produce executed-tool evidence for this scan. Web3Guard keeps it honest instead of inventing fake output.`;
 }
 
 function buildStaticToolRows(result: UnifiedUrlScanResponse | null): StaticToolUiRow[] {
@@ -607,6 +649,9 @@ function buildStaticToolRows(result: UnifiedUrlScanResponse | null): StaticToolU
     const willRun = tool ? boolOrNull(tool.will_run) : null;
     const realFindings = tool ? unknownNumber(tool.real_findings) ?? 0 : 0;
     const evidenceSource = tool ? unknownString(tool.evidence_source, "backend_tool_status") : "not_reported";
+    const filesScanned = tool ? unknownNumber(tool.files_scanned) ?? unknownNumber(tool.source_file_count) : null;
+    const reason = tool ? unknownString(tool.reason, "") : "";
+    const verdict = toolRunVerdict(id, label, status, state, realFindings, willRun, installed, enabledByEnv);
     rows.push({
       id,
       label,
@@ -617,8 +662,13 @@ function buildStaticToolRows(result: UnifiedUrlScanResponse | null): StaticToolU
       willRun,
       realFindings,
       evidenceSource,
-      detail: `installed: ${yesNo(installed)} · enabled: ${yesNo(enabledByEnv)} · will run: ${yesNo(willRun)} · findings: ${realFindings}`,
+      detail: `installed: ${yesNo(installed)} · enabled: ${yesNo(enabledByEnv)} · will run: ${yesNo(willRun)} · findings: ${realFindings}${filesScanned !== null ? ` · files scanned: ${filesScanned}` : ""}`,
       action: toolAction(state, label, evidenceSource),
+      runVerdict: verdict.runVerdict,
+      runBadgeClass: verdict.runBadgeClass,
+      beginnerMeaning: toolBeginnerMeaning(id, label, status, state, realFindings, reason),
+      filesScanned,
+      reason,
     });
   });
 
@@ -643,6 +693,13 @@ function buildStaticToolRows(result: UnifiedUrlScanResponse | null): StaticToolU
         evidenceSource,
         detail: `user artifact parsed · findings: ${realFindings}`,
         action: toolAction(state, label, evidenceSource),
+        runVerdict: realFindings > 0 ? "Artifact parsed — findings found" : "Artifact parsed",
+        runBadgeClass: realFindings > 0 ? "badge-amber" : "badge-green",
+        beginnerMeaning: realFindings > 0
+          ? `${label} was not run by Web3Guard live, but the pasted JSON artifact was parsed and contains ${realFindings} finding(s).`
+          : `${label} was not run live, but the pasted JSON artifact was parsed with no matching findings.`,
+        filesScanned: null,
+        reason: "user supplied artifact",
       });
     });
 
@@ -662,8 +719,9 @@ function staticToolSummary(result: UnifiedUrlScanResponse | null) {
     ranCount: unknownNumber(verification.ran_count) ?? 0,
     failedCount: unknownNumber(verification.failed_count) ?? 0,
     realFindingsCount: unknownNumber(verification.real_findings_count) ?? staticCard?.findings_count ?? 0,
+    filesScannedCount: unknownNumber(staticSummary.source_file_count) ?? unknownNumber(plainRecord(staticSummary.worker_summary).source_file_count) ?? null,
     evidenceRule: unknownString(verification.evidence_rule, "Only real executed tool output or valid supplied artifacts count. Missing tools are not fake vulnerabilities."),
-    note: unknownString(staticSummary.real_only_note, "URL-only scans do not run Slither/Semgrep/Aderyn. Add source/artifacts for static-analysis evidence."),
+    note: unknownString(staticSummary.real_only_note, "URL-only scans do not run Slither/Semgrep/Aderyn unless source code is available. Add GitHub/source/artifacts for static-analysis evidence."),
   };
 }
 
@@ -1188,32 +1246,65 @@ function StaticToolStatusCard({ result }: { result: UnifiedUrlScanResponse }) {
   const summary = staticToolSummary(result);
   if (!summary) return null;
   const staticCard = result.module_cards.find((card) => card.module === "static_analysis");
+  const ranRows = rows.filter((tool) => ["completed", "completed_with_errors", "timeout"].includes(tool.status));
+  const readyRows = rows.filter((tool) => tool.willRun === true && !["completed", "completed_with_errors", "timeout"].includes(tool.status));
+  const semgrepRow = rows.find((tool) => tool.id === "semgrep");
+  const slitherRow = rows.find((tool) => tool.id === "slither");
+  const aderynRow = rows.find((tool) => tool.id === "aderyn");
+
+  const plainVerdict = semgrepRow?.status === "completed"
+    ? semgrepRow.realFindings > 0
+      ? `Semgrep ran on your GitHub/web-code files and found ${semgrepRow.realFindings} item(s) to triage.`
+      : "Semgrep ran on your GitHub/web-code files and found no matching issue in the selected rules."
+    : semgrepRow?.willRun
+      ? "Semgrep is ready on the worker, but this scan result does not show a completed Semgrep run. Run a fresh Developer scan after backend/worker deploy."
+      : "Semgrep did not run. Check worker install/env or provide GitHub/source evidence.";
+
   return (
     <CardShell>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="section-label">Static analysis</p>
-          <h2 className="mt-2 text-2xl font-black text-white">Slither / Semgrep / Aderyn status</h2>
+          <h2 className="mt-2 text-2xl font-black text-white">Did Slither / Semgrep / Aderyn actually run?</h2>
           <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-400">
-            This block explains whether external static-analysis tools actually ran, were not installed, were disabled by configuration, or were only supplied as JSON artifacts.
+            This card separates <b className="text-white">tool ready</b> from <b className="text-white">tool actually ran</b>. Ready means the worker can execute it; Ran means this scan sent source files and received real tool output.
           </p>
           <p className="mt-2 text-xs leading-5 text-slate-500">{summary.evidenceRule}</p>
         </div>
         <div className="grid min-w-[280px] gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
-            <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">State</p>
-            <p className="mt-2 text-sm font-black text-white">{summary.state}</p>
+            <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Ran now</p>
+            <p className="mt-2 text-2xl font-black text-white">{summary.ranCount}</p>
+            <p className="mt-1 text-[11px] text-slate-500">Ready but not run: {readyRows.length}</p>
           </div>
           <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
-            <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Tools ran</p>
-            <p className="mt-2 text-2xl font-black text-white">{summary.ranCount}</p>
+            <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Files sent</p>
+            <p className="mt-2 text-2xl font-black text-white">{summary.filesScannedCount ?? "—"}</p>
+            <p className="mt-1 text-[11px] text-slate-500">safe source snippets only</p>
           </div>
           <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
             <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Real findings</p>
             <p className="mt-2 text-2xl font-black text-white">{summary.realFindingsCount}</p>
+            <p className="mt-1 text-[11px] text-slate-500">no fake output</p>
           </div>
         </div>
       </div>
+
+      <div className="mt-5 rounded-2xl border border-cyan/15 bg-cyan/[0.07] p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-black text-white">Plain answer for this scan</p>
+            <p className="mt-2 text-sm leading-6 text-cyan-50/90">{plainVerdict}</p>
+          </div>
+          <span className={`badge ${semgrepRow?.status === "completed" ? "badge-green" : semgrepRow?.willRun ? "badge-cyan" : ""}`}>
+            {semgrepRow?.runVerdict || "Semgrep status unknown"}
+          </span>
+        </div>
+        <p className="mt-3 text-xs leading-5 text-cyan-100/70">
+          For a Next.js/FastAPI web app, Semgrep is the main code scanner. Slither and Aderyn are contract-only and need Solidity <code className="rounded bg-black/30 px-1">.sol</code> files.
+        </p>
+      </div>
+
       <div className="mt-5 grid gap-3 md:grid-cols-3">
         {rows.map((tool) => (
           <div key={tool.id} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
@@ -1222,16 +1313,39 @@ function StaticToolStatusCard({ result }: { result: UnifiedUrlScanResponse }) {
                 <p className="text-base font-black text-white">{tool.label}</p>
                 <p className="mt-1 text-xs font-semibold text-slate-500">{tool.status} · {tool.evidenceSource}</p>
               </div>
-              <span className={`badge ${statusBadgeClass(tool.state)}`}>{tool.state}</span>
+              <span className={`badge ${tool.runBadgeClass}`}>{tool.runVerdict}</span>
             </div>
-            <p className="mt-3 text-xs leading-5 text-slate-400">{tool.detail}</p>
+            <p className="mt-3 text-sm leading-6 text-slate-300">{tool.beginnerMeaning}</p>
+            <div className="mt-3 grid gap-2 text-xs leading-5 text-slate-400">
+              <p>{tool.detail}</p>
+              {tool.reason ? <p><b className="text-slate-300">Reason:</b> {tool.reason}</p> : null}
+            </div>
             <p className="mt-3 rounded-xl border border-cyan/10 bg-cyan/5 p-3 text-xs leading-5 text-cyan-50">{tool.action}</p>
           </div>
         ))}
       </div>
+
+      <div className="mt-5 grid gap-3 lg:grid-cols-3">
+        <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50/90">
+          <p className="font-black text-white">Semgrep for web code</p>
+          <p className="mt-2">{semgrepRow?.status === "completed" ? "Completed on fetched source files." : "Use Developer mode with GitHub repo, then run fresh scan after worker/backend deploy."}</p>
+        </div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-6 text-slate-300">
+          <p className="font-black text-white">Slither for contracts</p>
+          <p className="mt-2">{slitherRow?.status === "completed" ? "Completed on Solidity source." : "Not expected for this web repo unless .sol contract files are present."}</p>
+        </div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-6 text-slate-300">
+          <p className="font-black text-white">Aderyn for contracts</p>
+          <p className="mt-2">{aderynRow?.status === "completed" ? "Completed on Solidity source." : "Currently optional/disabled until Aderyn is installed and enabled on the worker."}</p>
+        </div>
+      </div>
+
       <div className="mt-5 rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">
-        <p className="font-black">Why it may show Not Assessed</p>
+        <p className="font-black">Why it may still show Not Assessed</p>
         <p className="mt-2">{summary.note}</p>
+        {ranRows.length === 0 && readyRows.length ? (
+          <p className="mt-2 text-xs text-amber-100/80">Tools are ready, but this saved result did not include completed tool output. Run a fresh scan after redeploying both backend and worker.</p>
+        ) : null}
         {staticCard?.required_input?.length ? <p className="mt-2 text-xs text-amber-100/80">Next evidence: {staticCard.required_input[0]}</p> : null}
       </div>
     </CardShell>

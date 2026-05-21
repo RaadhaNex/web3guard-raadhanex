@@ -304,6 +304,9 @@ def _static_summary_from_tool_metadata(tool_metadata: dict[str, Any] | None, *, 
         return None
     tool_status = tool_metadata.get("tool_status", {}) if isinstance(tool_metadata.get("tool_status"), dict) else {}
     tool_runs = tool_metadata.get("tool_runs", {}) if isinstance(tool_metadata.get("tool_runs"), dict) else {}
+    worker_summary = tool_metadata.get("worker_summary", {}) if isinstance(tool_metadata.get("worker_summary"), dict) else {}
+    source_file_count = int(tool_metadata.get("source_file_count") or len(tool_metadata.get("source_files_written") or []) or len(worker_summary.get("files_written") or []) or 0)
+    tools_completed = worker_summary.get("tools_completed") if isinstance(worker_summary.get("tools_completed"), list) else []
     tools: list[dict[str, Any]] = []
     real_findings_count = 0
     real_tool_completed = False
@@ -315,6 +318,11 @@ def _static_summary_from_tool_metadata(tool_metadata: dict[str, Any] | None, *, 
             real_tool_completed = True
         real_findings = int(run.get("real_findings") or 0)
         real_findings_count += real_findings
+        reason = str(run.get("reason") or "")
+        if not reason and tool in {"slither", "aderyn"} and run_status == "not_run":
+            reason = "No Solidity .sol files were supplied. This tool is contract-only."
+        if not reason and tool == "semgrep" and run_status == "not_run" and bool(status_info.get("will_run")):
+            reason = "Semgrep is ready, but this scan result did not include completed worker output."
         tools.append({
             "tool": tool,
             "state": _tool_state_label(run_status),
@@ -328,6 +336,9 @@ def _static_summary_from_tool_metadata(tool_metadata: dict[str, Any] | None, *, 
             "stderr_tail": _short_text(run.get("stderr"), 700),
             "stdout_tail": _short_text(run.get("stdout"), 700),
             "evidence_source": source_label,
+            "reason": reason,
+            "files_scanned": source_file_count if run_status in {"completed", "completed_with_errors", "timeout"} else 0,
+            "source_file_count": source_file_count,
         })
     if real_tool_completed or real_findings_count:
         state = "Assessed"
@@ -365,10 +376,14 @@ def _static_summary_from_tool_metadata(tool_metadata: dict[str, Any] | None, *, 
             "completed_count": sum(1 for item in tools if item.get("status") == "completed"),
             "failed_count": sum(1 for item in tools if item.get("status") == "completed_with_errors" or bool(item.get("timed_out"))),
             "real_findings_count": real_findings_count,
-            "evidence_rule": "Tool evidence is counted only when the tool actually ran on fetched/provided Solidity source. Not-run statuses are not vulnerabilities.",
+            "source_file_count": source_file_count,
+            "tools_completed": tools_completed,
+            "evidence_rule": "Tool evidence is counted only when Semgrep/Slither/Aderyn actually ran on fetched/provided source files. Semgrep can scan web/config files; Slither/Aderyn require Solidity. Not-run statuses are not vulnerabilities.",
         },
+        "source_file_count": source_file_count,
+        "worker_summary": worker_summary,
         "safety_controls": tool_metadata.get("safety_controls", {}) if isinstance(tool_metadata, dict) else {},
-        "real_only_note": "Status imported from GitHub-discovered Solidity static-analysis run metadata. No fake Slither/Semgrep/Aderyn output is generated.",
+        "real_only_note": "Status imported from GitHub/source-code isolated worker metadata. Semgrep may run on web/config files; Slither/Aderyn run only on Solidity. No fake tool output is generated.",
     }
 
 
@@ -695,8 +710,9 @@ def _static_module_card(summary: dict[str, Any]) -> dict[str, Any]:
         "critical_high_count": sum(1 for f in summary.get("findings") or [] if f.get("severity") in {"critical", "high"}),
         "evidence": evidence,
         "limitations": [
-            "External static analyzers are only run for user-supplied Solidity source.",
-            "Tool status messages are not fake vulnerabilities and do not prove contract safety.",
+            "Semgrep can run on fetched GitHub web/config source through the isolated worker.",
+            "Slither/Aderyn run only when Solidity .sol source is present.",
+            "Tool status messages are not fake vulnerabilities and do not prove full project safety.",
             "Mythril/deep symbolic execution remains separate worker-required functionality.",
         ],
         "required_input": required_input,
@@ -766,10 +782,11 @@ def _static_not_assessed_summary() -> dict[str, Any]:
             "completed_count": 0,
             "failed_count": 0,
             "real_findings_count": 0,
-            "evidence_rule": "Solidity source/contract/GitHub evidence was not supplied, so Slither/Semgrep/Aderyn were not run and no fake tool findings were created.",
+            "evidence_rule": "Source/contract/GitHub evidence was not supplied, so Slither/Semgrep/Aderyn were not run and no fake tool findings were created.",
         },
+        "source_file_count": 0,
         "safety_controls": status.get("safety_controls", {}),
-        "real_only_note": "Solidity source was not supplied, so external static analysis was not run and no fake findings were created.",
+        "real_only_note": "Source evidence was not supplied or not dispatched, so external static analysis was not run and no fake findings were created.",
     }
 
 
@@ -1228,7 +1245,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
             github_static = _static_summary_from_tool_metadata(
                 (github_report.scan_metadata or {}).get("static_analysis_tools") if isinstance(github_report.scan_metadata, dict) else None,
                 report_id=github_report.report_id,
-                source_label="github_auto_discovered_solidity",
+                source_label="github_auto_worker_source",
             )
             if github_static:
                 current_static = surface_hints.get("static_analysis") if isinstance(surface_hints.get("static_analysis"), dict) else _static_not_assessed_summary()
