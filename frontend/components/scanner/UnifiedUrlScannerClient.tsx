@@ -33,28 +33,6 @@ const scanProgressMessages = [
   "Building readiness output...",
 ];
 
-const scanModeBulletHints: Record<string, string> = {
-  "Website headers/CSP/cookies": "Checks Content-Security-Policy, HSTS, X-Frame-Options, cookie flags, and common launch headers.",
-  "Public exposure paths": "Safely probes common sensitive paths like /admin, /debug, /.env, /.git, and public source maps.",
-  "JS/API discovery": "Finds exposed API endpoints and risky public assets referenced in page JavaScript.",
-  "No technical evidence required": "URL alone is enough for safe passive checks; no contract, keys, or code needed.",
-};
-
-function suggestedChainForProjectType(value: string) {
-  const lower = value.toLowerCase();
-  if (!value || value === "Other") return "";
-  if (lower.includes("solana")) return "Solana";
-  if (value === "Website / dApp Frontend" || value === "API / SaaS Backend") return "Web only";
-  if (value === "Smart Contract" || value === "DeFi Protocol" || value === "NFT / Marketplace") return "Ethereum";
-  return "";
-}
-
-function evidenceFieldHint(id: string) {
-  if (id === "solidity-source") return "Paste raw Solidity — enables local rule engine analysis without Slither.";
-  if (id === "slither-json" || id === "semgrep-json") return "Paste tool output JSON — enables real finding import with file/line evidence when available.";
-  return "Optional evidence. Filled fields unlock deeper assessed modules; empty fields stay Not Assessed.";
-}
-
 const moduleOrder = ["website", "dapp", "api", "github", "contract", "static_analysis", "wallet", "admin_opsec"];
 
 const projectTypeOptions = [
@@ -117,6 +95,18 @@ type FixGuide = {
   why_it_matters: string;
   how_to_fix: string;
   verify: string;
+};
+
+type EvidenceEditorField = {
+  id: string;
+  icon: string;
+  title: string;
+  label: string;
+  description: string;
+  value: string;
+  setValue: React.Dispatch<React.SetStateAction<string>>;
+  placeholder: string;
+  rows: number;
 };
 
 function normaliseUrl(value: string) {
@@ -746,6 +736,8 @@ export function UnifiedUrlScannerClient() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [scanMode, setScanMode] = useState<ScanMode>("quick");
   const [activeEvidenceEditor, setActiveEvidenceEditor] = useState<string | null>(null);
+  const [scanQueueIds, setScanQueueIds] = useState<string[]>([]);
+  const [draggedEvidenceId, setDraggedEvidenceId] = useState<string | null>(null);
 
   const [authLoading, setAuthLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -758,7 +750,8 @@ export function UnifiedUrlScannerClient() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [stageIndex, setStageIndex] = useState(0);
-  const [scanProgressMessage, setScanProgressMessage] = useState(scanProgressMessages[0]);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [showSlowBackendNotice, setShowSlowBackendNotice] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldPrompt, setFieldPrompt] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -769,185 +762,205 @@ export function UnifiedUrlScannerClient() {
   const selectedProject = projects.find((project) => project.id === selectedProjectId) || null;
   const selectedHistory = scanHistory.find((scan) => scan.id === selectedHistoryId) || null;
   const currentStage = scanStages[Math.min(stageIndex, scanStages.length - 1)];
-  const activeScanMode = scanModeOptions.find((option) => option.id === scanMode) ?? scanModeOptions[0];
+  const activeLoadingMessage = showSlowBackendNotice
+    ? "Taking longer than expected — backend may be waking up on Render free tier. Please wait..."
+    : scanProgressMessages[loadingMessageIndex % scanProgressMessages.length];
 
-  const deepEditorFields = [
+  const allEvidenceFields: EvidenceEditorField[] = [
+    {
+      id: "contract-address",
+      icon: "🔷",
+      title: "Contract Address",
+      label: "Contract Address",
+      description: "0x deployed address",
+      value: contractAddress,
+      setValue: setContractAddress,
+      placeholder: "Paste deployed contract address, for example 0x1234...",
+      rows: 3,
+    },
     {
       id: "solidity-source",
-      label: "Solidity source",
+      icon: "📋",
+      title: "Solidity Source",
+      label: "Solidity Source",
+      description: "Raw .sol source code",
       value: solidityCode,
       setValue: setSolidityCode,
-      placeholder: "Paste Solidity source here for local rule checks and optional backend Slither/Semgrep execution.",
+      placeholder: "Paste raw Solidity source code here...",
       rows: 12,
     },
-  ];
-
-  const expertEditorFields = [
     {
       id: "slither-json",
+      icon: "⚙️",
+      title: "Slither JSON",
       label: "Slither JSON",
+      description: "Slither analysis output",
       value: slitherJson,
       setValue: setSlitherJson,
-      placeholder: '{ "results": { "detectors": [...] } }',
-      rows: 8,
+      placeholder: "Paste your Slither JSON output here...",
+      rows: 10,
     },
     {
       id: "semgrep-json",
+      icon: "🔍",
+      title: "Semgrep JSON",
       label: "Semgrep JSON",
+      description: "Semgrep scan results",
       value: semgrepJson,
       setValue: setSemgrepJson,
-      placeholder: '{ "results": [...] }',
-      rows: 8,
+      placeholder: "Paste your Semgrep JSON output here...",
+      rows: 10,
     },
     {
       id: "aderyn-json",
+      icon: "🔑",
+      title: "Aderyn JSON",
       label: "Aderyn JSON",
+      description: "Aderyn audit output",
       value: aderynJson,
       setValue: setAderynJson,
-      placeholder: '{ "issues": [...] }',
-      rows: 8,
+      placeholder: "Paste your Aderyn JSON output here...",
+      rows: 10,
+    },
+    {
+      id: "api-base-url",
+      icon: "🌐",
+      title: "API Base URL",
+      label: "API Base URL",
+      description: "Your API root endpoint",
+      value: apiBaseUrl,
+      setValue: setApiBaseUrl,
+      placeholder: "https://api.yourproject.com",
+      rows: 3,
     },
     {
       id: "openapi-json",
+      icon: "📡",
+      title: "OpenAPI JSON",
       label: "OpenAPI JSON",
+      description: "API schema/spec file",
       value: openapiJson,
       setValue: setOpenapiJson,
-      placeholder: '{ "openapi": "3.0.0", "paths": { ... } }',
-      rows: 8,
+      placeholder: "Paste your OpenAPI JSON spec here...",
+      rows: 10,
     },
     {
       id: "authorized-api-observations",
-      label: "Authorized API observations JSON array",
+      icon: "🔐",
+      title: "Auth API Observations",
+      label: "Auth API Observations",
+      description: "Authorized calls",
       value: apiObservationsJson,
       setValue: setApiObservationsJson,
-      placeholder: '[{"endpoint":"/api/orders/123","role":"userA","status_code":200,"cross_account_access_proved":true,"response_hash":"sha256..."}]',
-      rows: 8,
+      placeholder: "Paste authorized API observations JSON here...",
+      rows: 10,
     },
     {
       id: "wallet-evidence-json",
-      label: "Wallet evidence JSON",
+      icon: "👛",
+      title: "Wallet Evidence",
+      label: "Wallet Evidence",
+      description: "Wallet flow JSON",
       value: walletEvidenceJson,
       setValue: setWalletEvidenceJson,
-      placeholder: '{ "expected_chain_id":"1", "copy":"No seed phrase requested" }',
-      rows: 8,
+      placeholder: "Paste wallet-flow evidence JSON here...",
+      rows: 10,
     },
     {
       id: "transaction-samples-json",
-      label: "Transaction samples JSON array",
+      icon: "📊",
+      title: "Transaction Samples",
+      label: "Transaction Samples",
+      description: "Tx JSON array",
       value: transactionSamplesJson,
       setValue: setTransactionSamplesJson,
-      placeholder: '[{"chain_id":"1","approval":"unlimited"}]',
-      rows: 8,
+      placeholder: "Paste transaction samples JSON array here...",
+      rows: 10,
     },
     {
-      id: "signature-samples-json",
-      label: "Signature samples JSON array",
-      value: signatureSamplesJson,
-      setValue: setSignatureSamplesJson,
-      placeholder: '[{"message":"Claim airdrop","human_readable_purpose":""}]',
-      rows: 8,
-    },
-    {
-      id: "business-context-json",
-      label: "Business context JSON",
-      value: businessContextJson,
-      setValue: setBusinessContextJson,
-      placeholder: '{ "roles":["owner","user"], "critical_actions":["report unlock"], "asset_flows":["payment to report"] }',
-      rows: 8,
-    },
-    {
-      id: "defi-simulation-json",
-      label: "DeFi simulation artifact JSON",
-      value: defiSimulationJson,
-      setValue: setDefiSimulationJson,
-      placeholder: '{ "invariants":[{"name":"assets conserved","passed":false,"evidence":"local test output"}] }',
-      rows: 8,
-    },
-    {
-      id: "protocol-context-json",
-      label: "Protocol context JSON",
-      value: protocolContextJson,
-      setValue: setProtocolContextJson,
-      placeholder: '{ "uses_oracle": true, "has_flash_loan_surface": true }',
-      rows: 8,
-    },
-    {
-      id: "reviewed-confirmation-json",
-      label: "Reviewed confirmation JSON",
-      value: reviewContextJson,
-      setValue: setReviewContextJson,
-      placeholder: '{ "reviewer":"name", "triaged_findings_count":8, "unresolved_critical_high_count":0, "payment_verified":true }',
-      rows: 8,
+      id: "github-repo-url",
+      icon: "🐙",
+      title: "GitHub Repo URL",
+      label: "GitHub Repo URL",
+      description: "Public repo link",
+      value: githubRepoUrl,
+      setValue: setGithubRepoUrl,
+      placeholder: "https://github.com/org/repo",
+      rows: 3,
     },
     {
       id: "har-json",
-      label: "HAR / browser network capture JSON",
+      icon: "🔎",
+      title: "HAR Capture",
+      label: "HAR Capture",
+      description: "Browser network HAR",
       value: harJson,
       setValue: setHarJson,
-      placeholder: '{ "log": { "entries": [{ "request": {"url":"https://example.com/api/me","method":"GET"}, "response": {"status": 200} }] } }',
-      rows: 8,
+      placeholder: "Paste browser HAR JSON here...",
+      rows: 10,
     },
     {
       id: "crawler-artifact-json",
-      label: "Crawler artifact JSON",
+      icon: "🕷️",
+      title: "Crawler Artifact",
+      label: "Crawler Artifact",
+      description: "Crawl output JSON",
       value: crawlerArtifactJson,
       setValue: setCrawlerArtifactJson,
-      placeholder: '{ "entries": [{"url":"https://example.com/admin","status":200,"method":"GET"}] }',
-      rows: 8,
+      placeholder: "Paste crawler artifact JSON here...",
+      rows: 10,
     },
     {
-      id: "authorized-api-test-context-json",
-      label: "Authorized API test context JSON",
-      value: authTestContextJson,
-      setValue: setAuthTestContextJson,
-      placeholder: '[{"endpoint":"/api/orders/123","expected_status":403,"actual_status":200,"cross_account_access_proved":true,"response_hash":"sha256..."}]',
-      rows: 8,
-    },
-    {
-      id: "sca-secrets-tool-artifact-json",
-      label: "SCA / secrets tool artifact JSON",
-      value: securityToolArtifactsJson,
-      setValue: setSecurityToolArtifactsJson,
-      placeholder: '{ "gitleaks": [{"RuleID":"generic-api-key","File":"src/config.ts"}], "npm_audit": {"vulnerabilities": []} }',
-      rows: 8,
+      id: "defi-simulation-json",
+      icon: "🏦",
+      title: "DeFi Simulation",
+      label: "DeFi Simulation",
+      description: "Simulation artifact",
+      value: defiSimulationJson,
+      setValue: setDefiSimulationJson,
+      placeholder: "Paste DeFi simulation artifact JSON here...",
+      rows: 10,
     },
     {
       id: "foundry-forge-test-output",
-      label: "Foundry / forge test output",
+      icon: "🛡️",
+      title: "Foundry Output",
+      label: "Foundry Output",
+      description: "forge test results",
       value: foundryTestOutput,
       setValue: setFoundryTestOutput,
-      placeholder: 'Paste forge test output. Failure markers become evidence-backed local test findings.',
-      rows: 8,
+      placeholder: "Paste forge test output here...",
+      rows: 10,
     },
     {
       id: "echidna-output-json",
-      label: "Echidna output JSON",
+      icon: "🧪",
+      title: "Echidna JSON",
+      label: "Echidna JSON",
+      description: "Fuzzing output",
       value: echidnaOutputJson,
       setValue: setEchidnaOutputJson,
-      placeholder: '[{"name":"echidna_balance_never_drops","status":"falsified","counterexample":"..."}]',
-      rows: 8,
+      placeholder: "Paste Echidna JSON output here...",
+      rows: 10,
     },
     {
-      id: "invariant-simulation-artifact-json",
-      label: "Invariant / simulation artifact JSON",
-      value: invariantArtifactJson,
-      setValue: setInvariantArtifactJson,
-      placeholder: '{ "invariants": [{"name":"assets conserved","status":"failed","evidence":"local fork test"}] }',
-      rows: 8,
-    },
-    {
-      id: "accuracy-feedback-json",
-      label: "Accuracy feedback / triage benchmark JSON",
-      value: accuracyFeedbackJson,
-      setValue: setAccuracyFeedbackJson,
-      placeholder: '[{"finding_id":"abc","status":"confirmed"},{"finding_id":"def","status":"false_positive"}]',
-      rows: 8,
+      id: "business-context-json",
+      icon: "📝",
+      title: "Business Context",
+      label: "Business Context",
+      description: "Manual context",
+      value: businessContextJson,
+      setValue: setBusinessContextJson,
+      placeholder: "Paste business logic/context JSON here...",
+      rows: 10,
     },
   ];
 
-  const visibleEditorFields = scanMode === "expert" ? [...deepEditorFields, ...expertEditorFields] : deepEditorFields;
+  const visibleEditorFields = allEvidenceFields;
   const activeEvidenceField = visibleEditorFields.find((field) => field.id === activeEvidenceEditor) ?? null;
-
+  const queuedEvidenceFields = scanQueueIds
+    .map((fieldId) => visibleEditorFields.find((field) => field.id === fieldId))
+    .filter((field): field is EvidenceEditorField => Boolean(field));
   const resolvedProjectType = useMemo(() => projectType === "Other" ? customProjectType.trim() || "Other" : projectType.trim() || "Website / dApp Frontend", [customProjectType, projectType]);
   const resolvedChain = useMemo(() => chain === "Other" ? customChain.trim() || "Other" : chain.trim() || "Web only", [chain, customChain]);
 
@@ -997,6 +1010,62 @@ export function UnifiedUrlScannerClient() {
       setChain("Other");
       setCustomChain(value);
     }
+  }
+
+  function switchScanMode(nextMode: ScanMode) {
+    setScanMode(nextMode);
+    setAdvancedOpen(nextMode !== "quick");
+    if (nextMode === "quick") {
+      setActiveEvidenceEditor(null);
+    } else if (!scanQueueIds.length) {
+      setScanQueueIds(["contract-address", "solidity-source", "github-repo-url"]);
+    }
+  }
+
+  function addEvidenceToQueue(fieldId: string) {
+    setScanQueueIds((current) => {
+      if (current.includes(fieldId)) return current;
+      return [...current, fieldId];
+    });
+    setActiveEvidenceEditor(fieldId);
+  }
+
+  function removeEvidenceFromQueue(fieldId: string) {
+    setScanQueueIds((current) => current.filter((id) => id !== fieldId));
+    setActiveEvidenceEditor((current) => current === fieldId ? null : current);
+  }
+
+  function moveEvidenceInQueue(fieldId: string, direction: -1 | 1) {
+    setScanQueueIds((current) => {
+      const fromIndex = current.indexOf(fieldId);
+      const toIndex = fromIndex + direction;
+      if (fromIndex < 0 || toIndex < 0 || toIndex >= current.length) return current;
+      const next = [...current];
+      const [item] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, item);
+      return next;
+    });
+  }
+
+  function reorderEvidenceInQueue(fieldId: string, targetId: string) {
+    if (fieldId === targetId) return;
+    setScanQueueIds((current) => {
+      const fromIndex = current.indexOf(fieldId);
+      const toIndex = current.indexOf(targetId);
+      if (fromIndex < 0 || toIndex < 0) return current;
+      const next = [...current];
+      const [item] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, item);
+      return next;
+    });
+  }
+
+  function handleEvidenceDrop(event: React.DragEvent<HTMLElement>) {
+    event.preventDefault();
+    const fieldId = event.dataTransfer.getData("text/plain") || draggedEvidenceId;
+    if (!fieldId) return;
+    addEvidenceToQueue(fieldId);
+    setDraggedEvidenceId(null);
   }
 
   async function loadWorkspaceQuickData() {
@@ -1062,6 +1131,8 @@ export function UnifiedUrlScannerClient() {
     setReviewContextJson("");
     setAdvancedOpen(false);
     setScanMode("quick");
+    setActiveEvidenceEditor(null);
+    setScanQueueIds([]);
     setResult(null);
     clearLatestUnifiedScan();
     setError(null);
@@ -1123,22 +1194,26 @@ export function UnifiedUrlScannerClient() {
     if (!loading) return;
     setProgress(8);
     setStageIndex(0);
-    setScanProgressMessage(scanProgressMessages[0]);
-    const progressTimer = window.setInterval(() => {
+    const timer = window.setInterval(() => {
       setProgress((value) => (value >= 96 ? value : value + 7));
       setStageIndex((value) => (value >= scanStages.length - 2 ? value : value + 1));
     }, 800);
+    return () => window.clearInterval(timer);
+  }, [loading]);
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingMessageIndex(0);
+      setShowSlowBackendNotice(false);
+      return;
+    }
     const messageTimer = window.setInterval(() => {
-      setScanProgressMessage((current) => {
-        const index = scanProgressMessages.indexOf(current);
-        return scanProgressMessages[(index + 1) % scanProgressMessages.length];
-      });
+      setLoadingMessageIndex((value) => value + 1);
     }, 4000);
     const slowTimer = window.setTimeout(() => {
-      setScanProgressMessage("Backend waking up on Render free tier. Please wait...");
+      setShowSlowBackendNotice(true);
     }, 45000);
     return () => {
-      window.clearInterval(progressTimer);
       window.clearInterval(messageTimer);
       window.clearTimeout(slowTimer);
     };
@@ -1306,239 +1381,282 @@ export function UnifiedUrlScannerClient() {
     <main className="relative overflow-hidden scanner-console-page scanner-focus-page scanner-premium-page">
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl space-y-6">
-          <CardShell className="scanner-premium-console scanner-premium-console-clean card-glow">
-            <div className="scanner-premium-aurora" aria-hidden="true" />
-            <div className="scanner-premium-grid scanner-premium-grid-single">
-              <div className="scanner-input-panel scanner-input-panel-wide">
+          <div className="mx-auto max-w-3xl space-y-6">
+            <div className="text-center">
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/[0.08] px-4 py-2 text-xs font-bold text-cyan-100 shadow-[0_0_24px_rgba(0,240,255,0.08)]">
+                <span>⚡</span> Quick scan is free · No wallet signing · No key collection
+              </div>
+              <h1 className="mt-5 text-3xl font-black tracking-tight text-white sm:text-5xl">Start Readiness Scan</h1>
+              <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-400 sm:text-base">
+                Evidence-first. Real findings or Not Assessed. Never invented results.
+              </p>
+            </div>
 
-                <div className="scanner-premium-fields">
-                  <FieldLabel label="Website / dApp URL" required helper="Enter the public URL of your Web3 project. Quick Scan only needs this URL plus permission.">
-                    <input className="input scanner-input-xl scanner-premium-url" value={websiteUrl} onChange={(event) => setWebsiteUrl(event.target.value)} placeholder="https://yourproject.com" />
-                  </FieldLabel>
-
-                  <div className="scanner-field-row">
-                    <FieldLabel label="Project type" required={scanMode !== "quick"}>
-                      <select
-                            className="select scanner-choice-select"
-                            value={projectType}
-                            onChange={(event) => {
-                              const nextProjectType = event.target.value;
-                              setProjectType(nextProjectType);
-                              const nextChain = suggestedChainForProjectType(nextProjectType);
-                              if (nextChain) {
-                                setChain(nextChain);
-                                setCustomChain("");
-                              }
-                            }}
-                          >
-                        <option value="" disabled>Select project type</option>
-                        {projectTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-                      </select>
-                    </FieldLabel>
-
-                    <FieldLabel label="Chain / surface" required={scanMode !== "quick"}>
-                      <select className="select scanner-choice-select" value={chain} onChange={(event) => setChain(event.target.value)}>
-                        <option value="" disabled>Select chain</option>
-                        {chainOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-                      </select>
-                    </FieldLabel>
+            <CardShell className="overflow-hidden rounded-[28px] border-cyan-300/10 bg-[#0a0f1e]/95 p-0 shadow-[0_24px_90px_rgba(0,0,0,0.45)]">
+              <div className="space-y-7 p-5 sm:p-10">
+                <div className="space-y-3">
+                  <label className="block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Website / dApp URL <span className="text-red-300">*</span></label>
+                  <div className="group flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 transition focus-within:border-cyan-300/50 focus-within:shadow-[0_0_0_3px_rgba(0,240,255,0.10)]">
+                    <span className="text-lg text-cyan-200">🌐</span>
+                    <input
+                      className="w-full bg-transparent text-base font-semibold text-slate-100 outline-none placeholder:text-slate-600 sm:text-lg"
+                      value={websiteUrl}
+                      onChange={(event) => setWebsiteUrl(event.target.value)}
+                      placeholder="https://yourproject.com"
+                    />
                   </div>
-
-                  {(projectType === 'Other' || chain === 'Other') ? (
-                    <div className="scanner-field-row">
-                      {projectType === 'Other' ? (
-                        <FieldLabel label="Custom project type" required>
-                          <input className="input" value={customProjectType} onChange={(event) => setCustomProjectType(event.target.value)} placeholder="Example: RWA, DePIN, AI x Web3" />
-                        </FieldLabel>
-                      ) : <div />}
-
-                      {chain === 'Other' ? (
-                        <FieldLabel label="Custom chain" required>
-                          <input className="input" value={customChain} onChange={(event) => setCustomChain(event.target.value)} placeholder="Example: Sui, Aptos, Monad" />
-                        </FieldLabel>
-                      ) : <div />}
-                    </div>
-                  ) : null}
+                  <p className="text-xs text-slate-500">Enter the public URL of your Web3 project</p>
                 </div>
 
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500"><span>🧩</span> Project type</label>
+                    <select
+                      className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm font-semibold text-slate-200 outline-none transition focus:border-cyan-300/50 focus:shadow-[0_0_0_3px_rgba(0,240,255,0.10)]"
+                      value={projectType}
+                      onChange={(event) => setProjectType(event.target.value)}
+                    >
+                      <option value="" disabled>Select project type</option>
+                      {projectTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                  </div>
 
-                <div className="rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.03] p-3">
-                  <div className="grid gap-3 lg:grid-cols-[minmax(0,220px)_1fr] lg:items-end">
-                    <FieldLabel label="Scan mode">
-                      <select
-                        className="input"
-                        value={scanMode}
-                        onChange={(event) => {
-                          const nextMode = event.target.value as ScanMode;
-                          setScanMode(nextMode);
-                          setAdvancedOpen(nextMode !== "quick");
-                          setActiveEvidenceEditor(null);
-                        }}
-                      >
-                        {scanModeOptions.map((option) => (
-                          <option key={option.id} value={option.id}>
-                            {option.title}
-                          </option>
-                        ))}
-                      </select>
-                    </FieldLabel>
-                    <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
-                      <p className="text-xs text-slate-300">{activeScanMode.subtitle}</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {activeScanMode.bullets.map((bullet) => (
-                          <span
-                            key={bullet}
-                            title={scanModeBulletHints[bullet] || activeScanMode.subtitle}
-                            className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-slate-400"
-                          >
-                            {bullet}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+                  <div>
+                    <label className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500"><span>⛓️</span> Chain / surface</label>
+                    <select
+                      className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm font-semibold text-slate-200 outline-none transition focus:border-cyan-300/50 focus:shadow-[0_0_0_3px_rgba(0,240,255,0.10)]"
+                      value={chain}
+                      onChange={(event) => setChain(event.target.value)}
+                    >
+                      <option value="" disabled>Select chain</option>
+                      {chainOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
                   </div>
                 </div>
 
-                <div className="scanner-evidence-panel">
-                  <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-white">{scanMode === "quick" ? "Auto public evidence" : scanMode === "deep" ? "Deep evidence" : "Expert evidence"}</p>
-                        <p className="mt-1 text-[11px] leading-5 text-slate-400">
-                          {scanMode === "quick"
-                            ? "URL-only scan auto-runs safe public checks."
-                            : scanMode === "deep"
-                              ? "Add repo, API, contract, or source evidence when needed."
-                              : "Keep fields compact. Open only the editor you want to paste into."}
-                        </p>
-                      </div>
-                      {scanMode === "quick" ? (
-                        <span className="badge badge-cyan">Auto</span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setAdvancedOpen((value) => !value)}
-                          className="rounded-full border border-cyan-300/20 bg-cyan-300/[0.08] px-3 py-1.5 text-[11px] font-semibold text-cyan-100 transition hover:border-cyan-300/40 hover:bg-cyan-300/[0.14]"
-                        >
-                          {advancedOpen ? "Hide fields" : "Open fields"}
-                        </button>
-                      )}
-                    </div>
+                {(projectType === "Other" || chain === "Other") ? (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {projectType === "Other" ? (
+                      <FieldLabel label="Custom project type" required>
+                        <input className="input" value={customProjectType} onChange={(event) => setCustomProjectType(event.target.value)} placeholder="Example: RWA, DePIN, AI x Web3" />
+                      </FieldLabel>
+                    ) : <div />}
+                    {chain === "Other" ? (
+                      <FieldLabel label="Custom chain" required>
+                        <input className="input" value={customChain} onChange={(event) => setCustomChain(event.target.value)} placeholder="Example: Sui, Aptos, Monad" />
+                      </FieldLabel>
+                    ) : <div />}
+                  </div>
+                ) : null}
 
-                    {scanMode === "quick" ? (
-                      <div className="scanner-evidence-chips" aria-label="Auto evidence types">
-                        {["Headers/CSP", "Cookies", "Public exposure paths", "JS/API discovery", "Score proof", "Coverage gate"].map((item) => (
-                          <span key={item} title={scanModeBulletHints[item] || "Auto-scanned evidence area. Real findings only; unavailable modules stay Not Assessed."}>
-                            {item}
-                          </span>
-                        ))}
+                <div className="space-y-3">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Scan mode</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => switchScanMode("quick")}
+                      className={`rounded-2xl border p-4 text-left transition ${scanMode === "quick" ? "border-cyan-300/45 bg-cyan-300/[0.08] shadow-[0_0_32px_rgba(0,240,255,0.12)]" : "border-white/[0.08] bg-white/[0.02] opacity-80 hover:border-white/[0.16] hover:opacity-100"}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cyan-300/[0.10] text-xl">⚡</span>
+                        <span>
+                          <strong className="block text-sm font-black text-white">Quick Scan</strong>
+                          <small className="mt-1 block text-xs leading-5 text-slate-400">URL-only · Headers · CSP · Public paths · No evidence needed</small>
+                        </span>
                       </div>
-                    ) : null}
+                    </button>
 
-                    {scanMode !== "quick" && advancedOpen ? (
-                      <>
-                        <div className="grid gap-3 lg:grid-cols-3">
-                          <FieldLabel label="Contract address" helper="Deployed contract address — enables ownership and upgrade signal checks.">
-                            <input className="input" value={contractAddress} onChange={(event) => setContractAddress(event.target.value)} placeholder="0x..." />
-                          </FieldLabel>
-                          <FieldLabel label="API base URL" helper="Your API root URL — enables CORS, auth, and rate-limit checks.">
-                            <input className="input" value={apiBaseUrl} onChange={(event) => setApiBaseUrl(event.target.value)} placeholder="https://api.yourproject.com" />
-                          </FieldLabel>
-                          <FieldLabel label="GitHub repo URL" helper="Public GitHub URL — enables dependency and secret exposure signals.">
-                            <input className="input" value={githubRepoUrl} onChange={(event) => setGithubRepoUrl(event.target.value)} placeholder="https://github.com/org/repo" />
-                          </FieldLabel>
+                    <button
+                      type="button"
+                      onClick={() => switchScanMode("expert")}
+                      className={`rounded-2xl border p-4 text-left transition ${scanMode === "expert" ? "border-cyan-300/45 bg-cyan-300/[0.08] shadow-[0_0_32px_rgba(0,240,255,0.12)]" : "border-white/[0.08] bg-white/[0.02] opacity-80 hover:border-white/[0.16] hover:opacity-100"}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cyan-300/[0.10] text-xl">🔬</span>
+                        <span>
+                          <strong className="block text-sm font-black text-white">Expert Evidence</strong>
+                          <small className="mt-1 block text-xs leading-5 text-slate-400">Paste tool artifacts · Slither · HAR · API observations</small>
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.04] px-4 py-3 text-xs leading-5 text-slate-300">
+                  ℹ️ <span className="text-slate-200">Auto-scanning:</span> Headers, CSP, Cookies, Public paths, JS/API endpoints
+                </div>
+
+                {scanMode === "expert" ? (
+                  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.12fr)]">
+                    <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-black text-white">Available evidence types</p>
+                          <p className="mt-1 text-xs leading-5 text-slate-500">Drag to queue on desktop, or tap + Add on mobile.</p>
                         </div>
+                        <span className="rounded-full border border-white/[0.08] px-2.5 py-1 text-[10px] font-bold text-slate-400">{allEvidenceFields.length}</span>
+                      </div>
 
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3">
-                          <div className="flex flex-wrap gap-2">
-                            {visibleEditorFields.map((field) => {
-                              const selected = activeEvidenceEditor === field.id;
-                              const filled = field.value.trim().length > 0;
-                              return (
-                                <button
-                                  key={field.id}
-                                  type="button"
-                                  onClick={() => setActiveEvidenceEditor((current) => current === field.id ? null : field.id)}
-                                  className={`rounded-lg border px-3 py-1.5 text-left text-[11px] font-semibold transition ${selected ? "border-cyan-300/40 bg-cyan-300/[0.10] text-cyan-100" : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-cyan-300/20 hover:bg-white/[0.05]"}`}
-                                >
-                                  <span className="block">{field.label}</span>
-                                  <span className={`mt-1 block text-[10px] ${filled ? "text-emerald-300" : "text-slate-500"}`}>{filled ? "Filled" : "Tap to open"}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          {activeEvidenceField ? (
-                            <div className="mt-3 rounded-2xl border border-cyan-300/15 bg-slate-950/50 p-3">
-                              <div className="flex items-center justify-between gap-3">
-                                <div>
-                                  <p className="text-sm font-semibold text-white">{activeEvidenceField.label}</p>
-                                  <p className="mt-1 text-xs leading-5 text-slate-500">{evidenceFieldHint(activeEvidenceField.id)}</p>
+                      <div className="mt-4 grid max-h-[560px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-1">
+                        {allEvidenceFields.map((field) => {
+                          const queued = scanQueueIds.includes(field.id);
+                          return (
+                            <article
+                              key={field.id}
+                              draggable
+                              onDragStart={(event) => {
+                                setDraggedEvidenceId(field.id);
+                                event.dataTransfer.setData("text/plain", field.id);
+                                event.dataTransfer.effectAllowed = "copy";
+                              }}
+                              onDragEnd={() => setDraggedEvidenceId(null)}
+                              className={`group rounded-xl border p-3 transition ${queued ? "border-emerald-300/25 bg-emerald-300/[0.06]" : "border-white/[0.07] bg-[#0d1424] hover:border-cyan-300/25 hover:bg-white/[0.04]"}`}
+                            >
+                              <div className="flex items-start gap-3">
+                                <span className="mt-0.5 cursor-grab text-slate-600 group-hover:text-cyan-200">⠿</span>
+                                <span className="text-lg">{field.icon}</span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-xs font-black text-white">{field.title}</p>
+                                  <p className="mt-1 text-[11px] leading-4 text-slate-500">{field.description}</p>
                                 </div>
                                 <button
                                   type="button"
-                                  onClick={() => setActiveEvidenceEditor(null)}
-                                  className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 transition hover:border-white/20 hover:text-slate-200"
+                                  onClick={() => addEvidenceToQueue(field.id)}
+                                  className="rounded-lg border border-cyan-300/20 bg-cyan-300/[0.08] px-2 py-1 text-[10px] font-bold text-cyan-100 transition hover:bg-cyan-300/[0.14]"
                                 >
-                                  Hide
+                                  {queued ? "Added" : "+ Add"}
                                 </button>
                               </div>
-                              <textarea
-                                className="textarea mt-3"
-                                rows={activeEvidenceField.rows}
-                                value={activeEvidenceField.value}
-                                onChange={(event) => activeEvidenceField.setValue(event.target.value)}
-                                placeholder={activeEvidenceField.placeholder}
-                              />
-                            </div>
-                          ) : null}
+                            </article>
+                          );
+                        })}
+                      </div>
+                    </section>
+
+                    <section
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={handleEvidenceDrop}
+                      className="rounded-2xl border border-dashed border-cyan-300/25 bg-cyan-300/[0.025] p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-black text-white">Your scan queue</p>
+                          <p className="mt-1 text-xs leading-5 text-slate-500">Drop evidence here to add to scan. Reorder with arrows or drag within queue.</p>
                         </div>
-                      </>
-                    ) : null}
+                        <span className="rounded-full border border-cyan-300/15 bg-cyan-300/[0.06] px-2.5 py-1 text-[10px] font-bold text-cyan-100">{queuedEvidenceFields.length} queued</span>
+                      </div>
+
+                      {queuedEvidenceFields.length ? (
+                        <div className="mt-4 max-h-[560px] space-y-3 overflow-y-auto pr-1">
+                          {queuedEvidenceFields.map((field, index) => (
+                            <article
+                              key={field.id}
+                              draggable
+                              onDragStart={(event) => {
+                                setDraggedEvidenceId(field.id);
+                                event.dataTransfer.setData("text/plain", field.id);
+                                event.dataTransfer.effectAllowed = "move";
+                              }}
+                              onDragOver={(event) => event.preventDefault()}
+                              onDrop={(event) => {
+                                event.preventDefault();
+                                const fieldId = event.dataTransfer.getData("text/plain") || draggedEvidenceId;
+                                if (!fieldId) return;
+                                if (scanQueueIds.includes(fieldId)) reorderEvidenceInQueue(fieldId, field.id);
+                                else addEvidenceToQueue(fieldId);
+                                setDraggedEvidenceId(null);
+                              }}
+                              className="rounded-2xl border border-white/[0.07] bg-[#07101f] p-3"
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="cursor-grab text-slate-600">⠿</span>
+                                <span className="text-lg">{field.icon}</span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-black text-white">{field.title}</p>
+                                  <p className="text-[11px] text-slate-500">{field.description}</p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <button type="button" onClick={() => moveEvidenceInQueue(field.id, -1)} disabled={index === 0} className="rounded-lg border border-white/[0.08] px-2 py-1 text-xs text-slate-300 disabled:opacity-30">↑</button>
+                                  <button type="button" onClick={() => moveEvidenceInQueue(field.id, 1)} disabled={index === queuedEvidenceFields.length - 1} className="rounded-lg border border-white/[0.08] px-2 py-1 text-xs text-slate-300 disabled:opacity-30">↓</button>
+                                  <button type="button" onClick={() => removeEvidenceFromQueue(field.id)} className="rounded-lg border border-red-300/20 bg-red-300/[0.08] px-2 py-1 text-xs font-bold text-red-100">×</button>
+                                </div>
+                              </div>
+                              <textarea
+                                className="mt-3 min-h-[120px] w-full resize-y rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 font-mono text-xs leading-6 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-300/50 focus:shadow-[0_0_0_3px_rgba(0,240,255,0.10)]"
+                                rows={Math.min(field.rows, 6)}
+                                value={field.value}
+                                onFocus={() => setActiveEvidenceEditor(field.id)}
+                                onChange={(event) => field.setValue(event.target.value)}
+                                placeholder={field.placeholder}
+                              />
+                            </article>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="mt-4 grid min-h-[280px] place-items-center rounded-2xl border border-dashed border-cyan-300/20 bg-black/20 p-8 text-center">
+                          <div>
+                            <p className="text-3xl">↘</p>
+                            <p className="mt-3 text-sm font-black text-white">Drag evidence here to add to scan</p>
+                            <p className="mt-2 text-xs leading-5 text-slate-500">Mobile users can tap + Add from the left list.</p>
+                          </div>
+                        </div>
+                      )}
+                    </section>
                   </div>
-                </div>
+                ) : null}
 
-                <div className="scanner-consent-grid">
-                  <label className={`scanner-check-card ${authorized ? "scanner-check-card-on" : ""}`}>
-                    <input type="checkbox" checked={authorized} onChange={(event) => setAuthorized(event.target.checked)} />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${authorized ? "border-cyan-300/35 bg-cyan-300/[0.07]" : "border-white/[0.08] bg-white/[0.02] hover:border-white/[0.14]"}`}>
+                    <input className="sr-only" type="checkbox" checked={authorized} onChange={(event) => setAuthorized(event.target.checked)} />
+                    <span className={`relative mt-0.5 h-6 w-11 rounded-full transition ${authorized ? "bg-cyan-400" : "bg-slate-700"}`}>
+                      <span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${authorized ? "left-6" : "left-1"}`} />
+                    </span>
                     <span>
-                      <strong>Permission confirmed</strong>
-                      <small>I own this project or have permission to review it.</small>
+                      <strong className="block text-sm font-black text-white">Permission confirmed</strong>
+                      <small className="mt-1 block text-xs leading-5 text-slate-500">I own this project or have permission to review it.</small>
                     </span>
                   </label>
-                  <label className={`scanner-check-card ${realOnly ? "scanner-check-card-on" : ""}`}>
-                    <input type="checkbox" checked={realOnly} onChange={(event) => setRealOnly(event.target.checked)} />
+
+                  <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${realOnly ? "border-cyan-300/35 bg-cyan-300/[0.07]" : "border-white/[0.08] bg-white/[0.02] hover:border-white/[0.14]"}`}>
+                    <input className="sr-only" type="checkbox" checked={realOnly} onChange={(event) => setRealOnly(event.target.checked)} />
+                    <span className={`relative mt-0.5 h-6 w-11 rounded-full transition ${realOnly ? "bg-cyan-400" : "bg-slate-700"}`}>
+                      <span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${realOnly ? "left-6" : "left-1"}`} />
+                    </span>
                     <span>
-                      <strong>Evidence-only result</strong>
-                      <small>Unavailable modules stay Not Assessed.</small>
+                      <strong className="block text-sm font-black text-white">Evidence-only result</strong>
+                      <small className="mt-1 block text-xs leading-5 text-slate-500">Unavailable modules stay Not Assessed.</small>
                     </span>
                   </label>
                 </div>
 
-                {fieldPrompt ? <p className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100">{fieldPrompt}</p> : null}
+                {fieldPrompt ? <p className="rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100">{fieldPrompt}</p> : null}
 
-                <div className="scanner-action-row">
-                  <button type="button" onClick={() => void runScan()} disabled={!canRunScan} className="btn-primary scanner-run-button">
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => void runScan()}
+                    disabled={!canRunScan}
+                    className="group inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-br from-[#00F0FF] to-[#008BFF] px-5 py-4 text-sm font-black text-slate-950 shadow-[0_16px_45px_rgba(0,240,255,0.22)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(0,240,255,0.30)] disabled:translate-y-0 disabled:bg-slate-700 disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 disabled:shadow-none"
+                  >
                     {loading ? (
                       <>
-                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-black/25 border-t-black" aria-hidden="true" />
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-950/30 border-t-slate-950" />
                         Scanning... 15–30 seconds
                       </>
-                    ) : (
-                      'Run readiness scan →'
-                    )}
+                    ) : "Run readiness scan →"}
                   </button>
-                  {!isLoggedIn && !authLoading ? <Link href="/auth/login" className="btn-secondary scanner-login-button">Login first</Link> : null}
+                  {loading ? <p className="text-center text-xs font-semibold text-cyan-100">{activeLoadingMessage}</p> : null}
+                  {!isLoggedIn && !authLoading ? <Link href="/auth/login" className="btn-secondary w-full justify-center">Login first</Link> : null}
                 </div>
-
-                {loading ? (
-                  <p className="mt-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.06] px-3 py-2 text-xs font-semibold text-cyan-100" role="status" aria-live="polite">
-                    {scanProgressMessage}
-                  </p>
-                ) : null}
               </div>
+            </CardShell>
+
+            <div className="grid gap-2 text-xs font-bold text-slate-400 sm:grid-cols-3">
+              <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-center">🔒 No private keys</span>
+              <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-center">📋 Pre-audit only</span>
+              <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-center">🚫 No exploit automation</span>
             </div>
-          </CardShell>
+          </div>
 
         {loading ? (
           <CardShell>
