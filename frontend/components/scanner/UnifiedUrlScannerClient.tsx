@@ -1155,7 +1155,6 @@ export function UnifiedUrlScannerClient() {
   const [invariantArtifactJson, setInvariantArtifactJson] = useState("");
   const [accuracyFeedbackJson, setAccuracyFeedbackJson] = useState("");
   const [authorized, setAuthorized] = useState(false);
-  const [realOnly, setRealOnly] = useState(true);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [scanMode, setScanMode] = useState<ScanMode>("quick");
   const [activeEvidenceEditor, setActiveEvidenceEditor] = useState<string | null>(null);
@@ -1367,16 +1366,11 @@ export function UnifiedUrlScannerClient() {
   const missingRequiredFields = useMemo(() => {
     const missing: string[] = [];
     if (!websiteUrl.trim()) missing.push("Website / dApp URL");
-    if (scanMode !== "quick") {
-      if (!projectType.trim()) missing.push("Project type");
-      if (projectType === "Other" && !customProjectType.trim()) missing.push("Custom project type");
-      if (!chain.trim()) missing.push("Chain / surface");
-      if (chain === "Other" && !customChain.trim()) missing.push("Custom chain");
-    }
-    if (!authorized) missing.push("Authorization confirmation");
-    if (!realOnly) missing.push("Evidence-only acknowledgement");
+    if (projectType === "Other" && !customProjectType.trim()) missing.push("Custom project type");
+    if (chain === "Other" && !customChain.trim()) missing.push("Custom chain");
+    if (!authorized) missing.push("Permission confirmation");
     return missing;
-  }, [authorized, chain, customChain, customProjectType, projectType, realOnly, scanMode, websiteUrl]);
+  }, [authorized, chain, customChain, customProjectType, projectType, websiteUrl]);
 
   const canRunScan = !loading && !authLoading;
   const cards = result?.module_cards ? sortModuleCards(result.module_cards) : [];
@@ -1470,7 +1464,6 @@ export function UnifiedUrlScannerClient() {
     setChain("");
     setCustomChain("");
     setAuthorized(false);
-    setRealOnly(false);
     setContractAddress("");
     setApiBaseUrl("");
     setGithubRepoUrl("");
@@ -1624,7 +1617,7 @@ export function UnifiedUrlScannerClient() {
           deep_scan_requested: scanMode === "deep" || scanMode === "expert",
           expert_evidence_requested: scanMode === "expert",
           authorization_confirmed: authorized,
-          real_only_acknowledged: realOnly,
+          real_only_acknowledged: true,
         },
         { headers }
       );
@@ -1724,192 +1717,220 @@ export function UnifiedUrlScannerClient() {
             <div className="scanner-premium-grid scanner-premium-grid-single">
               <div className="scanner-input-panel scanner-input-panel-wide">
 
-                <div className="scanner-premium-fields">
-                  <FieldLabel label="Website / dApp URL" required>
-                    <input className="input scanner-input-xl scanner-premium-url" value={websiteUrl} onChange={(event) => setWebsiteUrl(event.target.value)} placeholder="https://yourproject.com" />
-                  </FieldLabel>
+                <div className="rounded-3xl border border-cyan-300/10 bg-cyan-300/[0.04] p-4 sm:p-5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="section-label">Step 1 · Beginner friendly</p>
+                      <h2 className="mt-2 text-2xl font-black text-white">Paste your website link</h2>
+                      <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+                        For a normal user, only this one URL is needed. Web3Guard will check public website evidence and will clearly mark anything deeper as Not Assessed instead of guessing.
+                      </p>
+                    </div>
+                    <span className="badge badge-cyan w-fit">No code setup needed</span>
+                  </div>
 
-                  <div className="scanner-field-row">
-                    <FieldLabel label="Project type" required={scanMode !== "quick"}>
-                      <select className="select scanner-choice-select" value={projectType} onChange={(event) => setProjectType(event.target.value)}>
-                        <option value="" disabled>Select project type</option>
-                        {projectTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-                      </select>
-                    </FieldLabel>
-
-                    <FieldLabel label="Chain / surface" required={scanMode !== "quick"}>
-                      <select className="select scanner-choice-select" value={chain} onChange={(event) => setChain(event.target.value)}>
-                        <option value="" disabled>Select chain</option>
-                        {chainOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-                      </select>
+                  <div className="mt-4">
+                    <FieldLabel label="Website / dApp URL" required>
+                      <input
+                        className="input scanner-input-xl scanner-premium-url"
+                        value={websiteUrl}
+                        onChange={(event) => setWebsiteUrl(event.target.value)}
+                        placeholder="https://yourproject.com"
+                      />
                     </FieldLabel>
                   </div>
 
-                  {(projectType === 'Other' || chain === 'Other') ? (
-                    <div className="scanner-field-row">
-                      {projectType === 'Other' ? (
-                        <FieldLabel label="Custom project type" required>
-                          <input className="input" value={customProjectType} onChange={(event) => setCustomProjectType(event.target.value)} placeholder="Example: RWA, DePIN, AI x Web3" />
-                        </FieldLabel>
-                      ) : <div />}
-
-                      {chain === 'Other' ? (
-                        <FieldLabel label="Custom chain" required>
-                          <input className="input" value={customChain} onChange={(event) => setCustomChain(event.target.value)} placeholder="Example: Sui, Aptos, Monad" />
-                        </FieldLabel>
-                      ) : <div />}
-                    </div>
-                  ) : null}
+                  <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-400">
+                    <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1">Checks headers/CSP/cookies</span>
+                    <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1">Finds public exposure hints</span>
+                    <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1">No cloning or exploit testing</span>
+                    <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1">Missing proof = Not Assessed</span>
+                  </div>
                 </div>
 
+                <div className="rounded-3xl border border-white/10 bg-white/[0.025] p-4 sm:p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="section-label">Step 2 · Scan depth</p>
+                      <h3 className="mt-2 text-xl font-black text-white">Choose how much evidence you want to add</h3>
+                      <p className="mt-2 text-sm leading-6 text-slate-400">
+                        Stay on Simple Scan if you are new. Developers can open Deep or Expert mode for repo, API, contract, and tool artifacts.
+                      </p>
+                    </div>
+                    <span className="badge">Current: {activeScanMode.title}</span>
+                  </div>
 
-                <div className="rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.03] p-3">
-                  <div className="grid gap-3 lg:grid-cols-[minmax(0,220px)_1fr] lg:items-end">
-                    <FieldLabel label="Scan mode">
-                      <select
-                        className="input"
-                        value={scanMode}
-                        onChange={(event) => {
-                          const nextMode = event.target.value as ScanMode;
-                          setScanMode(nextMode);
-                          setAdvancedOpen(nextMode !== "quick");
-                          setActiveEvidenceEditor(null);
-                        }}
-                      >
-                        {scanModeOptions.map((option) => (
-                          <option key={option.id} value={option.id}>
-                            {option.title}
-                          </option>
-                        ))}
-                      </select>
-                    </FieldLabel>
-                    <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
-                      <p className="text-xs text-slate-300">{activeScanMode.subtitle}</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {activeScanMode.bullets.map((bullet) => (
-                          <span key={bullet} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-slate-400">
-                            {bullet}
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    {scanModeOptions.map((option) => {
+                      const selected = scanMode === option.id;
+                      const simpleTitle = option.id === "quick" ? "Simple Scan" : option.id === "deep" ? "Add GitHub/API/Contract" : "Expert / Auditor evidence";
+                      const simpleSubtitle = option.id === "quick"
+                        ? "Best for beginners. Only website URL required."
+                        : option.id === "deep"
+                          ? "For developers who can add repo, API, or contract details."
+                          : "For auditors with Slither, Semgrep, Aderyn, HAR, or test output.";
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => {
+                            setScanMode(option.id);
+                            setAdvancedOpen(option.id !== "quick");
+                            setActiveEvidenceEditor(null);
+                          }}
+                          className={`rounded-2xl border p-4 text-left transition ${selected ? "border-cyan-300/35 bg-cyan-300/[0.10] shadow-[0_0_28px_rgba(34,211,238,0.10)]" : "border-white/10 bg-white/[0.03] hover:border-cyan-300/20 hover:bg-white/[0.05]"}`}
+                        >
+                          <span className="block text-sm font-black text-white">{simpleTitle}</span>
+                          <span className="mt-2 block text-xs leading-5 text-slate-400">{simpleSubtitle}</span>
+                          <span className={`mt-3 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${selected ? "border-cyan-300/30 text-cyan-100" : "border-white/10 text-slate-500"}`}>
+                            {selected ? "Selected" : "Choose"}
                           </span>
-                        ))}
-                      </div>
-                    </div>
+                        </button>
+                      );
+                    })}
                   </div>
-                </div>
 
-                <div className="scanner-evidence-panel">
-                  <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-white">{scanMode === "quick" ? "Auto public evidence" : scanMode === "deep" ? "Deep evidence" : "Expert evidence"}</p>
-                        <p className="mt-1 text-[11px] leading-5 text-slate-400">
-                          {scanMode === "quick"
-                            ? "URL-only scan auto-runs safe public checks."
-                            : scanMode === "deep"
-                              ? "Add repo, API, contract, or source evidence when needed."
-                              : "Keep fields compact. Open only the editor you want to paste into."}
-                        </p>
-                      </div>
-                      {scanMode === "quick" ? (
-                        <span className="badge badge-cyan">Auto</span>
-                      ) : (
+                  {scanMode !== "quick" ? (
+                    <div className="mt-5 space-y-4 rounded-3xl border border-cyan-300/10 bg-cyan-300/[0.035] p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm font-black text-white">Developer evidence fields</p>
+                          <p className="mt-1 text-xs leading-5 text-slate-400">Optional fields. Add what you have; empty areas will stay Not Assessed.</p>
+                        </div>
                         <button
                           type="button"
                           onClick={() => setAdvancedOpen((value) => !value)}
-                          className="rounded-full border border-cyan-300/20 bg-cyan-300/[0.08] px-3 py-1.5 text-[11px] font-semibold text-cyan-100 transition hover:border-cyan-300/40 hover:bg-cyan-300/[0.14]"
+                          className="w-fit rounded-full border border-cyan-300/20 bg-cyan-300/[0.08] px-3 py-1.5 text-[11px] font-semibold text-cyan-100 transition hover:border-cyan-300/40 hover:bg-cyan-300/[0.14]"
                         >
                           {advancedOpen ? "Hide fields" : "Open fields"}
                         </button>
-                      )}
-                    </div>
-
-                    {scanMode === "quick" ? (
-                      <div className="scanner-evidence-chips" aria-label="Auto evidence types">
-                        {["Headers/CSP", "Cookies", "Public exposure paths", "JS/API discovery", "Score proof", "Coverage gate"].map((item) => <span key={item}>{item}</span>)}
                       </div>
-                    ) : null}
 
-                    {scanMode !== "quick" && advancedOpen ? (
-                      <>
-                        <div className="grid gap-3 lg:grid-cols-3">
-                          <FieldLabel label="Contract address">
-                            <input className="input" value={contractAddress} onChange={(event) => setContractAddress(event.target.value)} placeholder="0x..." />
-                          </FieldLabel>
-                          <FieldLabel label="API base URL">
-                            <input className="input" value={apiBaseUrl} onChange={(event) => setApiBaseUrl(event.target.value)} placeholder="https://api.yourproject.com" />
-                          </FieldLabel>
-                          <FieldLabel label="GitHub repo URL">
-                            <input className="input" value={githubRepoUrl} onChange={(event) => setGithubRepoUrl(event.target.value)} placeholder="https://github.com/org/repo" />
-                          </FieldLabel>
-                        </div>
+                      {advancedOpen ? (
+                        <>
+                          <div className="grid gap-3 lg:grid-cols-2">
+                            <FieldLabel label="Project type (optional)">
+                              <select className="select scanner-choice-select" value={projectType} onChange={(event) => setProjectType(event.target.value)}>
+                                <option value="">Auto / not sure</option>
+                                {projectTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                              </select>
+                            </FieldLabel>
 
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3">
-                          <div className="flex flex-wrap gap-2">
-                            {visibleEditorFields.map((field) => {
-                              const selected = activeEvidenceEditor === field.id;
-                              const filled = field.value.trim().length > 0;
-                              return (
-                                <button
-                                  key={field.id}
-                                  type="button"
-                                  onClick={() => setActiveEvidenceEditor((current) => current === field.id ? null : field.id)}
-                                  className={`rounded-lg border px-3 py-1.5 text-left text-[11px] font-semibold transition ${selected ? "border-cyan-300/40 bg-cyan-300/[0.10] text-cyan-100" : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-cyan-300/20 hover:bg-white/[0.05]"}`}
-                                >
-                                  <span className="block">{field.label}</span>
-                                  <span className={`mt-1 block text-[10px] ${filled ? "text-emerald-300" : "text-slate-500"}`}>{filled ? "Filled" : "Tap to open"}</span>
-                                </button>
-                              );
-                            })}
+                            <FieldLabel label="Chain / surface (optional)">
+                              <select className="select scanner-choice-select" value={chain} onChange={(event) => setChain(event.target.value)}>
+                                <option value="">Auto / Web only</option>
+                                {chainOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                              </select>
+                            </FieldLabel>
                           </div>
 
-                          {activeEvidenceField ? (
-                            <div className="mt-3 rounded-2xl border border-cyan-300/15 bg-slate-950/50 p-3">
-                              <div className="flex items-center justify-between gap-3">
-                                <p className="text-sm font-semibold text-white">{activeEvidenceField.label}</p>
-                                <button
-                                  type="button"
-                                  onClick={() => setActiveEvidenceEditor(null)}
-                                  className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 transition hover:border-white/20 hover:text-slate-200"
-                                >
-                                  Hide
-                                </button>
-                              </div>
-                              <textarea
-                                className="textarea mt-3"
-                                rows={activeEvidenceField.rows}
-                                value={activeEvidenceField.value}
-                                onChange={(event) => activeEvidenceField.setValue(event.target.value)}
-                                placeholder={activeEvidenceField.placeholder}
-                              />
+                          {(projectType === 'Other' || chain === 'Other') ? (
+                            <div className="grid gap-3 lg:grid-cols-2">
+                              {projectType === 'Other' ? (
+                                <FieldLabel label="Custom project type" required>
+                                  <input className="input" value={customProjectType} onChange={(event) => setCustomProjectType(event.target.value)} placeholder="Example: RWA, DePIN, AI x Web3" />
+                                </FieldLabel>
+                              ) : <div />}
+
+                              {chain === 'Other' ? (
+                                <FieldLabel label="Custom chain" required>
+                                  <input className="input" value={customChain} onChange={(event) => setCustomChain(event.target.value)} placeholder="Example: Sui, Aptos, Monad" />
+                                </FieldLabel>
+                              ) : <div />}
                             </div>
                           ) : null}
-                        </div>
-                      </>
-                    ) : null}
-                  </div>
+
+                          <div className="grid gap-3 lg:grid-cols-3">
+                            <FieldLabel label="GitHub repo URL (optional)">
+                              <input className="input" value={githubRepoUrl} onChange={(event) => setGithubRepoUrl(event.target.value)} placeholder="https://github.com/org/repo" />
+                            </FieldLabel>
+                            <FieldLabel label="API base URL (optional)">
+                              <input className="input" value={apiBaseUrl} onChange={(event) => setApiBaseUrl(event.target.value)} placeholder="https://api.yourproject.com" />
+                            </FieldLabel>
+                            <FieldLabel label="Contract address (optional)">
+                              <input className="input" value={contractAddress} onChange={(event) => setContractAddress(event.target.value)} placeholder="0x..." />
+                            </FieldLabel>
+                          </div>
+
+                          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <p className="text-sm font-black text-white">Paste advanced evidence only if you have it</p>
+                                <p className="mt-1 text-xs leading-5 text-slate-400">New users can skip this. Experts can open one editor at a time.</p>
+                              </div>
+                              <span className="badge badge-amber">Optional</span>
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {visibleEditorFields.map((field) => {
+                                const selected = activeEvidenceEditor === field.id;
+                                const filled = field.value.trim().length > 0;
+                                return (
+                                  <button
+                                    key={field.id}
+                                    type="button"
+                                    onClick={() => setActiveEvidenceEditor((current) => current === field.id ? null : field.id)}
+                                    className={`rounded-lg border px-3 py-1.5 text-left text-[11px] font-semibold transition ${selected ? "border-cyan-300/40 bg-cyan-300/[0.10] text-cyan-100" : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-cyan-300/20 hover:bg-white/[0.05]"}`}
+                                  >
+                                    <span className="block">{field.label}</span>
+                                    <span className={`mt-1 block text-[10px] ${filled ? "text-emerald-300" : "text-slate-500"}`}>{filled ? "Filled" : "Tap to open"}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {activeEvidenceField ? (
+                              <div className="mt-3 rounded-2xl border border-cyan-300/15 bg-slate-950/50 p-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <p className="text-sm font-semibold text-white">{activeEvidenceField.label}</p>
+                                  <button
+                                    type="button"
+                                    onClick={() => setActiveEvidenceEditor(null)}
+                                    className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 transition hover:border-white/20 hover:text-slate-200"
+                                  >
+                                    Hide
+                                  </button>
+                                </div>
+                                <textarea
+                                  className="textarea mt-3"
+                                  rows={activeEvidenceField.rows}
+                                  value={activeEvidenceField.value}
+                                  onChange={(event) => activeEvidenceField.setValue(event.target.value)}
+                                  placeholder={activeEvidenceField.placeholder}
+                                />
+                              </div>
+                            ) : null}
+                          </div>
+                        </>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-2xl border border-emerald-400/15 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
+                      Simple Scan selected: only paste the website URL, confirm permission, then run. GitHub, contract, API, Slither, Semgrep, and Aderyn will stay Not Assessed unless you switch to Deep/Expert mode and provide evidence.
+                    </div>
+                  )}
                 </div>
 
                 <div className="scanner-consent-grid">
                   <label className={`scanner-check-card ${authorized ? "scanner-check-card-on" : ""}`}>
                     <input type="checkbox" checked={authorized} onChange={(event) => setAuthorized(event.target.checked)} />
                     <span>
-                      <strong>Permission confirmed</strong>
-                      <small>I own this project or have permission to review it.</small>
+                      <strong>I have permission to scan this project</strong>
+                      <small>Only scan your own project or a project you are allowed to review.</small>
                     </span>
                   </label>
-                  <label className={`scanner-check-card ${realOnly ? "scanner-check-card-on" : ""}`}>
-                    <input type="checkbox" checked={realOnly} onChange={(event) => setRealOnly(event.target.checked)} />
+                  <div className="scanner-check-card scanner-check-card-on">
                     <span>
-                      <strong>Evidence-only result</strong>
-                      <small>Unavailable modules stay Not Assessed.</small>
+                      <strong>Real-only result is always on</strong>
+                      <small>No fake audit claim. Missing proof stays Not Assessed.</small>
                     </span>
-                  </label>
+                  </div>
                 </div>
 
                 {fieldPrompt ? <p className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100">{fieldPrompt}</p> : null}
 
                 <div className="scanner-action-row">
                   <button type="button" onClick={() => void runScan()} disabled={!canRunScan} className="btn-primary scanner-run-button">
-                    {loading ? 'Scanning evidence...' : 'Run readiness scan →'}
+                    {loading ? 'Scanning...' : 'Start scan →'}
                   </button>
                   {!isLoggedIn && !authLoading ? <Link href="/auth/login" className="btn-secondary scanner-login-button">Login first</Link> : null}
                 </div>
