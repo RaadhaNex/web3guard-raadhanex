@@ -1,72 +1,55 @@
 # Web3Guard Isolated Static Analysis Worker
 
-This is a separate worker service for real Slither / Semgrep / Aderyn execution.
+This worker intentionally uses a tiny stdlib ASGI app instead of FastAPI/Starlette. Semgrep/Slither can pull dependency versions that conflict with FastAPI's Starlette expectations on Render. The worker only needs three JSON endpoints, so avoiding FastAPI removes the startup conflict while keeping the same API contract.
 
-It must be deployed separately from the public FastAPI backend. The main backend only sends safe Solidity source files to this worker when explicitly configured.
+## Render settings
 
-## Main backend env
+Root Directory:
 
-Keep code execution disabled in the main backend. Add only the bridge values:
-
-```env
-STATIC_WORKER_ENABLED=true
-STATIC_WORKER_AUTO_DISPATCH_ENABLED=true
-STATIC_WORKER_URL=https://your-worker-service.onrender.com
-STATIC_WORKER_TOKEN=<same strong secret as worker>
-STATIC_WORKER_TIMEOUT_SECONDS=75
+```text
+worker_static_analysis
 ```
 
-## Worker service env
-
-```env
-APP_ENV=production
-STATIC_ANALYSIS_ENABLED=true
-STATIC_WORKER_TOKEN=<same strong secret as main backend>
-PROFESSIONAL_WORKER_SERVICE_ROLE=isolated_worker
-PROFESSIONAL_WORKER_ISOLATED_RUNTIME_CONFIRMED=true
-PROFESSIONAL_WORKER_ALLOW_LOCAL_EXECUTION=true
-PROFESSIONAL_WORKER_NETWORK_ENABLED=false
-SLITHER_ENABLED=true
-SLITHER_BINARY=slither
-SEMGREP_ENABLED=true
-SEMGREP_BINARY=semgrep
-ADERYN_ENABLED=false
-ADERYN_BINARY=aderyn
-```
-
-## Render build command example
+Build Command:
 
 ```bash
-python -m pip install --upgrade pip setuptools wheel && pip install -r requirements.txt && pip install slither-analyzer semgrep
+python -V && python -m pip install --upgrade pip setuptools wheel && python -m pip install -r requirements.txt && python -m py_compile main.py && python -m pip show semgrep slither-analyzer
 ```
 
-Aderyn is disabled by default until you install it in the isolated worker image.
-
-## Start command
+Start Command:
 
 ```bash
 uvicorn main:app --host 0.0.0.0 --port $PORT
 ```
 
-## Safety rules
+## Required env
 
-- No private key / seed phrase collection.
-- No dependency install during scan.
-- No repo clone by worker.
-- No wallet signing.
-- No exploit automation.
-- No certified audit or 100% secure claim.
-- Missing tools return Not Assessed / Tool Not Installed / Provider Not Configured.
+```env
+PYTHON_VERSION=3.12.8
+APP_ENV=production
+STATIC_ANALYSIS_ENABLED=true
+STATIC_WORKER_TOKEN=<same strong token used by main backend>
+PROFESSIONAL_WORKER_SERVICE_ROLE=isolated_worker
+PROFESSIONAL_WORKER_ISOLATED_RUNTIME_CONFIRMED=true
+PROFESSIONAL_WORKER_ALLOW_LOCAL_EXECUTION=true
+PROFESSIONAL_WORKER_NETWORK_ENABLED=false
+SLITHER_ENABLED=true
+SEMGREP_ENABLED=true
+ADERYN_ENABLED=false
+```
 
+## Test
 
-## Phase Worker-2 note
+```powershell
+curl.exe https://web3guard-static-worker.onrender.com/health
+$TOKEN="paste-token"
+curl.exe -H "Authorization: Bearer $TOKEN" https://web3guard-static-worker.onrender.com/static-analysis/status
+```
 
-This worker can now run Semgrep on safe web/config files fetched from a public GitHub repository. Slither and Aderyn are still Solidity-only and will only run when `.sol` files are supplied.
+Expected after a successful deploy:
 
-Supported Semgrep input examples:
+```json
+"semgrep": { "installed": true, "will_run": true }
+```
 
-- Next.js/React: `.ts`, `.tsx`, `.js`, `.jsx`
-- FastAPI/Python: `.py`
-- Config/manifests: `.json`, `.yml`, `.yaml`, `.toml`, `.env.example`
-
-No repository cloning or dependency installation is performed by the main backend. The main backend only forwards selected safe file contents to this isolated worker.
+Slither may be installed but can still need Solidity compiler support for some contracts. Aderyn remains disabled until its binary is installed.

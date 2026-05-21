@@ -2,10 +2,13 @@ services:
   - type: web
     name: web3guard-static-worker
     env: python
-    plan: starter
-    buildCommand: python -m pip install --upgrade pip setuptools wheel && pip install -r requirements.txt && pip install slither-analyzer semgrep
+    rootDir: worker_static_analysis
+    plan: free
+    buildCommand: python -V && python -m pip install --upgrade pip setuptools wheel && python -m pip install -r requirements.txt && python -m py_compile main.py && python -m pip show semgrep slither-analyzer
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
       - key: APP_ENV
         value: production
       - key: STATIC_ANALYSIS_ENABLED
@@ -20,11 +23,7 @@ services:
         value: "false"
       - key: SLITHER_ENABLED
         value: "true"
-      - key: SLITHER_BINARY
-        value: slither
       - key: SEMGREP_ENABLED
         value: "true"
-      - key: SEMGREP_BINARY
-        value: semgrep
       - key: ADERYN_ENABLED
         value: "false"

@@ -7,19 +7,43 @@ import re
 import shutil
 import subprocess
 import tempfile
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 from uuid import uuid4
 
-from fastapi import FastAPI, Header, HTTPException
-from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+ENGINE_VERSION = "web3guard-isolated-static-worker-v1.1-stdlib-asgi"
+SUPPORTED_TOOLS = ("slither", "semgrep", "aderyn")
+SAFE_EXTENSIONS = {
+    ".sol",
+    ".js",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".mjs",
+    ".cjs",
+    ".py",
+    ".yml",
+    ".yaml",
+    ".json",
+    ".toml",
+    ".env.example",
+}
+SOLIDITY_EXTENSIONS = {".sol"}
+RULE_DIR = Path(__file__).resolve().parent / "rules"
+RULE_FILE = RULE_DIR / "solidity_security.yml"
+WEB_RULE_FILE = RULE_DIR / "web_security.yml"
+PRIVATE_KEY_PATTERNS = [
+    re.compile(r"\bprivate[_-]?key\b\s*[:=]", re.I),
+    re.compile(r"\bmnemonic\b\s*[:=]", re.I),
+    re.compile(r"\bseed\s+phrase\b\s*[:=]", re.I),
+]
+SECRET_ENV_HINTS = ("SECRET", "TOKEN", "PASSWORD", "PRIVATE", "MNEMONIC", "SEED", "OPENAI", "ANTHROPIC", "SUPABASE")
 
 
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
-
+@dataclass(frozen=True)
+class Settings:
     app_env: str = "development"
     static_analysis_enabled: bool = False
     static_worker_token: str | None = None
@@ -41,41 +65,55 @@ class Settings(BaseSettings):
     aderyn_command_template: str = "{binary} --root {root} --output {output}"
 
 
-settings = Settings()
-app = FastAPI(
-    title="Web3Guard Isolated Static Analysis Worker",
-    version="1.0.0",
-    description="Separate worker for real Slither/Semgrep/Aderyn execution. Not a certified audit service.",
-    docs_url=None if settings.app_env.lower() in {"production", "staging"} else "/docs",
-    redoc_url=None if settings.app_env.lower() in {"production", "staging"} else "/redoc",
-)
-
-ENGINE_VERSION = "web3guard-isolated-static-worker-v1.0"
-SUPPORTED_TOOLS = ("slither", "semgrep", "aderyn")
-SAFE_EXTENSIONS = {".sol", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".py", ".yml", ".yaml", ".json", ".toml", ".env.example"}
-SOLIDITY_EXTENSIONS = {".sol"}
-WEB_RULE_FILE = Path(__file__).resolve().parent / "rules" / "web_security.yml"
-PRIVATE_KEY_PATTERNS = [
-    re.compile(r"\bprivate[_-]?key\b\s*[:=]", re.I),
-    re.compile(r"\bmnemonic\b\s*[:=]", re.I),
-    re.compile(r"\bseed\s+phrase\b\s*[:=]", re.I),
-]
-SECRET_ENV_HINTS = ("SECRET", "TOKEN", "PASSWORD", "PRIVATE", "MNEMONIC", "SEED", "OPENAI", "ANTHROPIC", "SUPABASE")
-RULE_FILE = Path(__file__).resolve().parent / "rules" / "solidity_security.yml"
+def _env_bool(key: str, default: bool = False) -> bool:
+    raw = os.getenv(key)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
-class SourceFile(BaseModel):
-    path: str = Field(min_length=1, max_length=240)
-    content: str = Field(min_length=1, max_length=180000)
+def _env_int(key: str, default: int) -> int:
+    raw = os.getenv(key)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return default
 
 
-class RunRequest(BaseModel):
-    project_name: str | None = Field(default=None, max_length=160)
-    source_label: str | None = Field(default="auto_discovered_source", max_length=120)
-    files: list[SourceFile] = Field(default_factory=list, max_length=20)
-    tools: list[Literal["slither", "semgrep", "aderyn"]] = Field(default_factory=lambda: ["slither", "semgrep", "aderyn"])
-    authorization_confirmed: bool = False
-    real_only_acknowledged: bool = True
+def _settings() -> Settings:
+    return Settings(
+        app_env=os.getenv("APP_ENV", "development"),
+        static_analysis_enabled=_env_bool("STATIC_ANALYSIS_ENABLED", False),
+        static_worker_token=os.getenv("STATIC_WORKER_TOKEN"),
+        professional_worker_service_role=os.getenv("PROFESSIONAL_WORKER_SERVICE_ROLE", "api"),
+        professional_worker_isolated_runtime_confirmed=_env_bool("PROFESSIONAL_WORKER_ISOLATED_RUNTIME_CONFIRMED", False),
+        professional_worker_allow_local_execution=_env_bool("PROFESSIONAL_WORKER_ALLOW_LOCAL_EXECUTION", False),
+        professional_worker_network_enabled=_env_bool("PROFESSIONAL_WORKER_NETWORK_ENABLED", False),
+        static_worker_cleanup_workspace=_env_bool("STATIC_WORKER_CLEANUP_WORKSPACE", True),
+        static_worker_timeout_seconds=_env_int("STATIC_WORKER_TIMEOUT_SECONDS", 75),
+        static_worker_max_output_chars=_env_int("STATIC_WORKER_MAX_OUTPUT_CHARS", 16000),
+        static_worker_max_total_chars=_env_int("STATIC_WORKER_MAX_TOTAL_CHARS", 180000),
+        static_worker_max_files=_env_int("STATIC_WORKER_MAX_FILES", 12),
+        slither_enabled=_env_bool("SLITHER_ENABLED", True),
+        slither_binary=os.getenv("SLITHER_BINARY", "slither"),
+        semgrep_enabled=_env_bool("SEMGREP_ENABLED", True),
+        semgrep_binary=os.getenv("SEMGREP_BINARY", "semgrep"),
+        aderyn_enabled=_env_bool("ADERYN_ENABLED", False),
+        aderyn_binary=os.getenv("ADERYN_BINARY", "aderyn"),
+        aderyn_command_template=os.getenv("ADERYN_COMMAND_TEMPLATE", "{binary} --root {root} --output {output}"),
+    )
+
+
+settings = _settings()
+
+
+class WorkerHttpError(Exception):
+    def __init__(self, status_code: int, detail: str):
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(detail)
 
 
 def _now_iso() -> str:
@@ -129,9 +167,9 @@ def _tool_status() -> dict[str, Any]:
 def _auth(authorization: str | None) -> None:
     expected = settings.static_worker_token
     if not expected:
-        raise HTTPException(status_code=503, detail="STATIC_WORKER_TOKEN is not configured on worker.")
+        raise WorkerHttpError(503, "STATIC_WORKER_TOKEN is not configured on worker.")
     if authorization != f"Bearer {expected}":
-        raise HTTPException(status_code=401, detail="Worker token rejected.")
+        raise WorkerHttpError(401, "Worker token rejected.")
 
 
 def _safe_env() -> dict[str, str]:
@@ -158,13 +196,33 @@ def _sanitize_path(raw: str, fallback: str) -> Path:
     return Path(*parts)
 
 
-def _sanitize_files(files: list[SourceFile]) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+def _safe_source_files(raw_files: Any) -> list[dict[str, str]]:
+    files = raw_files if isinstance(raw_files, list) else []
+    clean: list[dict[str, str]] = []
+    for item in files:
+        if not isinstance(item, dict):
+            continue
+        path = item.get("path")
+        content = item.get("content")
+        if isinstance(path, str) and isinstance(content, str) and path.strip() and content.strip():
+            clean.append({"path": path[:240], "content": content[:180000]})
+    return clean
+
+
+def _safe_tools(raw_tools: Any) -> list[str]:
+    if not isinstance(raw_tools, list):
+        return list(SUPPORTED_TOOLS)
+    tools = [tool for tool in raw_tools if isinstance(tool, str) and tool in SUPPORTED_TOOLS]
+    return tools or list(SUPPORTED_TOOLS)
+
+
+def _sanitize_files(files: list[dict[str, str]]) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
     cleaned: list[dict[str, str]] = []
     rejected: list[dict[str, str]] = []
     total = 0
     for idx, item in enumerate(files[: settings.static_worker_max_files + 8], start=1):
-        path = item.path.replace("\\", "/").lstrip("/")
-        content = item.content
+        path = item["path"].replace("\\", "/").lstrip("/")
+        content = item["content"]
         suffix = Path(path).suffix.lower()
         if suffix not in SAFE_EXTENSIONS:
             rejected.append({"path": path, "reason": "Unsupported file type for isolated worker. Semgrep accepts web/config files; Slither/Aderyn require .sol."})
@@ -182,7 +240,7 @@ def _sanitize_files(files: list[SourceFile]) -> tuple[list[dict[str, str]], list
         if total > settings.static_worker_max_total_chars:
             rejected.append({"path": path, "reason": "Total source size limit reached."})
             continue
-        cleaned.append({"path": str(_sanitize_path(path, f"Contract{idx}.sol")), "content": content})
+        cleaned.append({"path": str(_sanitize_path(path, f"Source{idx}.txt")), "content": content})
     return cleaned, rejected
 
 
@@ -359,8 +417,7 @@ def _run_tool(tool: str, workdir: Path, primary_source: Path, info: dict[str, An
     return run, findings
 
 
-@app.get("/health")
-def health() -> dict[str, Any]:
+def _health_payload() -> dict[str, Any]:
     return {
         "ok": True,
         "service": "web3guard-isolated-static-analysis-worker",
@@ -371,8 +428,7 @@ def health() -> dict[str, Any]:
     }
 
 
-@app.get("/static-analysis/status")
-def status(authorization: str | None = Header(default=None)) -> dict[str, Any]:
+def _status_payload(authorization: str | None) -> dict[str, Any]:
     if settings.static_worker_token:
         _auth(authorization)
     return {
@@ -398,11 +454,10 @@ def status(authorization: str | None = Header(default=None)) -> dict[str, Any]:
     }
 
 
-@app.post("/static-analysis/run")
-def run(payload: RunRequest, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+def _run_payload(payload: dict[str, Any], authorization: str | None) -> dict[str, Any]:
     _auth(authorization)
-    if not payload.authorization_confirmed or not payload.real_only_acknowledged:
-        raise HTTPException(status_code=400, detail="authorization_confirmed and real_only_acknowledged are required")
+    if not payload.get("authorization_confirmed") or not payload.get("real_only_acknowledged", True):
+        raise WorkerHttpError(400, "authorization_confirmed and real_only_acknowledged are required")
     if not _worker_safe_to_execute():
         return {
             "ok": True,
@@ -414,7 +469,8 @@ def run(payload: RunRequest, authorization: str | None = Header(default=None)) -
             "findings": [],
             "summary": {"real_findings_count": 0},
         }
-    cleaned, rejected = _sanitize_files(payload.files)
+    cleaned, rejected = _sanitize_files(_safe_source_files(payload.get("files")))
+    tools = _safe_tools(payload.get("tools"))
     if not cleaned:
         return {
             "ok": True,
@@ -435,7 +491,7 @@ def run(payload: RunRequest, authorization: str | None = Header(default=None)) -
     try:
         written = _write_workspace(workdir, cleaned)
         primary = written[0]
-        for tool in payload.tools:
+        for tool in tools:
             run_meta, parsed = _run_tool(tool, workdir, primary, tool_status[tool])
             tool_runs[tool] = run_meta
             findings.extend(parsed)
@@ -448,7 +504,7 @@ def run(payload: RunRequest, authorization: str | None = Header(default=None)) -
         "run_id": run_id,
         "engine_version": ENGINE_VERSION,
         "generated_at": _now_iso(),
-        "source_label": payload.source_label,
+        "source_label": str(payload.get("source_label") or "auto_discovered_source")[:120],
         "tool_status": tool_status,
         "tool_runs": tool_runs,
         "findings": findings,
@@ -456,8 +512,75 @@ def run(payload: RunRequest, authorization: str | None = Header(default=None)) -
         "summary": {
             "files_written": [item["path"] for item in cleaned],
             "real_findings_count": len(findings),
-            "tools_requested": payload.tools,
+            "tools_requested": tools,
             "tools_completed": [tool for tool, run in tool_runs.items() if run.get("status") in {"completed", "completed_with_errors"}],
         },
         "real_only_note": "Only actual Slither/Semgrep/Aderyn process output is returned. Semgrep can scan web/config files; Slither/Aderyn run only on Solidity. Not-run/missing tools are not converted into fake vulnerabilities.",
     }
+
+
+async def _read_body(receive: Any) -> bytes:
+    chunks: list[bytes] = []
+    more = True
+    while more:
+        message = await receive()
+        if message.get("type") != "http.request":
+            continue
+        chunks.append(message.get("body", b""))
+        more = bool(message.get("more_body", False))
+    return b"".join(chunks)
+
+
+async def _send_json(send: Any, status_code: int, payload: dict[str, Any]) -> None:
+    body = json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8")
+    await send(
+        {
+            "type": "http.response.start",
+            "status": status_code,
+            "headers": [
+                (b"content-type", b"application/json; charset=utf-8"),
+                (b"cache-control", b"no-store"),
+            ],
+        }
+    )
+    await send({"type": "http.response.body", "body": body})
+
+
+def _header(headers: list[tuple[bytes, bytes]], name: str) -> str | None:
+    key = name.lower().encode("latin-1")
+    for raw_key, raw_value in headers:
+        if raw_key.lower() == key:
+            return raw_value.decode("latin-1")
+    return None
+
+
+async def app(scope: dict[str, Any], receive: Any, send: Any) -> None:
+    if scope.get("type") != "http":
+        await _send_json(send, 404, {"detail": "Unsupported scope."})
+        return
+    method = str(scope.get("method") or "GET").upper()
+    path = str(scope.get("path") or "/")
+    headers = scope.get("headers") or []
+    authorization = _header(headers, "authorization")
+    try:
+        if method == "GET" and path == "/health":
+            await _send_json(send, 200, _health_payload())
+            return
+        if method == "GET" and path == "/static-analysis/status":
+            await _send_json(send, 200, _status_payload(authorization))
+            return
+        if method == "POST" and path == "/static-analysis/run":
+            body = await _read_body(receive)
+            try:
+                payload = json.loads(body.decode("utf-8") or "{}")
+            except json.JSONDecodeError:
+                raise WorkerHttpError(400, "Invalid JSON payload.")
+            if not isinstance(payload, dict):
+                raise WorkerHttpError(400, "JSON object payload is required.")
+            await _send_json(send, 200, _run_payload(payload, authorization))
+            return
+        await _send_json(send, 404, {"detail": "Not Found", "available_routes": ["GET /health", "GET /static-analysis/status", "POST /static-analysis/run"]})
+    except WorkerHttpError as exc:
+        await _send_json(send, exc.status_code, {"detail": exc.detail})
+    except Exception as exc:  # defensive: never expose secrets, never fake output
+        await _send_json(send, 500, {"detail": "Worker internal error", "error_type": type(exc).__name__})
