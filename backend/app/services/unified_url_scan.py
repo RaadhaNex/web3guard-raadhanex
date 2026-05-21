@@ -237,7 +237,7 @@ def _static_summary_from_report(report: ScanResponse) -> dict[str, Any]:
     real_tool_completed = False
     real_findings_count = 0
 
-    for tool in ("slither", "semgrep"):
+    for tool in ("slither", "semgrep", "aderyn"):
         status_info = tool_status.get(tool, {}) if isinstance(tool_status, dict) else {}
         run = tool_runs.get(tool, {}) if isinstance(tool_runs, dict) else {}
         run_status = str(run.get("status") or "not_run")
@@ -319,6 +319,14 @@ def _static_summary_from_report(report: ScanResponse) -> dict[str, Any]:
         "tools": tools,
         "findings": [_finding_to_dict(f) for f in non_status_findings[:36]],
         "status_messages": [_finding_to_dict(f) for f in status_messages[:14]],
+        "tool_verification": {
+            "tools_total": len(tools),
+            "ran_count": sum(1 for item in tools if item.get("status") in {"completed", "completed_with_errors", "artifact_parsed"}),
+            "completed_count": sum(1 for item in tools if item.get("status") in {"completed", "artifact_parsed"}),
+            "failed_count": sum(1 for item in tools if item.get("status") == "completed_with_errors" or bool(item.get("timed_out"))),
+            "real_findings_count": real_findings_count,
+            "evidence_rule": "Only actually executed tools or user-supplied valid artifacts count as evidence. Not-run statuses are informational and never become fake vulnerabilities.",
+        },
         "safety_controls": metadata.get("safety_controls", {}) if isinstance(metadata, dict) else {},
         "real_only_note": metadata.get("real_only_note") if isinstance(metadata, dict) else None,
     }
@@ -346,6 +354,14 @@ def _merge_static_summaries(primary: dict[str, Any], extra: dict[str, Any]) -> d
         "tools": tools,
         "findings": findings[:48],
         "status_messages": status_messages[:20],
+        "tool_verification": {
+            "tools_total": len(tools),
+            "ran_count": sum(1 for item in tools if item.get("status") in {"completed", "completed_with_errors", "artifact_parsed"}),
+            "completed_count": sum(1 for item in tools if item.get("status") in {"completed", "artifact_parsed"}),
+            "failed_count": sum(1 for item in tools if item.get("status") == "completed_with_errors" or bool(item.get("timed_out"))),
+            "real_findings_count": sum(int(item.get("real_findings") or 0) for item in tools),
+            "evidence_rule": "Merged backend tool status/output with user-supplied artifacts. Tool status rows never become fake vulnerabilities.",
+        },
         "real_only_note": "Merged backend tool status/output with user-supplied Slither/Semgrep/Aderyn artifacts. Artifact findings are real evidence inputs but not a Web3Guard-certified audit.",
     }
 
@@ -357,7 +373,7 @@ def _static_module_card(summary: dict[str, Any]) -> dict[str, Any]:
     ]
     if not evidence:
         evidence = ["No external static-analysis tool status is available for this scan."]
-    required_input = [] if summary.get("assessed") else ["Install/enable Slither/Semgrep in the tools venv, or paste valid Slither/Semgrep/Aderyn JSON artifacts, then rerun."]
+    required_input = [] if summary.get("assessed") else ["Install/enable Slither/Semgrep/Aderyn in the tools venv, or paste valid Slither/Semgrep/Aderyn JSON artifacts, then rerun."]
     return {
         "module": "static_analysis",
         "label": MODULE_LABELS["static_analysis"],
@@ -381,7 +397,7 @@ def _static_module_card(summary: dict[str, Any]) -> dict[str, Any]:
 def _static_not_assessed_summary() -> dict[str, Any]:
     status = static_analysis_status()
     tools = []
-    for tool in ("slither", "semgrep"):
+    for tool in ("slither", "semgrep", "aderyn"):
         info = status.get("tools", {}).get(tool, {})
         if not info.get("installed"):
             state = "Tool Not Installed"
@@ -406,6 +422,14 @@ def _static_not_assessed_summary() -> dict[str, Any]:
         "tools": tools,
         "findings": [],
         "status_messages": [],
+        "tool_verification": {
+            "tools_total": len(tools),
+            "ran_count": 0,
+            "completed_count": 0,
+            "failed_count": 0,
+            "real_findings_count": 0,
+            "evidence_rule": "Solidity source/contract/GitHub evidence was not supplied, so Slither/Semgrep/Aderyn were not run and no fake tool findings were created.",
+        },
         "safety_controls": status.get("safety_controls", {}),
         "real_only_note": "Solidity source was not supplied, so external static analysis was not run and no fake findings were created.",
     }
@@ -713,7 +737,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
                 "Live for pasted Solidity",
                 report=contract_report,
                 evidence=["User submitted Solidity source was scanned by the local rule engine."],
-                limitations=["This is a preliminary rule-engine scan. External Slither/Semgrep evidence is shown separately and only when real tools run or valid tool artifacts are supplied."],
+                limitations=["This is a preliminary rule-engine scan. External Slither/Semgrep/Aderyn evidence is shown separately and only when real tools run or valid tool artifacts are supplied."],
             )
         )
         try:
@@ -721,11 +745,11 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
                 payload.solidity_code,
                 payload.project_name,
                 "Web3GuardUnified.sol",
-                ["slither", "semgrep"],
+                ["slither", "semgrep", "aderyn"],
             )
             static_summary = _static_summary_from_report(static_report)
         except Exception as exc:
-            warnings.append(f"Slither/Semgrep static analysis was not completed: {exc}")
+            warnings.append(f"Slither/Semgrep/Aderyn static analysis was not completed: {exc}")
             static_summary = {
                 "state": "Manual Review Required",
                 "assessed": False,
