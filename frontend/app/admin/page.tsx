@@ -8,6 +8,12 @@ export const metadata = {
 
 const adminModules = [
   {
+    title: "Real Setup Assistant",
+    href: "/professional/setup",
+    badge: "Phase T",
+    text: "Production env checklist, webhook readiness, safe worker gate, and final real-world setup actions.",
+  },
+  {
     title: "Reviewer Onboarding",
     href: "/admin/reviewers",
     badge: "Phase R",

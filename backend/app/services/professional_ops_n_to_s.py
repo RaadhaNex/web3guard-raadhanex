@@ -105,6 +105,13 @@ def _tool_state(enabled: bool, binary: str | None) -> dict[str, Any]:
     return {"enabled": bool(enabled), "binary": binary, "installed": installed, "state": state}
 
 
+def _professional_worker_runner_enabled() -> bool:
+    # Phase T supports PROFESSIONAL_WORKER_ENABLED as a friendly alias for the original
+    # PROFESSIONAL_WORKER_RUNNER_ENABLED flag. Keep both false on the main API until
+    # an isolated worker service is ready.
+    return bool(getattr(settings, "professional_worker_runner_enabled", False)) or bool(getattr(settings, "professional_worker_enabled", False))
+
+
 def phase_status() -> dict[str, Any]:
     reviewers = _read(settings.professional_reviewer_profiles_file)
     deliveries = _read(settings.professional_client_deliveries_file)
@@ -225,14 +232,14 @@ def onchain_webhook_setup_status() -> dict[str, Any]:
 
 def worker_tool_status() -> dict[str, Any]:
     return {
-        "enabled": bool(getattr(settings, "professional_worker_runner_enabled", False)),
+        "enabled": _professional_worker_runner_enabled(),
         "network_enabled": bool(getattr(settings, "professional_worker_network_enabled", False)),
         "allow_local_execution": bool(getattr(settings, "professional_worker_allow_local_execution", False)),
         "cleanup_workspace": bool(getattr(settings, "professional_worker_cleanup_workspace", True)),
         "timeout_seconds": int(getattr(settings, "professional_worker_timeout_seconds", 90)),
         "foundry": _tool_state(bool(getattr(settings, "foundry_enabled", False)), getattr(settings, "foundry_binary", None) or shutil.which("forge")),
         "echidna": _tool_state(bool(getattr(settings, "echidna_enabled", False)), getattr(settings, "echidna_binary", None) or shutil.which("echidna")),
-        "real_only_note": "Runner stays disabled unless PROFESSIONAL_WORKER_RUNNER_ENABLED and local execution/tool config are explicitly enabled.",
+        "real_only_note": "Runner stays disabled unless PROFESSIONAL_WORKER_ENABLED or PROFESSIONAL_WORKER_RUNNER_ENABLED plus local execution/tool config are explicitly enabled inside an isolated worker service.",
     }
 
 
@@ -297,11 +304,11 @@ def run_worker(payload: dict[str, Any]) -> dict[str, Any]:
     real_only_acknowledged = bool(payload.get("real_only_acknowledged", True))
     if not authorization_confirmed or not real_only_acknowledged:
         raise ValueError("authorization_confirmed and real_only_acknowledged are required")
-    if not bool(getattr(settings, "professional_worker_runner_enabled", False)):
+    if not _professional_worker_runner_enabled():
         return {
             "ok": True,
             "status": "Not Assessed",
-            "reason": "PROFESSIONAL_WORKER_RUNNER_ENABLED is false.",
+            "reason": "PROFESSIONAL_WORKER_ENABLED / PROFESSIONAL_WORKER_RUNNER_ENABLED is false.",
             "tool_status": worker_tool_status(),
             "real_only_note": REAL_ONLY_NOTE,
         }

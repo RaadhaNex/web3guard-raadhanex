@@ -72,6 +72,7 @@ class Settings(BaseSettings):
     # Professional/public report storage.
     public_reports_file: str = "app/data/db/public_reports.jsonl"
     public_proof_reports_file: str = "app/data/db/public_proof_reports.jsonl"
+    public_proof_signing_secret: str | None = None
     manual_review_assignments_file: str = "app/data/db/manual_review_assignments.jsonl"
     manual_review_fix_verifications_file: str = "app/data/db/manual_review_fix_verifications.jsonl"
     manual_review_approval_events_file: str = "app/data/db/manual_review_approval_events.jsonl"
@@ -93,6 +94,10 @@ class Settings(BaseSettings):
     professional_client_deliveries_file: str = "app/data/db/professional_client_deliveries.jsonl"
     professional_worker_runs_file: str = "app/data/db/professional_worker_runs.jsonl"
     professional_worker_runner_enabled: bool = False
+    # Friendly env alias used by the setup guide/UI. Either this or PROFESSIONAL_WORKER_RUNNER_ENABLED can enable the professional runner.
+    professional_worker_enabled: bool = False
+    professional_worker_service_role: str = "api"  # api | isolated_worker
+    professional_worker_isolated_runtime_confirmed: bool = False
     professional_worker_allow_local_execution: bool = False
     professional_worker_network_enabled: bool = False
     professional_worker_cleanup_workspace: bool = True
