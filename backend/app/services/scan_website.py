@@ -698,11 +698,17 @@ def _extract_html_evidence(html: str, final_url: str) -> dict:
     dapp_keyword_hits = sorted({keyword for keyword in DAPP_PAGE_KEYWORDS if keyword in lowered_html})
     evm_address_hints = sorted(set(EVM_ADDRESS_HINT_RE.findall(html)))[:20]
 
-    external_link_domains = sorted({
-        _host_of(urljoin(final_url, link.get("href", "")))
-        for link in parser.links
-        if link.get("href") and _host_of(urljoin(final_url, link.get("href", ""))) and not _same_origin(link.get("href", ""), final_url)
-    })
+    external_links = []
+    for link in parser.links:
+        href = link.get("href", "")
+        if not href:
+            continue
+        absolute_href = urljoin(final_url, href)
+        host = _host_of(absolute_href)
+        if host and not _same_origin(href, final_url):
+            external_links.append({"href": absolute_href, "host": host, "rel": link.get("rel", ""), "target": link.get("target", "")})
+
+    external_link_domains = sorted({str(item.get("host") or "") for item in external_links if item.get("host")})
     target_blank_without_noopener = [
         {"href": urljoin(final_url, link.get("href", "")), "rel": link.get("rel", "")}
         for link in parser.links
@@ -768,6 +774,8 @@ def _extract_html_evidence(html: str, final_url: str) -> dict:
         "insecure_form_actions": insecure_form_actions[:10],
         "external_form_actions": external_form_actions[:10],
         "link_count": len(parser.links),
+        "external_link_count": len(external_links),
+        "external_links": external_links[:40],
         "external_link_domain_count": len(external_link_domains),
         "external_link_domains": external_link_domains[:30],
         "target_blank_without_noopener": target_blank_without_noopener,

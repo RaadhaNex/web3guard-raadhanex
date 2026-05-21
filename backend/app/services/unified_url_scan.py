@@ -3,7 +3,7 @@ import re
 from collections import Counter
 from typing import Any
 from datetime import datetime, timezone
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 from app.core.security import validate_public_http_url
 from app.models.schemas import CombinedReportRequest, Finding, ModuleScore, ScanResponse, UnifiedUrlScanRequest
@@ -12,7 +12,7 @@ from app.services.scan_contract import scan_solidity
 from app.services.scan_dapp_api import scan_api_backend
 from app.services.api_deep_readiness import run_api_deep_readiness_scan, api_deep_status
 from app.services.scan_website import scan_website
-from app.services.scan_github_repo import scan_github_repository
+from app.services.scan_github_repo import GitHubScanServiceError, scan_github_repository
 from app.services.scan_contract_address import scan_contract_address
 from app.services.static_analysis_tools import run_static_analysis, static_analysis_status
 from app.services.static_analysis_artifacts import analyze_static_artifacts
@@ -35,6 +35,7 @@ MODULE_LABELS = {
     "static_analysis": "Slither / Semgrep Static Analysis",
     "deep_detection": "Deep Detection Expansion",
     "formal_fuzz": "Foundry / Echidna / Invariant Artifacts",
+    "auto_discovery": "Auto Public Discovery",
 }
 
 REALNESS_MATRIX = [
@@ -115,6 +116,266 @@ REALNESS_MATRIX = [
 
 DAPP_KEYWORDS = ["walletconnect", "metamask", "connect wallet", "mint", "claim", "airdrop", "swap", "stake", "approve", "permit", "bridge", "presale"]
 EVM_ADDRESS_RE = re.compile(r"0x[a-fA-F0-9]{40}")
+
+GITHUB_URL_RE = re.compile(r"https?://(?:www\.)?github\.com/([A-Za-z0-9_.-]{1,100})/([A-Za-z0-9_.-]{1,100})(?:[/?#][^\s'\"<>]*)?", re.I)
+API_PATH_RE = re.compile(r"^/(?:api|v1|v2|graphql|openapi|swagger|docs)(?:/|$)", re.I)
+EXPLORER_CHAIN_HINTS: dict[str, str] = {
+    "etherscan.io": "ethereum",
+    "sepolia.etherscan.io": "sepolia",
+    "bscscan.com": "bsc",
+    "testnet.bscscan.com": "bsc testnet",
+    "polygonscan.com": "polygon",
+    "mumbai.polygonscan.com": "polygon mumbai",
+    "amoy.polygonscan.com": "polygon amoy",
+    "arbiscan.io": "arbitrum",
+    "sepolia.arbiscan.io": "arbitrum sepolia",
+    "optimistic.etherscan.io": "optimism",
+    "sepolia-optimism.etherscan.io": "optimism sepolia",
+    "basescan.org": "base",
+    "sepolia.basescan.org": "base sepolia",
+    "snowtrace.io": "avalanche",
+    "avascan.info": "avalanche",
+}
+
+
+def _origin(value: str) -> str:
+    parsed = urlparse(value)
+    if not parsed.scheme or not parsed.netloc:
+        return value.rstrip("/")
+    return f"{parsed.scheme}://{parsed.netloc}"
+
+
+def _unique(values: list[str], limit: int = 10) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        clean = str(value or "").strip()
+        if not clean or clean in seen:
+            continue
+        seen.add(clean)
+        out.append(clean)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _urls_from_html_evidence(html: dict[str, Any], base_url: str) -> list[str]:
+    urls: list[str] = []
+
+    def add(value: Any) -> None:
+        if not isinstance(value, str) or not value.strip():
+            return
+        clean = value.strip()
+        if clean.startswith(("mailto:", "tel:", "javascript:", "data:")):
+            return
+        if clean.startswith("//"):
+            clean = f"{urlparse(base_url).scheme or 'https'}:{clean}"
+        if clean.startswith("/"):
+            clean = urljoin(base_url, clean)
+        if clean.startswith(("http://", "https://")):
+            urls.append(clean)
+
+    for key in ("external_links", "target_blank_without_noopener", "external_form_actions", "insecure_form_actions", "iframes", "external_scripts", "same_origin_scripts"):
+        items = html.get(key, []) if isinstance(html, dict) else []
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if isinstance(item, dict):
+                for field in ("href", "action", "src", "url"):
+                    add(item.get(field))
+            else:
+                add(item)
+    return _unique(urls, 120)
+
+
+def _github_candidates_from_urls(urls: list[str]) -> list[str]:
+    banned_owners = {"features", "topics", "marketplace", "login", "settings", "sponsors", "about", "pricing", "explore"}
+    banned_repos = {"issues", "pulls", "actions", "security", "settings", "stargazers", "network", "wiki"}
+    candidates: list[str] = []
+    for url in urls:
+        match = GITHUB_URL_RE.search(url)
+        if not match:
+            continue
+        owner = match.group(1).strip()
+        repo = match.group(2).strip().removesuffix(".git")
+        if owner.lower() in banned_owners or repo.lower() in banned_repos:
+            continue
+        candidates.append(f"https://github.com/{owner}/{repo}")
+    return _unique(candidates, 5)
+
+
+def _infer_chain_from_urls(urls: list[str]) -> str | None:
+    for url in urls:
+        host = urlparse(url).netloc.lower().removeprefix("www.")
+        for hint, chain in EXPLORER_CHAIN_HINTS.items():
+            if host == hint or host.endswith("." + hint):
+                return chain
+    return None
+
+
+def _api_candidates_from_urls(urls: list[str], base_url: str) -> list[str]:
+    base_origin = _origin(base_url)
+    base_host = urlparse(base_url).netloc.lower()
+    candidates: list[str] = []
+    for url in urls:
+        parsed = urlparse(url)
+        if not parsed.scheme or not parsed.netloc:
+            continue
+        host = parsed.netloc.lower()
+        path = parsed.path or "/"
+        if host == base_host and API_PATH_RE.search(path):
+            candidates.append(base_origin)
+        elif (host.startswith("api.") or ".api." in host or "-api." in host) and host != base_host:
+            candidates.append(f"{parsed.scheme}://{parsed.netloc}")
+        elif host == base_host and path.lower() in {"/graphql", "/openapi.json", "/swagger", "/docs"}:
+            candidates.append(base_origin)
+    return _unique(candidates, 5)
+
+
+def _auto_discovery_from_website(website_report: ScanResponse, payload: UnifiedUrlScanRequest, safe_website_url: str) -> dict[str, Any]:
+    metadata = website_report.scan_metadata or {}
+    html = metadata.get("html_evidence", {}) if isinstance(metadata, dict) else {}
+    if not isinstance(html, dict):
+        html = {}
+    discovered_urls = _urls_from_html_evidence(html, safe_website_url)
+    github_candidates = _github_candidates_from_urls(discovered_urls)
+    api_candidates = _api_candidates_from_urls(discovered_urls, safe_website_url)
+    address_candidates = [str(item) for item in (html.get("evm_address_hints") or []) if isinstance(item, str)]
+    inferred_chain = _infer_chain_from_urls(discovered_urls)
+
+    selected_github = payload.github_repo_url or (github_candidates[0] if github_candidates else None)
+    selected_api = payload.api_base_url or (api_candidates[0] if api_candidates else None)
+    selected_contract = payload.contract_address or (address_candidates[0] if address_candidates and inferred_chain else None)
+    selected_chain = payload.chain or inferred_chain
+
+    actions: list[str] = []
+    if selected_github and not payload.github_repo_url:
+        actions.append("Auto-selected a public GitHub repository link found on the website.")
+    if selected_api and not payload.api_base_url:
+        actions.append("Auto-selected a public API/base URL hint found on the website.")
+    if selected_contract and not payload.contract_address:
+        actions.append("Auto-selected a visible EVM contract/address hint and inferred chain from public explorer links.")
+    elif address_candidates and not payload.contract_address and not inferred_chain:
+        actions.append("Found a visible EVM address, but chain/source could not be proven from public URL evidence, so contract code scan stayed Not Assessed.")
+
+    return {
+        "state": "Assessed",
+        "mode": "url_only_auto_discovery",
+        "safe_scope": "Public HTML/link/script evidence only. No login, wallet connection, private repo access, exploit payloads, or destructive checks.",
+        "website_url": safe_website_url,
+        "discovered_url_count": len(discovered_urls),
+        "github_candidates": github_candidates,
+        "api_candidates": api_candidates,
+        "contract_address_candidates": address_candidates[:8],
+        "inferred_chain": inferred_chain,
+        "selected": {
+            "github_repo_url": selected_github,
+            "api_base_url": selected_api,
+            "contract_address": selected_contract,
+            "chain": selected_chain,
+        },
+        "selection_sources": {
+            "github_repo_url": "user_input" if payload.github_repo_url else ("auto_public_website_link" if selected_github else "not_found"),
+            "api_base_url": "user_input" if payload.api_base_url else ("auto_public_website_hint" if selected_api else "not_found"),
+            "contract_address": "user_input" if payload.contract_address else ("auto_public_homepage_address" if selected_contract else "not_found"),
+            "chain": "user_input" if payload.chain else ("auto_public_explorer_link" if inferred_chain else "not_found"),
+        },
+        "auto_actions": actions,
+        "not_assessed_rules": [
+            "If no public GitHub repo is discovered, repo/static code checks stay Not Assessed.",
+            "If a contract address is found but chain/source cannot be proven, contract code checks stay Not Assessed.",
+            "If Slither/Semgrep/Aderyn are disabled or missing, status is shown honestly and no fake tool findings are created.",
+            "Human review is only a handoff/ticket unless a real reviewer confirms findings.",
+        ],
+    }
+
+
+def _replace_module_card(module_cards: list[dict], module: str, new_card: dict) -> None:
+    for index, card in enumerate(module_cards):
+        if card.get("module") == module:
+            module_cards[index] = new_card
+            return
+    module_cards.append(new_card)
+
+
+def _static_summary_from_tool_metadata(tool_metadata: dict[str, Any] | None, *, report_id: str | None, source_label: str) -> dict[str, Any] | None:
+    if not isinstance(tool_metadata, dict):
+        return None
+    tool_status = tool_metadata.get("tool_status", {}) if isinstance(tool_metadata.get("tool_status"), dict) else {}
+    tool_runs = tool_metadata.get("tool_runs", {}) if isinstance(tool_metadata.get("tool_runs"), dict) else {}
+    tools: list[dict[str, Any]] = []
+    real_findings_count = 0
+    real_tool_completed = False
+    for tool in ("slither", "semgrep", "aderyn"):
+        status_info = tool_status.get(tool, {}) if isinstance(tool_status, dict) else {}
+        run = tool_runs.get(tool, {}) if isinstance(tool_runs, dict) else {}
+        run_status = str(run.get("status") or "not_run")
+        if run_status == "completed":
+            real_tool_completed = True
+        real_findings = int(run.get("real_findings") or 0)
+        real_findings_count += real_findings
+        tools.append({
+            "tool": tool,
+            "state": _tool_state_label(run_status),
+            "status": run_status,
+            "installed": bool(status_info.get("installed")),
+            "enabled_by_env": bool(status_info.get("enabled_by_env")),
+            "will_run": bool(status_info.get("will_run")),
+            "real_findings": real_findings,
+            "returncode": run.get("returncode"),
+            "timed_out": bool(run.get("timed_out")),
+            "stderr_tail": _short_text(run.get("stderr"), 700),
+            "stdout_tail": _short_text(run.get("stdout"), 700),
+            "evidence_source": source_label,
+        })
+    if real_tool_completed or real_findings_count:
+        state = "Assessed"
+        assessed = True
+        score: int | None = 98 if real_findings_count == 0 else None
+        risk_label_value = "No parsed tool findings" if real_findings_count == 0 else "Tool findings present"
+    elif tools and all(tool["state"] == "Tool Not Installed" for tool in tools):
+        state = "Tool Not Installed"
+        assessed = False
+        score = None
+        risk_label_value = "Tool Not Installed"
+    elif tools and all(tool["state"] == "Provider Not Configured" for tool in tools):
+        state = "Provider Not Configured"
+        assessed = False
+        score = None
+        risk_label_value = "Provider Not Configured"
+    else:
+        state = "Not Assessed"
+        assessed = False
+        score = None
+        risk_label_value = "Not Assessed"
+    return {
+        "state": state,
+        "assessed": assessed,
+        "score": score,
+        "risk_label": risk_label_value,
+        "report_id": report_id,
+        "engine_version": tool_metadata.get("engine_version") or "web3guard-static-analysis-engine",
+        "tools": tools,
+        "findings": [],
+        "status_messages": [],
+        "tool_verification": {
+            "tools_total": len(tools),
+            "ran_count": sum(1 for item in tools if item.get("status") in {"completed", "completed_with_errors"}),
+            "completed_count": sum(1 for item in tools if item.get("status") == "completed"),
+            "failed_count": sum(1 for item in tools if item.get("status") == "completed_with_errors" or bool(item.get("timed_out"))),
+            "real_findings_count": real_findings_count,
+            "evidence_rule": "Tool evidence is counted only when the tool actually ran on fetched/provided Solidity source. Not-run statuses are not vulnerabilities.",
+        },
+        "safety_controls": tool_metadata.get("safety_controls", {}) if isinstance(tool_metadata, dict) else {},
+        "real_only_note": "Status imported from GitHub-discovered Solidity static-analysis run metadata. No fake Slither/Semgrep/Aderyn output is generated.",
+    }
+
+
+def _merge_or_replace_static_summary(current: dict[str, Any], extra: dict[str, Any]) -> dict[str, Any]:
+    if not current.get("assessed") and not current.get("findings") and not extra.get("findings"):
+        return extra
+    return _merge_static_summaries(current, extra)
+
 
 
 def _hash(value: str) -> str:
@@ -745,6 +1006,14 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         )
     )
 
+    auto_discovery = _auto_discovery_from_website(website_report, payload, safe_website_url)
+    surface_hints["auto_discovery"] = auto_discovery
+    selected_auto = auto_discovery.get("selected", {}) if isinstance(auto_discovery, dict) else {}
+    effective_api_base_url = payload.api_base_url or selected_auto.get("api_base_url")
+    effective_github_repo_url = payload.github_repo_url or selected_auto.get("github_repo_url")
+    effective_contract_address = payload.contract_address or selected_auto.get("contract_address")
+    effective_chain = payload.chain or selected_auto.get("chain")
+
     dapp_hints = _dapp_hints_from_website(website_report)
     surface_hints["dapp_from_homepage"] = dapp_hints
     module_cards.append(
@@ -757,13 +1026,13 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         )
     )
 
-    if payload.api_base_url:
-        api_report = scan_api_backend(checklist=[], project_name=payload.project_name, api_base_url=payload.api_base_url)
+    if effective_api_base_url:
+        api_report = scan_api_backend(checklist=[], project_name=payload.project_name, api_base_url=str(effective_api_base_url))
         reports.append(api_report)
         api_deep_report: ScanResponse | None = None
         try:
             api_deep_report = await run_api_deep_readiness_scan(
-                api_base_url=payload.api_base_url,
+                api_base_url=str(effective_api_base_url),
                 project_name=payload.project_name,
                 ownership_verified=True,
             )
@@ -779,7 +1048,8 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
                 "Live safe/passive",
                 report=api_report,
                 evidence=[
-                    f"API URL passed public URL safety validation: {api_report.scan_metadata.get('validated_api_base', payload.api_base_url)}",
+                    f"API URL passed public URL safety validation: {api_report.scan_metadata.get('validated_api_base', effective_api_base_url)}",
+                    f"Source: {'user input' if payload.api_base_url else 'auto-discovered public website hint'}",
                     f"Safe passive API/admin checks recorded: {endpoint_count}",
                 ],
                 limitations=["No fuzzing, auth bypass, credential testing, brute force, DoS, login test, or exploit payloads."],
@@ -841,7 +1111,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
             static_summary = _merge_static_summaries(static_summary, _static_summary_from_report(static_artifact_report))
         surface_hints["static_analysis"] = static_summary
         module_cards.append(_static_module_card(static_summary))
-    elif payload.contract_address:
+    elif effective_contract_address:
         if static_artifact_report:
             reports.append(static_artifact_report)
             surface_hints["static_analysis"] = _static_summary_from_report(static_artifact_report)
@@ -849,7 +1119,9 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
             surface_hints["static_analysis"] = _static_not_assessed_summary()
         module_cards.append(_static_module_card(surface_hints["static_analysis"]))
         try:
-            address_report = await scan_contract_address(payload.contract_address, payload.chain, payload.project_name)
+            if not effective_chain and not payload.contract_address:
+                raise ValueError("Auto-discovered EVM address needs a chain/explorer link before verified source fetch. Select chain or paste Solidity source.")
+            address_report = await scan_contract_address(str(effective_contract_address), str(effective_chain) if effective_chain else None, payload.project_name)
             reports.append(address_report)
             module_cards.append(
                 _status_card(
@@ -857,8 +1129,9 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
                     "Live from verified explorer source" if address_report.scan_metadata.get("source_verified") else "Explorer metadata only",
                     report=address_report,
                     evidence=[
-                        f"Address: {payload.contract_address}",
+                        f"Address: {effective_contract_address}",
                         f"Chain: {address_report.scan_metadata.get('chain_id')}",
+                        f"Source: {'user input' if payload.contract_address else 'auto-discovered public website address/explorer hint'}",
                         f"Source verified: {address_report.scan_metadata.get('source_verified')}",
                     ],
                     limitations=["Explorer-source rule scan plus optional Slither/Semgrep/Aderyn status when configured. No wallet signing, bytecode decompilation, exploit automation, or certified audit."],
@@ -869,7 +1142,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
                 _status_card(
                     "contract",
                     "Input recorded only",
-                    evidence=[f"Contract address provided: {payload.contract_address}", f"Chain: {payload.chain or 'not specified'}"],
+                    evidence=[f"Contract address found: {effective_contract_address}", f"Chain: {effective_chain or 'not specified'}", f"Source: {'user input' if payload.contract_address else 'auto-discovered public website hint'}"],
                     required_input=[str(exc), "Paste Solidity source as fallback for a live rule-engine scan"],
                     limitations=["No fake contract score is generated when explorer source fetch cannot run."],
                 )
@@ -921,9 +1194,9 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
             limitations=["Website URL cannot prove owner wallet, multisig, private key policy, or incident response readiness."],
         )
     )
-    if payload.github_repo_url:
+    if effective_github_repo_url:
         try:
-            github_report = await scan_github_repository(payload.github_repo_url, project_name=payload.project_name)
+            github_report = await scan_github_repository(str(effective_github_repo_url), project_name=payload.project_name)
             github_report_for_expansion = github_report
             reports.append(github_report)
             surface_hints["github_dependency_risk"] = _github_dependency_summary(github_report)
@@ -931,24 +1204,34 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
             module_cards.append(
                 _status_card(
                     "github",
-                    "Live",
+                    "Live" if payload.github_repo_url else "Auto-discovered live",
                     report=github_report,
                     evidence=[
                         f"Repo: {github_report.scan_metadata.get('repo', {}).get('url')}",
                         f"Branch: {github_report.scan_metadata.get('repo', {}).get('scanned_branch')}",
                         f"Files seen: {github_report.scan_metadata.get('structure_summary', {}).get('total_files_seen')}",
                         f"Dependency manifests summarized: {dependency_summary.get('dependency_manifest_count', 0) if isinstance(dependency_summary, dict) else 0}",
+                        f"Source: {'user input' if payload.github_repo_url else 'auto-discovered public website link'}",
                     ],
                     limitations=["Read-only public GitHub API/raw file scan. No clone, execution, dependency install, or fake OSV output."],
                 )
             )
-        except ValueError as exc:
+            github_static = _static_summary_from_tool_metadata(
+                (github_report.scan_metadata or {}).get("static_analysis_tools") if isinstance(github_report.scan_metadata, dict) else None,
+                report_id=github_report.report_id,
+                source_label="github_auto_discovered_solidity",
+            )
+            if github_static:
+                current_static = surface_hints.get("static_analysis") if isinstance(surface_hints.get("static_analysis"), dict) else _static_not_assessed_summary()
+                surface_hints["static_analysis"] = _merge_or_replace_static_summary(current_static, github_static)
+                _replace_module_card(module_cards, "static_analysis", _static_module_card(surface_hints["static_analysis"]))
+        except (ValueError, GitHubScanServiceError) as exc:
             surface_hints["github_dependency_risk"] = _github_dependency_summary(None, str(exc))
             module_cards.append(
                 _status_card(
                     "github",
                     "Input rejected",
-                    evidence=[f"Repository URL provided: {payload.github_repo_url}"],
+                    evidence=[f"Repository URL found/provided: {effective_github_repo_url}"],
                     required_input=[str(exc)],
                     limitations=["No fake GitHub score is generated when the repo cannot be fetched."],
                 )
@@ -1030,8 +1313,9 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "engine_version": "web3guard-unified-url-launch-scanner-v23.0-professional-phase-c-formal-fuzz-artifacts",
         "mode": "real_only_unified_url_scan",
         "website_url": safe_website_url,
-        "chain": payload.chain,
+        "chain": effective_chain,
         "project_type": payload.project_type,
+        "auto_discovery": auto_discovery,
         "realness_rule": "Only modules with real input/evidence receive a score. Missing modules are shown as Not assessed instead of fake scores.",
         "available_score": combined.get("combined", {}).get("available_score"),
         "overall_score": combined.get("combined", {}).get("overall_score") if _coverage_gate(module_cards, combined)["overall_confidence_allowed"] else None,
@@ -1066,7 +1350,8 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
             "Provide API base URL/code for backend review.",
             "Complete wallet-flow checklist for approval/signature UX.",
             "Complete founder/admin OpSec checklist for multisig/timelock/key policy.",
-            "Provide a public GitHub repo URL to run the Web3Guard read-only repo scanner and dependency-manifest summary.",
+            "Provide a public GitHub repo URL if auto-discovery could not find one on the website.",
+            "For URL-only automation, add GitHub/source/explorer links to the public website so Web3Guard can safely discover them.",
         ],
         "disclaimer": "This is a preliminary security review and does not replace a full manual audit. URL-only scans are partial by design.",
     }

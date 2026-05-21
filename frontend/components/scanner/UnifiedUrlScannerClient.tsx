@@ -406,6 +406,76 @@ function simpleGuideForAction(action: UnifiedUrlScanResponse["priority_actions"]
   };
 }
 
+
+function AutoDiscoveryCard({ result }: { result: UnifiedUrlScanResponse }) {
+  const discovery = plainRecord(result.surface_hints?.auto_discovery || (result as unknown as { auto_discovery?: unknown }).auto_discovery);
+  if (!Object.keys(discovery).length) return null;
+  const selected = plainRecord(discovery.selected);
+  const sources = plainRecord(discovery.selection_sources);
+  const actions = unknownArray(discovery.auto_actions).map(String);
+  const github = unknownString(selected.github_repo_url, "Not found");
+  const api = unknownString(selected.api_base_url, "Not found");
+  const contract = unknownString(selected.contract_address, "Not found");
+  const chain = unknownString(selected.chain, "Not found");
+  const foundCount = [selected.github_repo_url, selected.api_base_url, selected.contract_address].filter(Boolean).length;
+
+  const rows = [
+    { label: "GitHub/source", value: github, source: unknownString(sources.github_repo_url, "not_found"), help: "If found, Web3Guard runs the read-only repo scan automatically." },
+    { label: "API hint", value: api, source: unknownString(sources.api_base_url, "not_found"), help: "If found, only safe passive API checks run. No fuzzing or bypass." },
+    { label: "Contract address", value: contract, source: unknownString(sources.contract_address, "not_found"), help: "If chain/source can be proven, verified-source scan can run." },
+    { label: "Chain", value: chain, source: unknownString(sources.chain, "not_found"), help: "Needed before auto contract-address source checks are trusted." },
+  ];
+
+  return (
+    <CardShell className="border-violet-400/15 bg-violet-400/[0.035]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="section-label">Auto discovery</p>
+          <h2 className="mt-2 text-2xl font-black text-white">URL-only deep scan helper</h2>
+          <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-300">
+            You gave only a website URL. Web3Guard looked for public GitHub, API, contract, and explorer evidence from the website so beginners do not need to fill technical fields manually.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-violet-300/20 bg-violet-300/10 p-4 text-sm leading-6 text-violet-50 lg:min-w-[220px]">
+          <p className="font-black text-white">Auto found</p>
+          <p className="mt-2 text-3xl font-black text-white">{foundCount}/3</p>
+          <p className="mt-1 text-xs text-violet-100/80">GitHub · API · Contract</p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {rows.map((row) => {
+          const found = row.value !== "Not found";
+          return (
+            <div key={row.label} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-black text-white">{row.label}</p>
+                <span className={`badge ${found ? "badge-green" : ""}`}>{found ? "Found" : "Missing"}</span>
+              </div>
+              <p className="mt-3 break-words text-xs leading-5 text-slate-300">{row.value}</p>
+              <p className="mt-2 mono text-[10px] uppercase tracking-[0.14em] text-slate-500">{row.source.replaceAll("_", " ")}</p>
+              <p className="mt-2 text-xs leading-5 text-slate-500">{row.help}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {actions.length ? (
+        <div className="mt-5 rounded-2xl border border-emerald-400/15 bg-emerald-400/10 p-4">
+          <p className="text-sm font-black text-white">What Web3Guard did automatically</p>
+          <ul className="mt-3 space-y-2 text-sm leading-6 text-emerald-50/90">
+            {actions.map((action) => <li key={action}>• {action}</li>)}
+          </ul>
+        </div>
+      ) : (
+        <div className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-6 text-slate-400">
+          No deeper public repo/API/contract link was found from the website. Website checks still ran, and missing code/tool areas stay Not Assessed instead of fake passed/failed.
+        </div>
+      )}
+    </CardShell>
+  );
+}
+
 function BeginnerBugSummaryCard({ result }: { result: UnifiedUrlScanResponse }) {
   const actions = result.priority_actions || [];
   const criticalHigh = actions.filter((item) => item.severity === "critical" || item.severity === "high").length;
@@ -738,8 +808,25 @@ function buildInlineMarkdownReport(report: Record<string, unknown>) {
     "## Executive summary",
     String(report.executive_summary || "Evidence-first launch readiness summary."),
     "",
-    "## Split readiness scores",
+    "## Auto discovery from URL",
   ];
+
+  const autoDiscovery = plainRecord(report.auto_discovery_summary);
+  const autoSelected = plainRecord(autoDiscovery.selected);
+  if (Object.keys(autoDiscovery).length) {
+    lines.push(`- GitHub/source: ${String(autoSelected.github_repo_url || "Not found")}`);
+    lines.push(`- API hint: ${String(autoSelected.api_base_url || "Not found")}`);
+    lines.push(`- Contract address: ${String(autoSelected.contract_address || "Not found")}`);
+    lines.push(`- Chain: ${String(autoSelected.chain || "Not found")}`);
+    unknownArray(autoDiscovery.auto_actions).forEach((action) => lines.push(`  - Auto action: ${String(action)}`));
+  } else {
+    lines.push("No auto-discovery summary was attached to this scan payload.");
+  }
+
+  lines.push(
+    "",
+    "## Split readiness scores"
+  );
 
   split.forEach((item) => {
     lines.push(`- **${String(item.label)}**: ${typeof item.score === "number" ? item.score : "Not Assessed"} — ${String(item.status || "Not Assessed")}`);
@@ -896,6 +983,7 @@ function buildInlineReportFromResult(result: UnifiedUrlScanResponse) {
     evidence_required: evidenceRequired,
     founder_action_plan: buildFounderActionPlan(result, 8),
     gap_closure_plan: buildGapClosurePlan(result),
+    auto_discovery_summary: plainRecord(result.surface_hints?.auto_discovery || (result as unknown as { auto_discovery?: unknown }).auto_discovery),
     human_review_handoff: {
       status: buildGapClosurePlan(result).humanReview.status,
       recommended: buildGapClosurePlan(result).humanReview.needed,
@@ -2388,6 +2476,8 @@ export function UnifiedUrlScannerClient() {
             </CardShell>
 
             <BeginnerBugSummaryCard result={result} />
+
+            <AutoDiscoveryCard result={result} />
 
             <FounderReportPolishCard result={result} />
 
