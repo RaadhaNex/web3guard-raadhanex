@@ -22,6 +22,7 @@ from app.services.detection_expansion import build_detection_expansion_package
 from app.services.deep_evidence_accuracy import build_deep_evidence_accuracy_package
 from app.services.deep_scan_orchestrator import build_deep_scan_orchestrator
 from app.services.formal_fuzz_artifacts import analyze_formal_fuzz_artifacts, formal_fuzz_summary_from_report
+from app.services.professional_accuracy import accuracy_readiness_summary
 
 MODULE_LABELS = {
     "website": "Website Surface",

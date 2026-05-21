@@ -20,7 +20,8 @@ from app.services.solidity_utils import (
     sensitive_function_name,
 )
 
-ENGINE_VERSION = "web3guard-solidity-rule-engine-v2.2-phase-h-tuned"
+ENGINE_VERSION = "web3guard-solidity-rule-engine-v2.0"
+PROFESSIONAL_TUNING_VERSION = "web3guard-solidity-rule-engine-v2.2-phase-h-tuned"
 
 SECURITY_REFERENCES = {
     "reentrancy": ["SWC-107", "Checks-Effects-Interactions", "OpenZeppelin ReentrancyGuard"],
@@ -943,6 +944,7 @@ def scan_solidity(solidity_code: str, project_name: str | None = None, contract_
             "phase_b_rule_coverage": _phase_b_rule_coverage_summary(code, findings),
             "phase_h_rule_tuning": _phase_b_rule_coverage_summary(code, findings),
             "finding_engine": "professional_normalized_rule_engine_phase_h_tuned",
+            "professional_tuning_version": PROFESSIONAL_TUNING_VERSION,
             "real_only_note": "Local Solidity rules produce preliminary evidence only; findings require triage before certified-audit wording.",
         },
     )

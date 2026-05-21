@@ -114,7 +114,8 @@ def db_status() -> dict[str, Any]:
         "version": "1.0",
         "storage_mode_requested": settings.storage_mode,
         "storage_mode_active": active_storage_mode(),
-        "supabase_configured": supabase_configured(),
+        "supabase_configured": active_storage_mode() == "supabase",
+        "supabase_env_configured": supabase_configured(),
         "supabase_service_role_configured": supabase_configured(require_service_role=True),
         "supabase_jwt_verify_enabled": settings.supabase_jwt_verify_enabled,
         "local_files": {
