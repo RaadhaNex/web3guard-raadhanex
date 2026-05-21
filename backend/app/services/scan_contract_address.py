@@ -11,6 +11,7 @@ import httpx
 from app.core.config import settings
 from app.models.schemas import Finding, ModuleScore, ScanResponse
 from app.services.scan_contract import scan_solidity
+from app.services.static_analysis_tools import run_static_analysis
 from app.services.scoring import priority_actions, risk_label, score_findings, severity_breakdown
 
 EVM_ADDRESS_RE = re.compile(r"^0x[a-fA-F0-9]{40}$")
@@ -54,6 +55,47 @@ SUPPORTED_CHAINS = [
     {"key": "avalanche", "label": "Avalanche C-Chain", "chain_id": "43114"},
 ]
 
+LEGACY_EXPLORER_BY_CHAIN_ID: dict[str, tuple[str, str, str]] = {
+    "1": ("https://api.etherscan.io/api", "ETHERSCAN_API_KEY", "etherscan_api_key"),
+    "56": ("https://api.bscscan.com/api", "BSCSCAN_API_KEY", "bscscan_api_key"),
+    "137": ("https://api.polygonscan.com/api", "POLYGONSCAN_API_KEY", "polygonscan_api_key"),
+    "42161": ("https://api.arbiscan.io/api", "ARBISCAN_API_KEY", "arbiscan_api_key"),
+    "10": ("https://api-optimistic.etherscan.io/api", "OPTIMISMSCAN_API_KEY", "optimismscan_api_key"),
+    "8453": ("https://api.basescan.org/api", "BASESCAN_API_KEY", "basescan_api_key"),
+}
+
+
+def _explorer_credentials(chain_id: str) -> dict[str, Any]:
+    """Return a safe explorer API config.
+
+    Etherscan API V2 is preferred because it supports multi-chain scans with one
+    ETHERSCAN_API_KEY + chainid parameter. Chain-specific keys/endpoints remain
+    supported as a fallback for deployments that still use legacy explorer keys.
+    """
+    if settings.etherscan_api_key:
+        return {
+            "api_base": settings.etherscan_v2_api_base,
+            "api_key": settings.etherscan_api_key,
+            "env_key": "ETHERSCAN_API_KEY",
+            "mode": "etherscan_v2_chainid",
+            "chainid_param": chain_id,
+        }
+    legacy = LEGACY_EXPLORER_BY_CHAIN_ID.get(chain_id)
+    if legacy:
+        api_base, env_key, attr = legacy
+        api_key = getattr(settings, attr, None)
+        if api_key:
+            return {
+                "api_base": api_base,
+                "api_key": api_key,
+                "env_key": env_key,
+                "mode": "legacy_chain_specific_explorer",
+                "chainid_param": None,
+            }
+        raise ValueError(f"Chain API key not configured. Set ETHERSCAN_API_KEY or {env_key}. Paste Solidity source manually.")
+    raise ValueError("Chain API key not configured for this chain. Paste Solidity source manually.")
+
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -89,6 +131,13 @@ def explorer_status() -> dict[str, Any]:
         "version": "1.0",
         "mode": "verified_source_fetch",
         "etherscan_v2_enabled": bool(settings.etherscan_api_key),
+        "legacy_chain_keys_configured": {
+            "polygon": bool(settings.polygonscan_api_key),
+            "bsc": bool(settings.bscscan_api_key),
+            "arbitrum": bool(settings.arbiscan_api_key),
+            "optimism": bool(settings.optimismscan_api_key),
+            "base": bool(settings.basescan_api_key),
+        },
         "api_base": settings.etherscan_v2_api_base,
         "supported_chains": SUPPORTED_CHAINS,
         "limits": {
@@ -102,7 +151,7 @@ def explorer_status() -> dict[str, Any]:
             "No transaction signing",
             "No wallet connection",
             "No bytecode decompilation yet",
-            "Slither/Aderyn/Mythril not run in address scan mode",
+            "Slither/Semgrep/Aderyn run only when STATIC_ANALYSIS_ENABLED=true and binaries are installed",
             "No certified audit wording",
         ],
     }
@@ -147,23 +196,25 @@ def _finding(
     )
 
 
-async def _etherscan_call(params: dict[str, str]) -> dict[str, Any]:
-    if not settings.etherscan_api_key:
-        raise ValueError("Explorer API key is missing. Add ETHERSCAN_API_KEY to backend .env to fetch verified contract source.")
-    query = {**params, "apikey": settings.etherscan_api_key}
+async def _etherscan_call(params: dict[str, str], chain_id: str) -> dict[str, Any]:
+    credentials = _explorer_credentials(chain_id)
+    query = {**params, "apikey": credentials["api_key"]}
+    if credentials.get("chainid_param"):
+        query["chainid"] = str(credentials["chainid_param"])
     timeout = httpx.Timeout(settings.explorer_scan_timeout_seconds)
     async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
-        response = await client.get(settings.etherscan_v2_api_base, params=query, headers={"User-Agent": "Web3GuardAI-RAADHANEX-ExplorerScanner/12.0"})
+        response = await client.get(credentials["api_base"], params=query, headers={"User-Agent": "Web3GuardAI-RAADHANEX-ExplorerScanner/13.0"})
     if response.status_code >= 400:
         raise ValueError(f"Explorer API returned HTTP {response.status_code}.")
     data = response.json()
     if str(data.get("status")) == "0" and not data.get("result"):
         raise ValueError(str(data.get("message") or "Explorer API returned an error."))
+    data.setdefault("_web3guard_explorer", {"mode": credentials["mode"], "env_key": credentials["env_key"], "api_base": credentials["api_base"]})
     return data
 
 
 async def fetch_contract_source(address: str, chain_id: str) -> dict[str, Any]:
-    data = await _etherscan_call({"chainid": chain_id, "module": "contract", "action": "getsourcecode", "address": address})
+    data = await _etherscan_call({"module": "contract", "action": "getsourcecode", "address": address}, chain_id)
     result = data.get("result")
     if not isinstance(result, list) or not result:
         raise ValueError("Explorer API did not return a contract source result.")
@@ -175,7 +226,7 @@ async def fetch_contract_source(address: str, chain_id: str) -> dict[str, Any]:
 
 async def fetch_contract_abi(address: str, chain_id: str) -> list[dict[str, Any]] | None:
     try:
-        data = await _etherscan_call({"chainid": chain_id, "module": "contract", "action": "getabi", "address": address})
+        data = await _etherscan_call({"module": "contract", "action": "getabi", "address": address}, chain_id)
         result = data.get("result")
         if isinstance(result, str) and result and result not in {"Contract source code not verified", "Max rate limit reached"}:
             parsed = json.loads(result)
@@ -384,11 +435,12 @@ async def scan_contract_address(address: str, chain: str | None = None, project_
             severity_breakdown=severity_breakdown(findings),
             priority_actions=priority_actions(findings),
             input_hash=_hash(f"{chain_id}:{normalized_address}"),
-            engine_version="web3guard-contract-address-engine-v12.0",
+            engine_version="web3guard-contract-address-engine-v13.0",
             scan_metadata={
                 "address": normalized_address,
                 "chain_id": chain_id,
                 "source_verified": False,
+                "not_assessed": [{"module": "contract_static_tools", "reason": "Contract source not verified on Etherscan-compatible explorer. Paste Solidity source manually for full scan."}],
                 "explorer_record": {k: record.get(k) for k in ["ContractName", "CompilerVersion", "Proxy", "Implementation"]},
                 "abi_summary": abi_meta,
                 "safety_controls": {"private_key_collection": False, "wallet_connection": False, "transaction_signing": False, "bytecode_decompilation": False},
@@ -396,10 +448,25 @@ async def scan_contract_address(address: str, chain: str | None = None, project_
         )
 
     contract_type = str(record.get("ContractName") or "Verified Contract")
-    rule_report = scan_solidity(source_text, project_name=project_name or str(record.get("ContractName") or normalized_address), contract_type=contract_type)
+    contract_name = str(record.get("ContractName") or normalized_address)
+    rule_report = scan_solidity(source_text, project_name=project_name or contract_name, contract_type=contract_type)
     metadata_findings = _metadata_findings(record, abi_meta, source_text)
-    findings = rule_report.findings + metadata_findings
-    score = score_findings(findings)
+    tool_report = None
+    tool_error: str | None = None
+    try:
+        tool_report = run_static_analysis(
+            source_text,
+            project_name=project_name or contract_name,
+            file_name=f"{contract_name}.sol",
+            requested_tools=["slither", "semgrep", "aderyn"],
+        )
+    except Exception as exc:
+        tool_error = str(exc)[:500]
+    tool_findings = tool_report.findings if tool_report else []
+    findings = rule_report.findings + metadata_findings + tool_findings
+    score = score_findings([f for f in findings if f.category != "tool_status"])
+    if findings and all(f.category == "tool_status" for f in findings):
+        score = 98
     metadata = {
         **(rule_report.scan_metadata or {}),
         "address": normalized_address,
@@ -418,13 +485,15 @@ async def scan_contract_address(address: str, chain: str | None = None, project_
             "evm_version": record.get("EVMVersion"),
         },
         "abi_summary": abi_meta,
+        "static_analysis_tools": (tool_report.scan_metadata if tool_report else {"state": "Tool Not Installed / Provider Not Configured / Not Assessed", "error": tool_error}),
         "safety_controls": {
             "verified_source_fetch": True,
             "private_key_collection": False,
             "wallet_connection": False,
             "transaction_signing": False,
             "bytecode_decompilation": False,
-            "slither_aderyn_mythril": False,
+            "slither_semgrep_aderyn_auto_attempt": True,
+            "slither_semgrep_aderyn_requires_worker_config": True,
         },
     }
     return ScanResponse(
@@ -436,6 +505,6 @@ async def scan_contract_address(address: str, chain: str | None = None, project_
         severity_breakdown=severity_breakdown(findings),
         priority_actions=priority_actions(findings),
         input_hash=_hash(f"{chain_id}:{normalized_address}:{source_text[:5000]}"),
-        engine_version="web3guard-contract-address-engine-v12.0",
+        engine_version="web3guard-contract-address-engine-v13.0",
         scan_metadata=metadata,
     )

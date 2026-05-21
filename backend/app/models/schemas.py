@@ -24,13 +24,10 @@ class Finding(BaseModel):
     severity: Severity
     title: str
     description: str
-    # Exact evidence location/output fields used by professional reports.
     affected_file: str | None = None
     affected_line: int | None = None
     affected_column: int | None = None
     end_line: int | None = None
-    evidence: str | None = None
-    fix: str | None = None
     affected_function: str | None = None
     affected_code: str | None = None
     confidence: Confidence = "medium"

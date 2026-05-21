@@ -12,9 +12,9 @@ import httpx
 from app.core.config import settings
 from app.models.schemas import Finding, ModuleScore, ScanResponse
 from app.services.scan_contract import scan_solidity
+from app.services.static_analysis_tools import run_static_analysis_files
 from app.services.scan_dapp_api import scan_api_backend, scan_dapp_frontend
 from app.services.scoring import priority_actions, risk_label, score_findings, severity_breakdown
-from app.services.accuracy_upgrade import run_dependency_osv_engine
 
 GITHUB_OWNER_REPO_RE = re.compile(r"^[A-Za-z0-9_.-]{1,100}$")
 EVM_ADDRESS_RE = re.compile(r"0x[a-fA-F0-9]{40}")
@@ -163,8 +163,6 @@ def _finding(
         severity=severity,  # type: ignore[arg-type]
         title=title,
         description=description,
-        evidence=snippet or description,
-        fix=recommendation,
         affected_file=path,
         affected_line=line,
         affected_function=None,
@@ -509,6 +507,7 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
         fetched_files: list[dict[str, Any]] = []
         linked_reports: list[dict[str, Any]] = []
         dependency_manifests: list[dict[str, Any]] = []
+        solidity_sources: list[dict[str, str]] = []
         total_bytes = 0
 
         priority_paths: list[str] = []
@@ -549,6 +548,7 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
             findings.extend(_content_findings(path, raw, idx))
             idx = len(findings) + 1
             if path.endswith(".sol"):
+                solidity_sources.append({"path": path, "content": raw})
                 try:
                     contract_report = scan_solidity(raw, project_name or repo, "GitHub Solidity")
                     linked_reports.append({
@@ -565,8 +565,6 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
                             "id": f"github-contract-{idx:03d}-{_hash(path + finding.id)[:6]}",
                             "source": f"GitHub Solidity Rule Engine ({path})",
                             "affected_file": path,
-                            "evidence": f"{path}:{finding.affected_line or '?'} — {finding.affected_code or finding.title}",
-                            "fix": finding.recommendation,
                             "affected_code": f"{path}:{finding.affected_line or '?'} — {finding.affected_code or finding.title}",
                         })
                         findings.append(data)
@@ -588,44 +586,6 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
                     ))
                     idx += 1
 
-        osv_dependency_engine = await run_dependency_osv_engine(manifests=dependency_manifests)
-        if isinstance(osv_dependency_engine, dict):
-            osv_payload = osv_dependency_engine.get("osv", {}) if isinstance(osv_dependency_engine.get("osv"), dict) else {}
-            vulnerabilities = osv_payload.get("vulnerabilities", []) if isinstance(osv_payload, dict) else []
-            iterable_vulns = vulnerabilities[:20] if isinstance(vulnerabilities, list) else []
-            for vuln in iterable_vulns:
-                if not isinstance(vuln, dict):
-                    continue
-                severity = "high"
-                raw_severity = str(vuln.get("severity") or vuln.get("database_specific") or "").lower()
-                if "critical" in raw_severity:
-                    severity = "critical"
-                package = str(vuln.get("package") or "unknown-package")
-                version = str(vuln.get("version") or "unknown-version")
-                advisory = str(vuln.get("id") or "OSV advisory")
-                manifest = str(vuln.get("manifest") or "package.json")
-                findings.append(_finding(
-                    idx=idx,
-                    severity=severity,
-                    title=f"OSV Vulnerability Matched: {package}@{version}",
-                    description=f"OSV matched dependency {package}@{version} to advisory {advisory}: {str(vuln.get('summary') or 'No summary supplied by OSV')[:500]}",
-                    category="dependency_cve",
-                    rule_id=f"GITHUB-OSV-{advisory}",
-                    confidence="high",
-                    source="OSV.dev Real Dependency Advisory",
-                    business_impact="Known vulnerable dependencies can expose frontend, API, wallet, build, or deployment surfaces depending on package usage.",
-                    developer_explanation=str(vuln.get("proof") or f"OSV returned {advisory} for {package}@{version}"),
-                    recommendation="Upgrade to a patched version, review advisory impact, regenerate lockfiles, run tests, and redeploy after verifying no vulnerable transitive version remains.",
-                    path=manifest,
-                    line=None,
-                    snippet=str(vuln.get("proof") or advisory),
-                    paid=severity in {"critical", "high"},
-                    refs=[advisory, "OSV.dev"],
-                ))
-                idx += 1
-        else:
-            osv_dependency_engine = {"state": "Not Assessed", "reason": "OSV dependency engine did not return a structured result."}
-
         package_texts = []
         api_texts = []
         frontend_texts = []
@@ -637,6 +597,50 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
                 api_texts.append(path)
             if path in summary["frontend_like_files"]:
                 frontend_texts.append(path)
+
+        static_tool_summary: dict[str, Any] | None = None
+        if solidity_sources:
+            try:
+                static_report = run_static_analysis_files(
+                    solidity_sources,
+                    project_name=project_name or repo,
+                    requested_tools=["slither", "semgrep", "aderyn"],
+                )
+                static_tool_summary = static_report.scan_metadata
+                linked_reports.append({
+                    "module": "static_analysis",
+                    "score": static_report.module_score.score,
+                    "risk_label": static_report.module_score.risk_label,
+                    "findings_count": len(static_report.findings),
+                    "critical_high_count": sum(1 for f in static_report.findings if f.severity in {"critical", "high"}),
+                    "report_id": static_report.report_id,
+                    "source": "github_solidity_auto_tools",
+                })
+                for finding in static_report.findings[: settings.max_total_static_findings]:
+                    data = finding.model_copy(update={
+                        "id": f"github-static-{idx:03d}-{_hash((finding.affected_file or '') + finding.id)[:6]}",
+                        "source": f"GitHub Solidity Static Tool Runner ({finding.source})",
+                    })
+                    findings.append(data)
+                    idx += 1
+            except Exception as exc:
+                static_tool_summary = {"state": "Not Assessed", "reason": str(exc)[:500]}
+                findings.append(_finding(
+                    idx=idx,
+                    severity="info",
+                    title="Static Tool Runner Not Completed",
+                    description="GitHub Solidity files were fetched, but Slither/Semgrep/Aderyn auto-run did not complete.",
+                    category="tool_status",
+                    rule_id="GITHUB-STATIC-TOOLS-NOT-COMPLETED",
+                    confidence="high",
+                    source="GitHub Static Tool Runner",
+                    business_impact="No fake tool findings were generated; only local rule-engine and repository evidence are shown.",
+                    developer_explanation=str(exc)[:240],
+                    recommendation="Enable STATIC_ANALYSIS_ENABLED and install Slither/Semgrep/Aderyn on an isolated backend worker, or paste real JSON artifacts.",
+                ))
+                idx += 1
+        else:
+            static_tool_summary = {"state": "Not Assessed", "reason": "No Solidity files were fetched from this public repository."}
 
     # Add structure-level findings after fetch completes.
     if summary["solidity_count"] == 0:
@@ -705,9 +709,9 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
         },
         "structure_summary": summary,
         "dependency_manifests": dependency_manifests,
-        "dependency_osv_engine": osv_dependency_engine,
         "fetched_files": fetched_files,
         "linked_contract_reports": linked_reports,
+        "static_analysis_tools": static_tool_summary,
         "safety_controls": {
             "clone_repo": False,
             "execute_code": False,
@@ -727,7 +731,7 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
         severity_breakdown=severity_breakdown(findings),
         priority_actions=priority_actions(findings, limit=8),
         input_hash=_hash(f"{owner}/{repo}@{effective_branch}|{len(limited_paths)}")[:16],
-        engine_version="web3guard-github-repo-scanner-v12.1-osv-path-line",
+        engine_version="web3guard-github-repo-scanner-v11.0",
         scan_metadata=metadata,
         disclaimer="This is a read-only public GitHub repository readiness scan. It does not clone, execute, install, exploit, or replace a full manual audit.",
     )
@@ -754,7 +758,7 @@ def github_scanner_status() -> dict[str, Any]:
             "No repository cloning",
             "No dependency install or npm audit execution",
             "No private repo scan unless a real GitHub token is configured and authorized",
-            "No Slither/Aderyn/Mythril execution in current",
+            "Slither/Semgrep/Aderyn run only when STATIC_ANALYSIS_ENABLED=true and binaries are installed",
             "No automatic code patching",
         ],
         "limits": {

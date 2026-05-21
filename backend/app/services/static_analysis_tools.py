@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -114,8 +115,23 @@ def _safe_filename(name: str) -> str:
     return cleaned[:120]
 
 
+def _safe_relative_sol_path(path: str | None, fallback: str) -> Path:
+    raw = (path or fallback or "Contract.sol").replace("\\", "/").strip().lstrip("/")
+    parts = []
+    for part in raw.split("/"):
+        if not part or part in {".", ".."}:
+            continue
+        parts.append(re.sub(r"[^a-zA-Z0-9_.-]", "_", part)[:100] or "file")
+    if not parts:
+        parts = [_safe_filename(fallback)]
+    if not parts[-1].endswith(".sol"):
+        parts[-1] = _safe_filename(parts[-1])
+    return Path(*parts)
+
+
 def _base_finding(idx: int, *, tool: str, severity: str, title: str, description: str, code: str | None = None,
-                  line: int | None = None, confidence: str = "medium", rule_id: str | None = None,
+                  line: int | None = None, file_path: str | None = None, column: int | None = None,
+                  confidence: str = "medium", rule_id: str | None = None,
                   category: str = "static_analysis") -> Finding:
     return Finding(
         id=f"static-{tool}-{idx:03d}",
@@ -123,7 +139,9 @@ def _base_finding(idx: int, *, tool: str, severity: str, title: str, description
         severity=severity,  # type: ignore[arg-type]
         title=title,
         description=description,
+        affected_file=file_path,
         affected_line=line,
+        affected_column=column,
         affected_function=None,
         affected_code=code,
         confidence=confidence,  # type: ignore[arg-type]
@@ -186,12 +204,14 @@ def _parse_slither_json(path: Path) -> list[Finding]:
         first = elements[0] if elements else {}
         source_mapping = first.get("source_mapping", {}) if isinstance(first, dict) else {}
         line = None
+        file_path = None
         if isinstance(source_mapping, dict):
             lines = source_mapping.get("lines") or []
             line = lines[0] if lines else None
+            file_path = source_mapping.get("filename_relative") or source_mapping.get("filename_used") or source_mapping.get("filename_absolute") or source_mapping.get("filename")
         check = str(item.get("check") or "slither-detector")
         description = str(item.get("description") or item.get("markdown") or "Slither reported a potential issue.")
-        findings.append(_base_finding(idx, tool="slither", severity=severity, title=check.replace("-", " ").title(), description=description, line=line, confidence="high", rule_id=f"SLITHER-{check}"))
+        findings.append(_base_finding(idx, tool="slither", severity=severity, title=check.replace("-", " ").title(), description=description, line=line, file_path=str(file_path) if file_path else None, confidence="high", rule_id=f"SLITHER-{check}"))
     return findings
 
 
@@ -211,10 +231,12 @@ def _parse_semgrep_json(raw: str) -> list[Finding]:
         severity = {"ERROR": "high", "WARNING": "medium", "INFO": "info"}.get(raw_sev, "medium")
         start = item.get("start") or {}
         line = start.get("line") if isinstance(start, dict) else None
+        column = start.get("col") if isinstance(start, dict) and isinstance(start.get("col"), int) else None
+        file_path = item.get("path") if isinstance(item.get("path"), str) else None
         code = extra.get("lines")
         rule_id = str(item.get("check_id") or "semgrep-rule")
         message = str(extra.get("message") or "Semgrep reported a pattern match.")
-        findings.append(_base_finding(idx, tool="semgrep", severity=severity, title=rule_id.split(".")[-1].replace("-", " ").title(), description=message, code=code, line=line, confidence="medium", rule_id=f"SEMGREP-{rule_id}"))
+        findings.append(_base_finding(idx, tool="semgrep", severity=severity, title=rule_id.split(".")[-1].replace("-", " ").title(), description=message, code=code, line=line, file_path=file_path, column=column, confidence="medium", rule_id=f"SEMGREP-{rule_id}"))
     return findings
 
 
@@ -245,7 +267,11 @@ def _parse_aderyn_json(path: Path) -> list[Finding]:
         sev_raw = str(item.get("severity") or item.get("impact") or "medium").lower()
         severity = {"critical": "critical", "high": "high", "medium": "medium", "low": "low", "info": "info", "informational": "info"}.get(sev_raw, "medium")
         line = item.get("line") or item.get("line_number")
-        findings.append(_base_finding(idx, tool="aderyn", severity=severity, title=title, description=desc, line=line if isinstance(line, int) else None, confidence="medium", rule_id=f"ADERYN-{sha12(title)[:8]}"))
+        file_path = (item.get("path") or item.get("file") or item.get("filename") or item.get("source_path"))
+        if not isinstance(file_path, str):
+            loc = item.get("location") if isinstance(item.get("location"), dict) else {}
+            file_path = loc.get("file") or loc.get("path") if isinstance(loc, dict) else None
+        findings.append(_base_finding(idx, tool="aderyn", severity=severity, title=title, description=desc, line=line if isinstance(line, int) else None, file_path=file_path if isinstance(file_path, str) else None, confidence="medium", rule_id=f"ADERYN-{sha12(title)[:8]}"))
     return findings
 
 
@@ -272,9 +298,42 @@ def _tool_disabled_finding(idx: int, tool: str, reason: str) -> Finding:
     )
 
 
-def run_static_analysis(solidity_code: str, project_name: str | None, file_name: str, requested_tools: list[str]) -> ScanResponse:
-    if len(solidity_code) > settings.max_static_analysis_code_chars:
-        raise ValueError(f"Solidity input is too large for Web3Guard static analysis limit ({settings.max_static_analysis_code_chars} chars)")
+def _execute_tool(tool: str, tool_info: dict[str, Any], workdir: Path, primary_source_path: Path, timeout: int) -> tuple[str, dict[str, Any], list[Finding]]:
+    try:
+        if tool == "slither":
+            out = workdir / "slither.json"
+            args = [tool_info["path"], str(primary_source_path), "--json", str(out), "--disable-color"]
+            run = _run_command(args, workdir, timeout)
+            parsed = _parse_slither_json(out)
+        elif tool == "semgrep":
+            args = [tool_info["path"], "--config", str(SEMGRP_RULE_FILE), "--json", "--no-git-ignore", str(workdir)]
+            run = _run_command(args, workdir, timeout)
+            parsed = _parse_semgrep_json(run.get("stdout", ""))
+        else:
+            out = workdir / "aderyn.json"
+            template = settings.aderyn_command_template
+            args = [part for part in template.format(binary=tool_info["path"], root=str(workdir), output=str(out)).split(" ") if part]
+            run = _run_command(args, workdir, timeout)
+            parsed = _parse_aderyn_json(out)
+        return tool, run, parsed
+    except Exception as exc:
+        return tool, {"ok": False, "returncode": None, "stdout": "", "stderr": str(exc)[:2000], "timed_out": False, "error": str(exc)[:500]}, []
+
+
+def run_static_analysis_files(source_files: list[dict[str, str]], project_name: str | None, requested_tools: list[str]) -> ScanResponse:
+    normalized_files: list[dict[str, str]] = []
+    total_chars = 0
+    for idx, item in enumerate(source_files, start=1):
+        content = item.get("content") or ""
+        if not content.strip():
+            continue
+        total_chars += len(content)
+        if total_chars > settings.max_static_analysis_code_chars:
+            raise ValueError(f"Solidity input is too large for Web3Guard static analysis limit ({settings.max_static_analysis_code_chars} chars)")
+        normalized_files.append({"path": item.get("path") or f"Contract{idx}.sol", "content": content})
+    if not normalized_files:
+        raise ValueError("No Solidity source files were supplied for static analysis.")
+
     valid_tools = [tool for tool in requested_tools if tool in SUPPORTED_TOOLS]
     if not valid_tools:
         valid_tools = list(SUPPORTED_TOOLS)
@@ -285,11 +344,18 @@ def run_static_analysis(solidity_code: str, project_name: str | None, file_name:
     try:
         workdir = temp_root / "workspace"
         workdir.mkdir(parents=True, exist_ok=True)
-        source_path = workdir / _safe_filename(file_name)
-        source_path.write_text(solidity_code, encoding="utf-8")
+        written_paths: list[Path] = []
+        for idx, item in enumerate(normalized_files, start=1):
+            rel = _safe_relative_sol_path(item.get("path"), f"Contract{idx}.sol")
+            path = workdir / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(item["content"], encoding="utf-8")
+            written_paths.append(path)
+        primary_source_path = written_paths[0]
 
         status = static_analysis_status()
         next_idx = 1
+        runnable: list[tuple[str, dict[str, Any]]] = []
         for tool in valid_tools:
             tool_info = status["tools"][tool]
             if not settings.static_analysis_enabled:
@@ -304,32 +370,24 @@ def run_static_analysis(solidity_code: str, project_name: str | None, file_name:
                 findings.append(_tool_disabled_finding(next_idx, tool, f"{tool} binary was not found on PATH/configured path.")); next_idx += 1
                 tool_runs[tool] = {"status": "not_installed", "real_findings": 0}
                 continue
+            runnable.append((tool, tool_info))
 
-            if tool == "slither":
-                out = workdir / "slither.json"
-                args = [tool_info["path"], str(source_path), "--json", str(out), "--disable-color"]
-                run = _run_command(args, workdir, settings.audit_tool_timeout_seconds)
-                parsed = _parse_slither_json(out)
-            elif tool == "semgrep":
-                args = [tool_info["path"], "--config", str(SEMGRP_RULE_FILE), "--json", "--no-git-ignore", str(workdir)]
-                run = _run_command(args, workdir, settings.audit_tool_timeout_seconds)
-                parsed = _parse_semgrep_json(run.get("stdout", ""))
-            else:
-                out = workdir / "aderyn.json"
-                template = settings.aderyn_command_template
-                args = [part for part in template.format(binary=tool_info["path"], root=str(workdir), output=str(out)).split(" ") if part]
-                run = _run_command(args, workdir, settings.audit_tool_timeout_seconds)
-                parsed = _parse_aderyn_json(out)
+        timeout = max(int(settings.audit_tool_timeout_seconds or 60), 60)
+        if runnable:
+            with ThreadPoolExecutor(max_workers=min(3, len(runnable))) as executor:
+                future_map = {executor.submit(_execute_tool, tool, tool_info, workdir, primary_source_path, timeout): tool for tool, tool_info in runnable}
+                for future in as_completed(future_map):
+                    tool, run, parsed = future.result()
+                    tool_runs[tool] = {**run, "status": "completed" if run.get("ok") else "completed_with_errors", "real_findings": len(parsed)}
+                    findings.extend(parsed)
+                    if not parsed and run.get("ok"):
+                        findings.append(_tool_disabled_finding(next_idx, tool, f"{tool} ran successfully and returned no parsed findings.")); next_idx += 1
+                    elif not run.get("ok") and not parsed:
+                        reason = "timed out" if run.get("timed_out") else f"returned code {run.get('returncode')}"
+                        if run.get("error"):
+                            reason = str(run.get("error"))[:220]
+                        findings.append(_tool_disabled_finding(next_idx, tool, f"{tool} attempted a real run but {reason}. Check tool logs in scan metadata.")); next_idx += 1
 
-            tool_runs[tool] = {**run, "status": "completed" if run.get("ok") else "completed_with_errors", "real_findings": len(parsed)}
-            findings.extend(parsed)
-            if not parsed and run.get("ok"):
-                findings.append(_tool_disabled_finding(next_idx, tool, f"{tool} ran successfully and returned no parsed findings.")); next_idx += 1
-            elif not run.get("ok") and not parsed:
-                reason = "timed out" if run.get("timed_out") else f"returned code {run.get('returncode')}"
-                findings.append(_tool_disabled_finding(next_idx, tool, f"{tool} attempted a real run but {reason}. Check tool logs in scan metadata.")); next_idx += 1
-
-        # If only tool status info findings exist, keep a high score but mark evidence limited.
         score = score_findings(findings)
         if findings and all(f.category == "tool_status" and f.severity == "info" for f in findings):
             score = 98
@@ -337,6 +395,10 @@ def run_static_analysis(solidity_code: str, project_name: str | None, file_name:
             "tool_status": status["tools"],
             "tool_runs": tool_runs,
             "requested_tools": valid_tools,
+            "source_files_written": [str(path.relative_to(workdir)) for path in written_paths],
+            "source_file_count": len(written_paths),
+            "parallel_tool_execution": bool(runnable),
+            "timeout_seconds_per_tool": timeout,
             "safety_controls": status["safety_controls"],
             "workspace_mode": "temporary_local_workspace_deleted_after_scan",
             "real_only_note": "Only parsed output from actually installed/enabled tools is treated as tool evidence. Tool status messages are informational and are not fake vulnerabilities.",
@@ -347,12 +409,16 @@ def run_static_analysis(solidity_code: str, project_name: str | None, file_name:
             project_name=project_name,
             module_score=ModuleScore(module="static_analysis", score=score, risk_label=risk_label(score), assessed=True),  # type: ignore[arg-type]
             findings=findings[: settings.max_total_static_findings],
-            severity_breakdown=severity_breakdown(findings),
+            severity_breakdown=severity_breakdown([f for f in findings if f.category != "tool_status"]),
             priority_actions=priority_actions([f for f in findings if f.category != "tool_status"]),
-            input_hash=sha12(solidity_code),
+            input_hash=sha12("|".join(item["path"] + item["content"] for item in normalized_files)),
             engine_version=ENGINE_VERSION,
             scan_metadata=metadata,
         )
     finally:
         if settings.audit_tool_cleanup_workspace:
             shutil.rmtree(temp_root, ignore_errors=True)
+
+
+def run_static_analysis(solidity_code: str, project_name: str | None, file_name: str, requested_tools: list[str]) -> ScanResponse:
+    return run_static_analysis_files([{"path": file_name, "content": solidity_code}], project_name, requested_tools)

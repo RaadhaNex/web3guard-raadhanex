@@ -91,6 +91,11 @@ class Settings(BaseSettings):
 
     # verified contract address scanner via Etherscan API V2-compatible explorer API.
     etherscan_api_key: str | None = None
+    polygonscan_api_key: str | None = None
+    bscscan_api_key: str | None = None
+    arbiscan_api_key: str | None = None
+    optimismscan_api_key: str | None = None
+    basescan_api_key: str | None = None
     etherscan_v2_api_base: str = "https://api.etherscan.io/v2/api"
     explorer_scan_timeout_seconds: int = 15
     max_contract_address_scan_per_hour: int = 25
@@ -106,7 +111,7 @@ class Settings(BaseSettings):
     aderyn_binary: str | None = None
     semgrep_binary: str | None = None
     aderyn_command_template: str = "{binary} --root {root} --output {output}"
-    audit_tool_timeout_seconds: int = 45
+    audit_tool_timeout_seconds: int = 60
     audit_tool_max_output_chars: int = 16000
     audit_tool_cleanup_workspace: bool = True
     max_static_analysis_code_chars: int = 180000

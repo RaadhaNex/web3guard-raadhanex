@@ -58,7 +58,7 @@ contract VerifiedRisk {
 
     monkeypatch.setattr(svc, 'fetch_contract_source', fake_fetch_contract_source)
     result = await svc.scan_contract_address('0x' + 'b' * 40, chain='ethereum', project_name='Verified Risk')
-    assert result.engine_version == 'web3guard-contract-address-engine-v12.0'
+    assert result.engine_version == 'web3guard-contract-address-engine-v13.0'
     assert result.scan_metadata['source_verified'] is True
     assert result.scan_metadata['chain_id'] == '1'
     assert result.module_score.module == 'contract'
