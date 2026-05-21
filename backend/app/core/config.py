@@ -81,6 +81,12 @@ class Settings(BaseSettings):
     professional_monitoring_baselines_file: str = "app/data/db/professional_monitoring_baselines.jsonl"
     professional_monitoring_events_file: str = "app/data/db/professional_monitoring_events.jsonl"
     professional_monitoring_runs_file: str = "app/data/db/professional_monitoring_runs.jsonl"
+    professional_direct_level_snapshots_file: str = "app/data/db/professional_direct_level_snapshots.jsonl"
+    professional_webhook_events_file: str = "app/data/db/professional_webhook_events.jsonl"
+    professional_direct_level_network_enabled: bool = False
+    github_webhook_secret: str | None = None
+    onchain_webhook_secret: str | None = None
+    professional_direct_level_min_reviewers: int = 2
 
     # SecureScore Pro dashboard + finding workflow persistence.
     db_finding_workflow_file: str = "app/data/db/finding_workflow.jsonl"
