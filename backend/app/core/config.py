@@ -104,6 +104,7 @@ class Settings(BaseSettings):
     professional_worker_timeout_seconds: int = 90
     professional_worker_max_output_chars: int = 18000
     professional_worker_max_code_chars: int = 180000
+    professional_production_qa_runs_file: str = "app/data/db/professional_production_qa_runs.jsonl"
 
     # SecureScore Pro dashboard + finding workflow persistence.
     db_finding_workflow_file: str = "app/data/db/finding_workflow.jsonl"

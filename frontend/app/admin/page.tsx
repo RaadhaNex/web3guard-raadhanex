@@ -14,6 +14,12 @@ const adminModules = [
     text: "Production env checklist, webhook readiness, safe worker gate, and final real-world setup actions.",
   },
   {
+    title: "Production QA",
+    href: "/professional/production-qa",
+    badge: "Phase U",
+    text: "First real production QA, local/build/live smoke checklist, launch decision, and competitor-level gap matrix.",
+  },
+  {
     title: "Reviewer Onboarding",
     href: "/admin/reviewers",
     badge: "Phase R",
