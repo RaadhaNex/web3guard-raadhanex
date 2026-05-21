@@ -284,6 +284,36 @@ type SimpleFindingGuide = {
   whyNotExploitClaim: string;
 };
 
+type FounderActionItem = {
+  title: string;
+  module: string;
+  severity: string;
+  type: string;
+  badgeClass: string;
+  plainProblem: string;
+  plainRisk: string;
+  fixNow: string;
+  owner: string;
+  effort: string;
+  verify: string;
+  launchDecision: string;
+};
+
+type GapClosurePlan = {
+  staticAnalysis: {
+    status: string;
+    reason: string;
+    safePaths: string[];
+    tools: StaticToolUiRow[];
+  };
+  humanReview: {
+    status: string;
+    reason: string;
+    safePaths: string[];
+    needed: boolean;
+  };
+};
+
 function simpleOwner(module?: string | null, title?: string | null) {
   const text = `${module || ""} ${title || ""}`.toLowerCase();
   if (text.includes("contract") || text.includes("solidity") || text.includes("slither") || text.includes("aderyn")) return "Smart contract developer / auditor";
@@ -567,6 +597,81 @@ function staticToolSummary(result: UnifiedUrlScanResponse | null) {
   };
 }
 
+function buildFounderActionPlan(result: UnifiedUrlScanResponse, limit = 5): FounderActionItem[] {
+  const actions = [...(result.priority_actions || [])].sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
+  const mapped = actions.map((action) => {
+    const simple = simpleGuideForAction(action);
+    return {
+      title: action.title || "Launch-readiness issue",
+      module: action.module_label || action.module || "general",
+      severity: action.severity || "info",
+      type: simple.label,
+      badgeClass: simple.badgeClass,
+      plainProblem: simple.simpleProblem,
+      plainRisk: simple.simpleRisk,
+      fixNow: simple.fixNow,
+      owner: simple.owner,
+      effort: simple.effort,
+      verify: simple.verify,
+      launchDecision: simple.launchDecision,
+    };
+  });
+
+  if (mapped.length) return mapped.slice(0, limit);
+
+  const missingCards = result.module_cards.filter((card) => !isModuleAssessed(card));
+  return missingCards.slice(0, limit).map((card) => ({
+    title: `${card.label} was not assessed`,
+    module: card.module,
+    severity: "info",
+    type: "Missing evidence",
+    badgeClass: "badge-amber",
+    plainProblem: `${card.label} could not be judged because the scan did not receive the needed proof.`,
+    plainRisk: "Unknown areas should not be called safe. Add evidence before making strong launch/security claims.",
+    fixNow: moduleFixGuide(card),
+    owner: card.module === "contract" || card.module === "static_analysis" ? "Smart contract developer / auditor" : "Project technical owner",
+    effort: "Depends on evidence availability",
+    verify: "Add the evidence, rerun the scan, and confirm the module is no longer Not Assessed.",
+    launchDecision: "Add evidence before strong public claims",
+  }));
+}
+
+function buildGapClosurePlan(result: UnifiedUrlScanResponse): GapClosurePlan {
+  const tools = buildStaticToolRows(result);
+  const staticCovered = tools.some((tool) => tool.realFindings > 0 || tool.evidenceSource.includes("artifact") || tool.willRun === true);
+  const missingToolCount = tools.filter((tool) => tool.state.toLowerCase().includes("not") || tool.willRun === false || tool.willRun === null).length;
+  const reviewSeverityCount = (result.priority_actions || []).filter((item) => ["critical", "high", "medium"].includes(String(item.severity || "").toLowerCase())).length;
+  const notAssessedCount = result.module_cards.filter((card) => !isModuleAssessed(card)).length;
+  const humanReviewNeeded = reviewSeverityCount > 0 || notAssessedCount > 0;
+
+  return {
+    staticAnalysis: {
+      status: staticCovered ? "Partly covered with real tool/artifact evidence" : "Gap open: tools are not live by default",
+      reason: staticCovered
+        ? "At least one static-analysis path has real evidence. Keep raw output attached for reviewer verification."
+        : `Slither/Semgrep/Aderyn are not faked. ${missingToolCount || 3} tool path(s) still need pasted JSON artifacts or an isolated worker setup.`,
+      safePaths: [
+        "Paste real Slither/Semgrep/Aderyn JSON in Expert Evidence.",
+        "Use a separate isolated worker service for live execution; do not enable execution in the main backend.",
+        "Attach Solidity source or verified contract evidence so static tools have code to analyze.",
+      ],
+      tools,
+    },
+    humanReview: {
+      status: humanReviewNeeded ? "Manual reviewer recommended" : "Manual reviewer optional",
+      reason: humanReviewNeeded
+        ? "Scanner output is useful for triage, but critical/high/medium issues and Not Assessed modules need a real human reviewer before strong security wording."
+        : "No priority blocker is visible in assessed modules, but a human review still improves trust before public claims.",
+      safePaths: [
+        "Create a reviewer handoff pack from this report.",
+        "Assign a real reviewer/admin in the manual review workflow.",
+        "Do not show verified-auditor, certified-audit, or marketplace claims until real reviewers are onboarded and approved.",
+      ],
+      needed: humanReviewNeeded,
+    },
+  };
+}
+
 function buildScoreSplit(result: UnifiedUrlScanResponse): UnifiedScoreSplit {
   if (result.score_split) return result.score_split;
   const byModule = new Map(result.module_cards.map((card) => [card.module, card]));
@@ -616,6 +721,8 @@ function scoreSplitCards(scoreSplit: UnifiedScoreSplit) {
 function buildInlineMarkdownReport(report: Record<string, unknown>) {
   const findings = Array.isArray(report.top_findings) ? (report.top_findings as Array<Record<string, unknown>>) : [];
   const evidenceRequired = Array.isArray(report.evidence_required) ? (report.evidence_required as Array<Record<string, unknown>>) : [];
+  const founderPlan = Array.isArray(report.founder_action_plan) ? (report.founder_action_plan as Array<Record<string, unknown>>) : [];
+  const gapClosure = plainRecord(report.gap_closure_plan);
   const matrix = Array.isArray(report.module_matrix) ? (report.module_matrix as Array<Record<string, unknown>>) : [];
   const split = scoreSplitCards((report.score_split || {}) as UnifiedScoreSplit);
 
@@ -638,6 +745,32 @@ function buildInlineMarkdownReport(report: Record<string, unknown>) {
     lines.push(`- **${String(item.label)}**: ${typeof item.score === "number" ? item.score : "Not Assessed"} — ${String(item.status || "Not Assessed")}`);
     lines.push(`  - Evidence basis: ${String(item.source || "Not provided")}`);
   });
+
+  lines.push("", "## Founder action plan");
+  if (founderPlan.length) {
+    founderPlan.forEach((item, index) => {
+      lines.push(
+        `${index + 1}. **${String(item.title || "Action item")}**`,
+        `   - Simple meaning: ${String(item.plainProblem || "Review this item.")}`,
+        `   - Risk: ${String(item.plainRisk || "This may affect launch safety or trust.")}`,
+        `   - Fix: ${String(item.fixNow || "Apply the recommended fix.")}`,
+        `   - Owner: ${String(item.owner || "Project owner")}`,
+        `   - Effort: ${String(item.effort || "Project-specific")}`,
+        `   - Verify: ${String(item.verify || "Rerun scan after the fix.")}`,
+        `   - Launch decision: ${String(item.launchDecision || "Review before launch")}`
+      );
+    });
+  } else {
+    lines.push("No priority action was generated from the assessed modules.");
+  }
+
+  lines.push("", "## Gap closure plan");
+  const staticGap = plainRecord(gapClosure.staticAnalysis);
+  const humanGap = plainRecord(gapClosure.humanReview);
+  lines.push(`- **Static tools:** ${String(staticGap.status || "Not Assessed")} — ${String(staticGap.reason || "No static-analysis gap data attached.")}`);
+  unknownArray(staticGap.safePaths).forEach((step) => lines.push(`  - ${String(step)}`));
+  lines.push(`- **Human reviewer:** ${String(humanGap.status || "Manual Review Required")} — ${String(humanGap.reason || "No human-review gap data attached.")}`);
+  unknownArray(humanGap.safePaths).forEach((step) => lines.push(`  - ${String(step)}`));
 
   lines.push("", "## Findings and fix hints");
   if (findings.length) {
@@ -761,6 +894,14 @@ function buildInlineReportFromResult(result: UnifiedUrlScanResponse) {
     priority_action_plan: result.priority_actions || [],
     top_findings: realFindings,
     evidence_required: evidenceRequired,
+    founder_action_plan: buildFounderActionPlan(result, 8),
+    gap_closure_plan: buildGapClosurePlan(result),
+    human_review_handoff: {
+      status: buildGapClosurePlan(result).humanReview.status,
+      recommended: buildGapClosurePlan(result).humanReview.needed,
+      safe_route: "/manual-review",
+      note: "A real reviewer/admin must confirm findings before reviewed-report or strong security wording. No fake marketplace/team claim is created.",
+    },
     evidence_summary: result.module_cards.map((card) => ({
       module: card.module,
       module_label: card.label,
@@ -803,6 +944,9 @@ function buildInlineReportFromResult(result: UnifiedUrlScanResponse) {
     priority_action_plan: report.priority_action_plan,
     top_findings: report.top_findings,
     evidence_required: report.evidence_required,
+    founder_action_plan: report.founder_action_plan,
+    gap_closure_plan: report.gap_closure_plan,
+    human_review_handoff: report.human_review_handoff,
     evidence_summary: report.evidence_summary,
     dynamic_score_trace: report.dynamic_score_trace,
     detection_expansion: report.detection_expansion,
@@ -1085,6 +1229,153 @@ function severityRank(severity?: string | null) {
   if (value === "medium") return 2;
   if (value === "low") return 3;
   return 4;
+}
+
+function FounderReportPolishCard({ result }: { result: UnifiedUrlScanResponse }) {
+  const tasks = buildFounderActionPlan(result, 5);
+  const gaps = buildGapClosurePlan(result);
+  const criticalHigh = (result.priority_actions || []).filter((item) => item.severity === "critical" || item.severity === "high").length;
+  const unknownModules = result.module_cards.filter((card) => !isModuleAssessed(card)).length;
+  const launchLine = criticalHigh > 0
+    ? "Do not launch with strong security claims until the top red items are fixed or reviewed."
+    : unknownModules > 0
+      ? "Assessed modules look usable, but unknown modules still need evidence before strong claims."
+      : "No priority launch blocker is visible in assessed modules; keep the report wording limited and honest.";
+
+  return (
+    <CardShell className="border-emerald-400/15 bg-emerald-400/[0.035]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="section-label">Phase Y report view</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Founder-friendly report</h2>
+          <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-300">
+            This turns scanner output into simple launch tasks: what is the issue, why it matters, who should fix it, and how to confirm it is fixed.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50 lg:max-w-sm">
+          <p className="font-black text-white">Launch reading</p>
+          <p className="mt-2">{launchLine}</p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-3">
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+          <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Fix first</p>
+          <p className="mt-2 text-lg font-black text-white">Top launch tasks</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">Sorted by severity so non-technical users do not need to read every raw finding.</p>
+        </div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+          <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Static tools</p>
+          <p className="mt-2 text-lg font-black text-white">{gaps.staticAnalysis.status}</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">Slither, Semgrep, and Aderyn are never faked. Add real artifacts or use an isolated worker.</p>
+        </div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+          <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Human review</p>
+          <p className="mt-2 text-lg font-black text-white">{gaps.humanReview.status}</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">Reviewer/team status must be real. This UI prepares the handoff; it does not invent auditors.</p>
+        </div>
+      </div>
+
+      <div className="mt-5 space-y-3">
+        {tasks.length ? tasks.map((task, index) => (
+          <div key={`${task.title}-${index}`} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="flex flex-wrap gap-2">
+                  <span className="badge badge-cyan">#{index + 1}</span>
+                  <span className={`badge ${task.badgeClass}`}>{task.type}</span>
+                  <SeverityBadge severity={task.severity as Severity} />
+                </div>
+                <h3 className="mt-3 text-base font-black text-white">{task.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-300"><b className="text-white">Meaning:</b> {task.plainProblem}</p>
+                <p className="mt-1 text-sm leading-6 text-slate-400"><b className="text-white">Risk:</b> {task.plainRisk}</p>
+              </div>
+              <div className="shrink-0 rounded-xl border border-white/[0.07] bg-black/20 p-3 text-xs leading-5 text-slate-300 sm:max-w-[260px]">
+                <p><b className="text-white">Owner:</b> {task.owner}</p>
+                <p className="mt-1"><b className="text-white">Effort:</b> {task.effort}</p>
+                <p className="mt-1"><b className="text-white">Decision:</b> {task.launchDecision}</p>
+              </div>
+            </div>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <p className="rounded-xl border border-cyan/10 bg-cyan/5 p-3 text-sm leading-6 text-cyan-50"><b>Fix:</b> {task.fixNow}</p>
+              <p className="rounded-xl border border-white/[0.07] bg-black/20 p-3 text-sm leading-6 text-slate-300"><b>Confirm:</b> {task.verify}</p>
+            </div>
+          </div>
+        )) : (
+          <p className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-100">No priority action is visible in the assessed modules. Still review Not Assessed modules before strong security claims.</p>
+        )}
+      </div>
+    </CardShell>
+  );
+}
+
+function GapClosureCard({ result, onOpenEvidence }: { result: UnifiedUrlScanResponse; onOpenEvidence: (fieldId: string) => void }) {
+  const gaps = buildGapClosurePlan(result);
+  const toolButtons = [
+    { id: "slither-json", label: "Add Slither JSON" },
+    { id: "semgrep-json", label: "Add Semgrep JSON" },
+    { id: "aderyn-json", label: "Add Aderyn JSON" },
+  ];
+
+  return (
+    <CardShell className="border-amber-300/15 bg-amber-300/[0.035]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="section-label">Gap closure</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Cover the two real gaps safely</h2>
+          <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-300">
+            Web3Guard will not pretend that tools ran or that a reviewer team exists. Use these two paths to move from scanner output to stronger professional evidence.
+          </p>
+        </div>
+        <span className="badge badge-amber w-fit">No fake audit claim</span>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="section-label">Gap 1</p>
+              <h3 className="mt-2 text-lg font-black text-white">Slither / Semgrep / Aderyn live execution</h3>
+            </div>
+            <span className="badge badge-amber">{gaps.staticAnalysis.status}</span>
+          </div>
+          <p className="mt-3 text-sm leading-6 text-slate-300">{gaps.staticAnalysis.reason}</p>
+          <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-400">
+            {gaps.staticAnalysis.safePaths.map((step) => <li key={step}>• {step}</li>)}
+          </ul>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {toolButtons.map((button) => (
+              <button key={button.id} type="button" onClick={() => onOpenEvidence(button.id)} className="btn-secondary !px-3 !py-2 text-xs">
+                {button.label}
+              </button>
+            ))}
+            <Link href="/professional/setup" className="btn-secondary !px-3 !py-2 text-xs">Worker setup guide</Link>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="section-label">Gap 2</p>
+              <h3 className="mt-2 text-lg font-black text-white">Human reviewer handoff</h3>
+            </div>
+            <span className="badge badge-cyan">{gaps.humanReview.status}</span>
+          </div>
+          <p className="mt-3 text-sm leading-6 text-slate-300">{gaps.humanReview.reason}</p>
+          <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-400">
+            {gaps.humanReview.safePaths.map((step) => <li key={step}>• {step}</li>)}
+          </ul>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link href="/manual-review" className="btn-primary !px-3 !py-2 text-xs">Open manual review</Link>
+            <Link href="/contact" className="btn-secondary !px-3 !py-2 text-xs">Request human review</Link>
+          </div>
+          <p className="mt-3 rounded-xl border border-red-400/15 bg-red-500/10 p-3 text-xs leading-5 text-red-100/90">
+            Do not display verified marketplace/team claims until real reviewers are onboarded, verified, assigned, and logged.
+          </p>
+        </div>
+      </div>
+    </CardShell>
+  );
 }
 
 function ModuleCard({ card }: { card: UnifiedModuleCard }) {
@@ -1760,34 +2051,36 @@ export function UnifiedUrlScannerClient() {
                     <span className="badge">Current: {activeScanMode.title}</span>
                   </div>
 
-                  <div className="mt-4 grid gap-3 md:grid-cols-3">
-                    {scanModeOptions.map((option) => {
-                      const selected = scanMode === option.id;
-                      const simpleTitle = option.id === "quick" ? "Simple Scan" : option.id === "deep" ? "Add GitHub/API/Contract" : "Expert / Auditor evidence";
-                      const simpleSubtitle = option.id === "quick"
-                        ? "Best for beginners. Only website URL required."
-                        : option.id === "deep"
-                          ? "For developers who can add repo, API, or contract details."
-                          : "For auditors with Slither, Semgrep, Aderyn, HAR, or test output.";
-                      return (
-                        <button
-                          key={option.id}
-                          type="button"
-                          onClick={() => {
-                            setScanMode(option.id);
-                            setAdvancedOpen(option.id !== "quick");
-                            setActiveEvidenceEditor(null);
-                          }}
-                          className={`rounded-2xl border p-4 text-left transition ${selected ? "border-cyan-300/35 bg-cyan-300/[0.10] shadow-[0_0_28px_rgba(34,211,238,0.10)]" : "border-white/10 bg-white/[0.03] hover:border-cyan-300/20 hover:bg-white/[0.05]"}`}
-                        >
-                          <span className="block text-sm font-black text-white">{simpleTitle}</span>
-                          <span className="mt-2 block text-xs leading-5 text-slate-400">{simpleSubtitle}</span>
-                          <span className={`mt-3 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${selected ? "border-cyan-300/30 text-cyan-100" : "border-white/10 text-slate-500"}`}>
-                            {selected ? "Selected" : "Choose"}
-                          </span>
-                        </button>
-                      );
-                    })}
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3">
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {scanModeOptions.map((option) => {
+                        const selected = scanMode === option.id;
+                        const simpleTitle = option.id === "quick" ? "1. Simple" : option.id === "deep" ? "2. Developer" : "3. Expert";
+                        const simpleSubtitle = option.id === "quick"
+                          ? "Website only"
+                          : option.id === "deep"
+                            ? "Add GitHub/API/contract"
+                            : "Add tool JSON/artifacts";
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => {
+                              setScanMode(option.id);
+                              setAdvancedOpen(option.id !== "quick");
+                              setActiveEvidenceEditor(null);
+                            }}
+                            className={`rounded-xl border px-3 py-3 text-left transition ${selected ? "border-cyan-300/35 bg-cyan-300/[0.10] text-white" : "border-white/10 bg-white/[0.03] text-slate-400 hover:border-cyan-300/20 hover:text-white"}`}
+                          >
+                            <span className="block text-sm font-black">{simpleTitle}</span>
+                            <span className="mt-1 block text-xs leading-5">{simpleSubtitle}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-3 text-xs leading-5 text-slate-500">
+                      Beginner? Keep <b className="text-slate-300">Simple</b>. Web3Guard will not ask for GitHub, contracts, Slither, Semgrep, or Aderyn unless you choose Developer/Expert.
+                    </p>
                   </div>
 
                   {scanMode !== "quick" ? (
@@ -2096,6 +2389,8 @@ export function UnifiedUrlScannerClient() {
 
             <BeginnerBugSummaryCard result={result} />
 
+            <FounderReportPolishCard result={result} />
+
             {realEvidenceSummary ? (
               <CardShell>
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -2130,6 +2425,16 @@ export function UnifiedUrlScannerClient() {
             <DynamicScoreTraceCard trace={dynamicScoreTrace} />
 
             <StaticToolStatusCard result={result} />
+
+            <GapClosureCard
+              result={result}
+              onOpenEvidence={(fieldId) => {
+                setScanMode("expert");
+                setAdvancedOpen(true);
+                setActiveEvidenceEditor(fieldId);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
 
             <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
               <CardShell>
