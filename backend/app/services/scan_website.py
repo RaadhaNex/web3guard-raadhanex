@@ -796,6 +796,7 @@ def _build_response(url: str, project_name: str | None, findings: list[Finding],
         ],
         "display_rule": "Website score is the assessed website-surface readiness score. Overall launch confidence is gated until other modules have evidence.",
     }
+    metadata["professional_evidence_engine_version"] = "web3guard-passive-website-engine-v3.0-deep-evidence"
     digest = _hash_input(url)[:12]
     return ScanResponse(
         report_id=f"W3G-WEBSITE-{digest}",
@@ -806,7 +807,7 @@ def _build_response(url: str, project_name: str | None, findings: list[Finding],
         severity_breakdown=severity_breakdown(findings),
         priority_actions=priority_actions(findings),
         input_hash=_hash_input(url)[:16],
-        engine_version="web3guard-passive-website-engine-v3.0-deep-evidence",
+        engine_version="web3guard-passive-website-engine-v2.9",
         scan_metadata=metadata,
     )
 
