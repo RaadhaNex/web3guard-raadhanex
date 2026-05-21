@@ -77,7 +77,7 @@ export function DetectionExpansionClient() {
 
       <section className="mt-6 rounded-[1.7rem] border border-white/10 bg-white/[0.035] p-5">
         <h2 className="text-2xl font-black text-white">Status payload</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-400">Use this page to confirm the backend deployed Phase 60–67. The detailed findings appear inside fresh unified scan results.</p>
+        <p className="mt-2 text-sm leading-6 text-slate-400">Use this page to confirm the backend is configured. The detailed findings appear inside fresh unified scan results.</p>
         <div className="mt-4"><JsonBlock value={status || { loading: true }} /></div>
       </section>
     </main>

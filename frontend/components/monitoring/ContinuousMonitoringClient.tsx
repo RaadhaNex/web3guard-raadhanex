@@ -151,7 +151,7 @@ export function ContinuousMonitoringClient({ adminMode = false }: { adminMode?: 
     <main className="quantum-module-screen mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-4xl">
-          <p className="section-label">Phase 19 · Continuous Monitoring Lite</p>
+          <p className="section-label">Continuous Monitoring Lite</p>
           <h1 className="mt-3 text-3xl font-black sm:text-5xl">{adminMode ? "Admin monitoring intelligence" : "User project monitoring"}</h1>
           <p className="mt-4 text-sm leading-7 text-slate-400 sm:text-base">
             Opt-in monitoring configs, manual or scheduler-triggered rechecks, stale report detection, passive website drift readiness, Sentinel alert queue visibility, and clear no-fake-alert status.

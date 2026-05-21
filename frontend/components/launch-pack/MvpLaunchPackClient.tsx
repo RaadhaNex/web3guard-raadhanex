@@ -193,7 +193,7 @@ export function MvpLaunchPackClient() {
       <section className="grid gap-5 lg:grid-cols-3">
         <div className="card p-5 sm:p-6 lg:col-span-2">
           <div className="flex flex-wrap gap-2">
-            {smallBadge("Phase 36", "cyan")}
+            {smallBadge("MVP launch pack", "cyan")}
             {smallBadge("last build phase", "amber")}
             {smallBadge("no fake claims", "red")}
           </div>

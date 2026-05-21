@@ -1,8 +1,5 @@
-import { SentinelClient } from "@/components/sentinel/SentinelClient";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
-export default function SentinelAdminPage() {
-  return <SentinelClient mode="admin" />;
+export default function Page() {
+  redirect("/dashboard");
 }

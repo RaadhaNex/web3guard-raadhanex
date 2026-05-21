@@ -265,7 +265,7 @@ export function ScannerCorrelationClient() {
         <article className="clean-panel p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="section-label">Phase 43 engine</p>
+              <p className="section-label">Correlation engine</p>
               <h2 className="mt-2 text-2xl font-black text-white">Correlation setup</h2>
             </div>
             <StatusPill status={status?.ok ? "Correlation live" : "Not assessed"} />

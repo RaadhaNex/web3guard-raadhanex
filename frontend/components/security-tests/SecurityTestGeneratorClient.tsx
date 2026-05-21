@@ -151,7 +151,7 @@ export function SecurityTestGeneratorClient() {
     <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="section-label">Phase 17 · Security Test Generator</p>
+          <p className="section-label">Security Test Generator</p>
           <h1 className="mt-3 max-w-5xl text-4xl font-black tracking-[-0.06em] sm:text-6xl">
             Generate defensive local test packs before asking for manual review.
           </h1>

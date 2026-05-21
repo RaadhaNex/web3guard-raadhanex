@@ -1,5 +1,5 @@
-import { DeepScanOrchestratorClient } from "@/components/deep-scan-orchestrator/DeepScanOrchestratorClient";
+import { redirect } from "next/navigation";
 
-export default function DeepScanOrchestratorPage() {
-  return <DeepScanOrchestratorClient />;
+export default function Page() {
+  redirect("/dashboard");
 }

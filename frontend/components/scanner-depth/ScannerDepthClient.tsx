@@ -57,7 +57,7 @@ type CoverageResult = {
 
 type Roadmap = {
   goal: string;
-  phases_inside_phase38: Array<{ order: number; name: string; target_points: number; outcome: string }>;
+  roadmap_items: Array<{ order: number; name: string; target_points: number; outcome: string }>;
   minimum_for_90_depth: string[];
   never_claim: string[];
 };
@@ -164,7 +164,7 @@ export function ScannerDepthClient() {
           apiGet<Roadmap>("/scanner-depth/roadmap"),
         ]);
         setStatus(statusData);
-        setRoadmap(roadmapData);
+        setRoadmap({ ...roadmapData, roadmap_items: (roadmapData as any).roadmap_items || (roadmapData as any).roadmap_items || [] });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not load scanner depth status");
       } finally {
@@ -200,7 +200,7 @@ export function ScannerDepthClient() {
 
   return (
     <section className="mt-6 grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-      {error && <div className="lg:col-span-2"><CommandNotice tone="danger" title="Phase 38 error" text={error} /></div>}
+      {error && <div className="lg:col-span-2"><CommandNotice tone="danger" title="Error" text={error} /></div>}
 
       <div className="space-y-6">
         <article className="clean-panel p-6">
@@ -290,9 +290,9 @@ export function ScannerDepthClient() {
 
         {roadmap && (
           <article className="clean-panel p-6">
-            <p className="section-label">Roadmap inside Phase 38</p>
+            <p className="section-label">Feature roadmap</p>
             <div className="mt-4 space-y-3">
-              {roadmap.phases_inside_phase38.map((item) => (
+              {roadmap.roadmap_items.map((item) => (
                 <div key={item.order} className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
                   <p className="font-black text-white">{item.order}. {item.name} <span className="text-slate-500">(+{item.target_points})</span></p>
                   <p className="mt-1 text-xs leading-5 text-slate-500">{item.outcome}</p>

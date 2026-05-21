@@ -1,7 +1,5 @@
-import { DeepEvidenceClient } from "@/components/deep-evidence/DeepEvidenceClient";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default function DeepEvidencePage() {
-  return <DeepEvidenceClient />;
+export default function Page() {
+  redirect("/dashboard");
 }

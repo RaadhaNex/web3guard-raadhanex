@@ -27,7 +27,7 @@ export function DeepScanOrchestratorClient() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
       <section className="rounded-[2rem] border border-cyan-300/15 bg-white/[0.035] p-6 shadow-2xl shadow-black/30">
-        <p className="section-label">Phase 78</p>
+        <p className="section-label">Scan orchestration</p>
         <h1 className="mt-3 text-4xl font-black text-white">Unified Deep Scan Orchestrator</h1>
         <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">
           The scanner now starts with a clean Quick Scan and unlocks Deep Scan / Expert Evidence only when the user wants stronger coverage. Missing inputs are shown as Not Assessed instead of guessed.

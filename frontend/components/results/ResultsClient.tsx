@@ -85,10 +85,7 @@ function findingFromRecord(value: unknown): Finding | null {
     severity: toSeverity(value.severity),
     title: asString(value.title, "Untitled finding"),
     description: asString(value.description, "No description provided."),
-    affected_file: typeof value.affected_file === "string" ? value.affected_file : null,
     affected_line: asNumber(value.affected_line),
-    affected_column: asNumber(value.affected_column),
-    end_line: asNumber(value.end_line),
     affected_function: typeof value.affected_function === "string" ? value.affected_function : null,
     affected_code: typeof value.affected_code === "string" ? value.affected_code : null,
     confidence: value.confidence === "high" || value.confidence === "medium" || value.confidence === "low" ? value.confidence : "medium",
@@ -160,11 +157,6 @@ function FindingCard({ finding }: { finding: Finding }) {
         <SeverityBadge severity={finding.severity} />
       </div>
       <p className="mt-3 text-sm leading-6 text-slate-300">{finding.description}</p>
-      {(finding.affected_file || finding.affected_line) ? (
-        <p className="mt-3 rounded-xl border border-white/[0.07] bg-white/[0.035] p-3 text-sm leading-6 text-slate-200">
-          Exact location: <b>{finding.affected_file || "Supplied source"}</b>{finding.affected_line ? `:${finding.affected_line}` : ""}{finding.affected_column ? `:${finding.affected_column}` : ""}
-        </p>
-      ) : null}
       <p className="mt-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.04] p-3 text-sm leading-6 text-cyan-50">Fix hint: {finding.recommendation}</p>
       <details className="mt-3 rounded-xl border border-white/[0.07] bg-white/[0.03] p-3 text-xs text-slate-400">
         <summary className="cursor-pointer font-bold text-slate-200">Raw evidence</summary>
@@ -309,7 +301,7 @@ function BugDetectionCoveragePanel({ result }: { result: UnifiedUrlScanResponse 
     <section className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 shadow-2xl shadow-black/20">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <p className="section-label">Phase 49 proof coverage</p>
+          <p className="section-label">Proof coverage</p>
           <h2 className="mt-2 text-2xl font-black text-white">Detected bugs / warnings from real evidence</h2>
           <p className="mt-2 max-w-4xl text-sm leading-7 text-slate-300">
             {coverage?.real_only_rule || "Only findings from assessed evidence are shown. Not assessed modules are not treated as clean."}
@@ -367,7 +359,7 @@ function DeepScanOrchestratorPanel({ orchestrator }: { orchestrator?: unknown })
     <section className="rounded-[1.5rem] border border-cyan-300/15 bg-cyan-300/[0.045] p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="section-label">Phase 78 orchestrator</p>
+          <p className="section-label">Scan orchestrator</p>
           <h2 className="mt-2 text-2xl font-black text-white">What actually ran vs what needs evidence</h2>
           <p className="mt-2 text-sm leading-7 text-cyan-50/85">{asString(summary.user_message, "Quick Scan runs public evidence. Deep/Expert evidence is optional.")}</p>
           <p className="mt-1 text-xs leading-5 text-cyan-100/70">{asString(summary.truth_rule, "Missing evidence is marked Not Assessed, not guessed.")}</p>
@@ -412,7 +404,7 @@ function AccuracyUpgradePanel({ accuracy }: { accuracy?: unknown }) {
       <section className="rounded-[1.5rem] border border-amber-300/15 bg-amber-300/10 p-5 text-sm leading-7 text-amber-50">
         <p className="section-label">Phases 52–58</p>
         <h2 className="mt-2 text-2xl font-black text-white">Accuracy upgrade not attached</h2>
-        <p className="mt-3">Run a fresh unified scan after applying the Phase 52–58 patch.</p>
+        <p className="mt-3">Run a fresh unified scan after applying the latest scanner patch.</p>
       </section>
     );
   }
@@ -462,7 +454,7 @@ function DeepDetectionExpansionPanel({ expansion }: { expansion?: unknown }) {
       <section className="rounded-[1.5rem] border border-amber-300/15 bg-amber-300/10 p-5 text-sm leading-7 text-amber-50">
         <p className="section-label">Phases 60–67</p>
         <h2 className="mt-2 text-2xl font-black text-white">Deep detection expansion not attached</h2>
-        <p className="mt-3">Run a fresh unified scan after applying Phase 60–67.</p>
+        <p className="mt-3">Run a fresh unified scan after applying the latest scanner patch.</p>
       </section>
     );
   }
@@ -482,7 +474,7 @@ function DeepDetectionExpansionPanel({ expansion }: { expansion?: unknown }) {
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Deep findings</p><p className="mt-2 text-2xl font-black text-white">{String(summary.total_findings ?? findings.length)}</p></div>
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Critical/high</p><p className="mt-2 text-2xl font-black text-white">{String(summary.critical_high_findings ?? 0)}</p></div>
-        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Assessed phases</p><p className="mt-2 text-2xl font-black text-white">{String(summary.assessed_phase_count ?? "—")}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Assessed layers</p><p className="mt-2 text-2xl font-black text-white">{String(summary.assessed_phase_count ?? "—")}</p></div>
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">High-confidence</p><p className="mt-2 text-2xl font-black text-white">{String(summary.confirmed_high_confidence_findings ?? 0)}</p></div>
       </div>
       {phases.length ? (
@@ -510,7 +502,7 @@ function DeepDetectionExpansionPanel({ expansion }: { expansion?: unknown }) {
         <p className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-7 text-slate-400">No extra deep detection findings were produced from the supplied evidence. This does not mean all bugs are absent; it means this layer found no proof-backed items.</p>
       )}
       <details className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-6 text-slate-300">
-        <summary className="cursor-pointer font-black text-white">Raw Phase 60–67 package</summary>
+        <summary className="cursor-pointer font-black text-white">Raw detection package package</summary>
         <pre className="mt-4 max-h-[420px] overflow-auto text-xs text-slate-300">{formatJson(root)}</pre>
       </details>
     </section>
@@ -523,9 +515,9 @@ function DeepEvidenceAccuracyPanel({ packageData }: { packageData?: unknown }) {
   if (!Object.keys(root).length) {
     return (
       <section className="rounded-[1.5rem] border border-amber-300/15 bg-amber-300/10 p-5 text-sm leading-7 text-amber-50">
-        <p className="section-label">Phases 68–77</p>
+        <p className="section-label">Deep evidence</p>
         <h2 className="mt-2 text-2xl font-black text-white">Deep evidence accuracy not attached</h2>
-        <p className="mt-3">Run a fresh unified scan after applying Phase 68–77.</p>
+        <p className="mt-3">Run a fresh unified scan after applying the latest scanner patch.</p>
       </section>
     );
   }
@@ -536,7 +528,7 @@ function DeepEvidenceAccuracyPanel({ packageData }: { packageData?: unknown }) {
     <section className="rounded-[1.5rem] border border-emerald-300/15 bg-emerald-300/[0.045] p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="section-label">Phases 68–77 deep evidence</p>
+          <p className="section-label">Deep evidence</p>
           <h2 className="mt-2 text-2xl font-black text-white">Evidence-backed deeper bug proof</h2>
           <p className="mt-2 text-sm leading-6 text-slate-300">{asString(root.output_authenticity_guarantee, "Every visible finding must include evidence and reproduction context.")}</p>
         </div>
@@ -545,7 +537,7 @@ function DeepEvidenceAccuracyPanel({ packageData }: { packageData?: unknown }) {
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Findings</p><p className="mt-2 text-2xl font-black text-white">{String(summary.total_findings ?? findings.length)}</p></div>
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Critical/high</p><p className="mt-2 text-2xl font-black text-white">{String(summary.critical_high_findings ?? 0)}</p></div>
-        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Assessed phases</p><p className="mt-2 text-2xl font-black text-white">{String(summary.assessed_phase_count ?? "—")}/10</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Assessed layers</p><p className="mt-2 text-2xl font-black text-white">{String(summary.assessed_phase_count ?? "—")}/10</p></div>
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Evidence score</p><p className="mt-2 text-2xl font-black text-white">{summary.evidence_score === null || summary.evidence_score === undefined ? "Gated" : `${String(summary.evidence_score)}/100`}</p></div>
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">State</p><p className="mt-2 text-sm font-black text-white">{asString(root.state, "Needs Evidence")}</p></div>
       </div>
@@ -556,7 +548,7 @@ function DeepEvidenceAccuracyPanel({ packageData }: { packageData?: unknown }) {
             return (
               <article key={key} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <h3 className="font-black text-white">Phase {key}</h3>
+                  <h3 className="font-black text-white">Layer {key}</h3>
                   <span className={`badge ${statusClass(asString(phase.state, "Not Assessed"))}`}>{asString(phase.state, "Not Assessed")}</span>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-slate-300">Findings: <b className="text-white">{String(phase.findings ?? 0)}</b></p>
@@ -568,13 +560,13 @@ function DeepEvidenceAccuracyPanel({ packageData }: { packageData?: unknown }) {
       ) : null}
       {findings.length ? (
         <div className="mt-5 grid gap-3">
-          {findings.slice(0, 16).map((finding) => <FindingCard key={`phase68-77-${finding.id}`} finding={finding} />)}
+          {findings.slice(0, 16).map((finding) => <FindingCard key={`deep-evidence-${finding.id}`} finding={finding} />)}
         </div>
       ) : (
-        <p className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-7 text-slate-400">No Phase 68–77 findings were generated. Add HAR/API/SCA/secrets/Foundry/Echidna/wallet/feedback artifacts for deeper real proof.</p>
+        <p className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-7 text-slate-400">No deep evidence findings were generated. Add HAR/API/SCA/secrets/Foundry/Echidna/wallet/feedback artifacts for deeper real proof.</p>
       )}
       <details className="mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-6 text-slate-300">
-        <summary className="cursor-pointer font-black text-white">Raw Phase 68–77 package</summary>
+        <summary className="cursor-pointer font-black text-white">Raw deep evidence package</summary>
         <pre className="mt-4 max-h-[420px] overflow-auto text-xs text-slate-300">{formatJson(root)}</pre>
       </details>
     </section>
@@ -585,9 +577,9 @@ function RealFindingsPipelinePanel({ pipeline }: { pipeline?: UnifiedUrlScanResp
   if (!pipeline) {
     return (
       <section className="rounded-[1.5rem] border border-amber-300/15 bg-amber-300/10 p-5 text-sm leading-7 text-amber-50">
-        <p className="section-label">Phase 45 pipeline</p>
+        <p className="section-label">Pipeline</p>
         <h2 className="mt-2 text-2xl font-black text-white">Real findings pipeline not attached</h2>
-        <p className="mt-3">Re-run the unified scanner after applying Phase 45. Older local scan payloads will not contain pipeline validation.</p>
+        <p className="mt-3">Re-run the unified scanner after applying the latest scanner patch. Older local scan payloads may not contain pipeline validation.</p>
       </section>
     );
   }
@@ -602,7 +594,7 @@ function RealFindingsPipelinePanel({ pipeline }: { pipeline?: UnifiedUrlScanResp
     <section className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="section-label">Phase 45 truth mapping</p>
+          <p className="section-label">Truth mapping</p>
           <h2 className="mt-2 text-2xl font-black text-white">Real findings pipeline</h2>
           <p className="mt-2 text-sm leading-6 text-slate-400">Checks tool output → parser → module cards → Results → Report/export mapping. Status messages stay separate from vulnerability findings.</p>
         </div>

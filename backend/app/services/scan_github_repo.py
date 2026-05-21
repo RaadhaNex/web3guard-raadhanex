@@ -14,6 +14,7 @@ from app.models.schemas import Finding, ModuleScore, ScanResponse
 from app.services.scan_contract import scan_solidity
 from app.services.scan_dapp_api import scan_api_backend, scan_dapp_frontend
 from app.services.scoring import priority_actions, risk_label, score_findings, severity_breakdown
+from app.services.accuracy_upgrade import run_dependency_osv_engine
 
 GITHUB_OWNER_REPO_RE = re.compile(r"^[A-Za-z0-9_.-]{1,100}$")
 EVM_ADDRESS_RE = re.compile(r"0x[a-fA-F0-9]{40}")
@@ -162,6 +163,9 @@ def _finding(
         severity=severity,  # type: ignore[arg-type]
         title=title,
         description=description,
+        evidence=snippet or description,
+        fix=recommendation,
+        affected_file=path,
         affected_line=line,
         affected_function=None,
         affected_code=snippet,
@@ -560,7 +564,10 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
                         data = finding.model_copy(update={
                             "id": f"github-contract-{idx:03d}-{_hash(path + finding.id)[:6]}",
                             "source": f"GitHub Solidity Rule Engine ({path})",
-                            "affected_code": f"{path}:{finding.affected_line or '?'} â€” {finding.affected_code or finding.title}",
+                            "affected_file": path,
+                            "evidence": f"{path}:{finding.affected_line or '?'} — {finding.affected_code or finding.title}",
+                            "fix": finding.recommendation,
+                            "affected_code": f"{path}:{finding.affected_line or '?'} — {finding.affected_code or finding.title}",
                         })
                         findings.append(data)
                         idx += 1
@@ -580,6 +587,44 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
                         path=path,
                     ))
                     idx += 1
+
+        osv_dependency_engine = await run_dependency_osv_engine(manifests=dependency_manifests)
+        if isinstance(osv_dependency_engine, dict):
+            osv_payload = osv_dependency_engine.get("osv", {}) if isinstance(osv_dependency_engine.get("osv"), dict) else {}
+            vulnerabilities = osv_payload.get("vulnerabilities", []) if isinstance(osv_payload, dict) else []
+            iterable_vulns = vulnerabilities[:20] if isinstance(vulnerabilities, list) else []
+            for vuln in iterable_vulns:
+                if not isinstance(vuln, dict):
+                    continue
+                severity = "high"
+                raw_severity = str(vuln.get("severity") or vuln.get("database_specific") or "").lower()
+                if "critical" in raw_severity:
+                    severity = "critical"
+                package = str(vuln.get("package") or "unknown-package")
+                version = str(vuln.get("version") or "unknown-version")
+                advisory = str(vuln.get("id") or "OSV advisory")
+                manifest = str(vuln.get("manifest") or "package.json")
+                findings.append(_finding(
+                    idx=idx,
+                    severity=severity,
+                    title=f"OSV Vulnerability Matched: {package}@{version}",
+                    description=f"OSV matched dependency {package}@{version} to advisory {advisory}: {str(vuln.get('summary') or 'No summary supplied by OSV')[:500]}",
+                    category="dependency_cve",
+                    rule_id=f"GITHUB-OSV-{advisory}",
+                    confidence="high",
+                    source="OSV.dev Real Dependency Advisory",
+                    business_impact="Known vulnerable dependencies can expose frontend, API, wallet, build, or deployment surfaces depending on package usage.",
+                    developer_explanation=str(vuln.get("proof") or f"OSV returned {advisory} for {package}@{version}"),
+                    recommendation="Upgrade to a patched version, review advisory impact, regenerate lockfiles, run tests, and redeploy after verifying no vulnerable transitive version remains.",
+                    path=manifest,
+                    line=None,
+                    snippet=str(vuln.get("proof") or advisory),
+                    paid=severity in {"critical", "high"},
+                    refs=[advisory, "OSV.dev"],
+                ))
+                idx += 1
+        else:
+            osv_dependency_engine = {"state": "Not Assessed", "reason": "OSV dependency engine did not return a structured result."}
 
         package_texts = []
         api_texts = []
@@ -660,6 +705,7 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
         },
         "structure_summary": summary,
         "dependency_manifests": dependency_manifests,
+        "dependency_osv_engine": osv_dependency_engine,
         "fetched_files": fetched_files,
         "linked_contract_reports": linked_reports,
         "safety_controls": {
@@ -681,7 +727,7 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
         severity_breakdown=severity_breakdown(findings),
         priority_actions=priority_actions(findings, limit=8),
         input_hash=_hash(f"{owner}/{repo}@{effective_branch}|{len(limited_paths)}")[:16],
-        engine_version="web3guard-github-repo-scanner-v11.0",
+        engine_version="web3guard-github-repo-scanner-v12.1-osv-path-line",
         scan_metadata=metadata,
         disclaimer="This is a read-only public GitHub repository readiness scan. It does not clone, execute, install, exploit, or replace a full manual audit.",
     )

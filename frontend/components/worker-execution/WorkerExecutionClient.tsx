@@ -205,7 +205,7 @@ export function WorkerExecutionClient() {
     }
   }
 
-  if (loading) return <CommandLoadingState label="Loading Phase 27 worker execution matrix..." />;
+  if (loading) return <CommandLoadingState label="Loading worker execution matrix..." />;
   if (error && !status) {
     return (
       <div className="mt-8 grid gap-4">
@@ -240,7 +240,7 @@ export function WorkerExecutionClient() {
 
       <div className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
         <div className="glass-tile p-6">
-          <p className="section-label">Phase 27 control</p>
+          <p className="section-label">Control panel</p>
           <h2 className="mt-2 text-2xl font-black text-white">Worker plan + version probe</h2>
           <label className="mt-5 block text-sm font-bold text-slate-300">Project type
             <input className="input mt-2" value={projectType} onChange={(event) => setProjectType(event.target.value)} />
@@ -258,7 +258,7 @@ export function WorkerExecutionClient() {
             </button>
           </div>
           <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
-            <p className="text-sm font-black text-white">Phase 27 scope</p>
+            <p className="text-sm font-black text-white">Worker scope</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {status.phase_27_scope.map((item) => <span key={item} className="badge badge-cyan">{item}</span>)}
             </div>

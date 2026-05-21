@@ -7,7 +7,7 @@ export default function PaymentValidationPage() {
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <section className="command-hero p-6 sm:p-8">
           <div className="relative z-[1] max-w-4xl">
-            <p className="section-label">Phase 34</p>
+            <p className="section-label">Payment validation</p>
             <h1 className="mt-3 text-4xl font-black sm:text-5xl">Payment validation + first paid flow sprint.</h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
               This page validates Razorpay test/live readiness, manual UPI fallback, paid access gates, and first ₹999 report flow without fake payment success or subscription unlocks.

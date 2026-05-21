@@ -1,5 +1,5 @@
-import { ContinuousMonitoringClient } from "@/components/monitoring/ContinuousMonitoringClient";
+import { redirect } from "next/navigation";
 
-export default function ContinuousMonitoringAdminPage() {
-  return <ContinuousMonitoringClient adminMode />;
+export default function Page() {
+  redirect("/dashboard");
 }

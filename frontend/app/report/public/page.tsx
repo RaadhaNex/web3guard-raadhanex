@@ -5,7 +5,7 @@ const endpoints = [
   ["GET /report/public", "List public report records that were intentionally published."],
   ["GET /report/public/:id", "Fetch a specific public record."],
   ["GET /report/public/:id/verify", "Verify a report hash against the published record."],
-  ["GET /report-verification/public/:id", "Open the Phase 11 verification packet with evidence snapshot and finding workflow."],
+  ["GET /report-verification/public/:id", "Open the report verification verification packet with evidence snapshot and finding workflow."],
   ["GET /report/public/:id/html", "Open the public HTML delivery view."],
   ["GET /report/public/:id/pdf", "Download the public PDF delivery artifact."],
 ];
@@ -24,7 +24,7 @@ export default function PublicReportRegistryPage() {
       <p className="section-label">Public report registry</p>
       <h1 className="mt-3 text-4xl font-black sm:text-6xl">Share report evidence without overstating security.</h1>
       <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-400 sm:text-base">
-        Public report records are for transparent pre-audit readiness sharing. Phase 11 adds a verification console that checks hash consistency, summarizes evidence, and creates a finding-status queue without claiming the project is certified or safe.
+        Public report records are for transparent pre-audit readiness sharing. report verification adds a verification console that checks hash consistency, summarizes evidence, and creates a finding-status queue without claiming the project is certified or safe.
       </p>
 
       <section className="mt-8 grid gap-4 md:grid-cols-2">

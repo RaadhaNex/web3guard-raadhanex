@@ -1586,12 +1586,12 @@ button:disabled, .btn-primary[aria-disabled="true"] { opacity: 0.45; cursor: not
    Phase 25 — Performance + Launch Hardening
    Keeps the Quantum UI feel while reducing mobile paint cost.
 ────────────────────────────────────── */
-.phase25-skeleton {
+.loading-skeleton {
   position: relative;
   overflow: hidden;
   background: rgba(148, 163, 184, 0.10);
 }
-.phase25-skeleton::after {
+.loading-skeleton::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -1663,7 +1663,7 @@ button:disabled, .btn-primary[aria-disabled="true"] { opacity: 0.45; cursor: not
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .phase25-skeleton::after {
+  .loading-skeleton::after {
     animation: none !important;
     transform: none !important;
   }

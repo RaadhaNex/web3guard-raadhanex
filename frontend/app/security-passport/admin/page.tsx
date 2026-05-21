@@ -1,5 +1,5 @@
-import { SecurityPassportClient } from "@/components/security-passport/SecurityPassportClient";
+import { redirect } from "next/navigation";
 
-export default function SecurityPassportAdminPage() {
-  return <SecurityPassportClient mode="admin" />;
+export default function Page() {
+  redirect("/dashboard");
 }

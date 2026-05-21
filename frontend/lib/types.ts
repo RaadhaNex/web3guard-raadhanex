@@ -10,6 +10,8 @@ export type Finding = {
   affected_line?: number | null;
   affected_column?: number | null;
   end_line?: number | null;
+  evidence?: string | null;
+  fix?: string | null;
   affected_function?: string | null;
   affected_code?: string | null;
   confidence: "high" | "medium" | "low";

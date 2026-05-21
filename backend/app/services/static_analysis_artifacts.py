@@ -84,6 +84,8 @@ def _artifact_finding(
         severity=severity,  # type: ignore[arg-type]
         title=title[:180],
         description=description[:3000],
+        evidence=description[:3000],
+        fix="Review the parsed tool finding, confirm whether it is true positive, and patch the source location before launch.",
         affected_file=file,
         affected_line=line,
         affected_column=column,
@@ -110,6 +112,8 @@ def _status_finding(idx: int, tool: str, message: str) -> Finding:
         severity="info",
         title=f"{tool.title()} Artifact Not Parsed",
         description=message,
+        evidence=message,
+        fix="Paste a valid raw JSON artifact from the real tool, then rerun the scan.",
         affected_line=None,
         affected_function=None,
         affected_code=None,

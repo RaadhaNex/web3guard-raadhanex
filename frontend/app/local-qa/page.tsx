@@ -1,5 +1,5 @@
-import { LocalQaClient } from "@/components/qa/LocalQaClient";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <LocalQaClient />;
+  redirect("/dashboard");
 }

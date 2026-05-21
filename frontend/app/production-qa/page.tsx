@@ -1,2 +1,5 @@
-import { ProductionQaClient } from "@/components/security/ProductionQaClient";
-export default function Page() { return <ProductionQaClient />; }
+import { redirect } from "next/navigation";
+
+export default function Page() {
+  redirect("/dashboard");
+}

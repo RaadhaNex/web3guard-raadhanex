@@ -117,7 +117,7 @@ export function LaunchValidationClient() {
       <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
           <div className="quantum-stage p-6 sm:p-8">
-            <p className="section-label">Phase 31</p>
+            <p className="section-label">Launch validation</p>
             <h1 className="mt-3 text-4xl font-black tracking-[-0.05em] sm:text-5xl">
               Real launch compression + revenue validation sprint.
             </h1>

@@ -246,7 +246,7 @@ export function ScannerTruthValidationClient() {
         <article className="clean-panel p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="section-label">Phase 44</p>
+              <p className="section-label">Truth validation</p>
               <h2 className="mt-2 text-2xl font-black text-white">Scanner Truth Validation</h2>
             </div>
             <StatusPill status={status?.ok ? "Validation live" : "Not assessed"} />

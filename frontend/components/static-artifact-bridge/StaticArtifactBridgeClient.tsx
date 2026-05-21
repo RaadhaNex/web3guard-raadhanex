@@ -41,7 +41,7 @@ export function StaticArtifactBridgeClient() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
       <section className="rounded-[2rem] border border-cyan-300/15 bg-slate-950/70 p-6 shadow-2xl shadow-cyan-950/20 sm:p-8">
-        <p className="section-label">Phase 50</p>
+        <p className="section-label">Static artifact bridge</p>
         <h1 className="mt-3 text-4xl font-black tracking-[-0.05em] text-white sm:text-5xl">Static Analysis Artifact Bridge</h1>
         <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">
           Paste real Slither/Semgrep JSON output and Web3Guard will parse it as tool evidence. This does not claim certified audit status or fake backend execution.

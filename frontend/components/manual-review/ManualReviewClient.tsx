@@ -192,7 +192,7 @@ export function ManualReviewClient() {
   return (
     <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <section className="rounded-[2rem] border border-cyan-300/15 bg-slate-950/70 p-6 shadow-2xl shadow-cyan-950/20 sm:p-8">
-        <p className="section-label">Phase 51</p>
+        <p className="section-label">Manual review</p>
         <h1 className="mt-3 max-w-5xl text-4xl font-black tracking-[-0.05em] text-white sm:text-6xl">
           Manual Expert Review + Finding Triage Workflow
         </h1>

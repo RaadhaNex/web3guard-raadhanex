@@ -5,7 +5,7 @@ export default function ProviderReadinessPage() {
     <main>
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="quantum-stage p-6 sm:p-8">
-          <p className="section-label">Phase 10 · External provider readiness</p>
+          <p className="section-label">External provider readiness</p>
           <h1 className="mt-3 max-w-5xl text-4xl font-black sm:text-6xl">
             Etherscan, GoPlus, and GitHub provider truth board.
           </h1>

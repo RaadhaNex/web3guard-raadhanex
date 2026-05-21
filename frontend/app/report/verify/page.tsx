@@ -15,7 +15,7 @@ export default function ReportVerifyPage() {
             Verify report metadata without making unsafe audit claims.
           </h1>
           <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-400 sm:text-base">
-            Phase 11 adds public report hash verification, evidence snapshots, and finding status workflow bootstrapping. It proves record consistency only—not project safety.
+            report verification adds public report hash verification, evidence snapshots, and finding status workflow bootstrapping. It proves record consistency only—not project safety.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">

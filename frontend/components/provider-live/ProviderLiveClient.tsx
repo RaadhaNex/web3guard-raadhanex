@@ -228,7 +228,7 @@ export function ProviderLiveClient() {
     }
   }
 
-  if (loading) return <CommandLoadingState label="Loading Phase 28 provider live status..." />;
+  if (loading) return <CommandLoadingState label="Loading provider live status..." />;
   if (error && !status) {
     return (
       <div className="mt-8 grid gap-4">
@@ -260,7 +260,7 @@ export function ProviderLiveClient() {
         <div className="stat-slab p-5">
           <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Deeper scanners</p>
           <Link href="/provider-readiness" className="mt-2 inline-flex text-2xl font-black text-cyan">Provider readiness →</Link>
-          <p className="mt-2 text-sm text-slate-400">Phase 10 matrix still stays available.</p>
+          <p className="mt-2 text-sm text-slate-400">The provider readiness matrix still stays available.</p>
         </div>
       </div>
 

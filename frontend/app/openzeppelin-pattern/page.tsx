@@ -9,7 +9,7 @@ export default function OpenZeppelinPatternPage() {
   return (
     <main className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
       <section className="clean-panel p-6 sm:p-8">
-        <p className="section-label">Phase 42 · OpenZeppelin Pattern Intelligence</p>
+        <p className="section-label">OpenZeppelin Pattern Intelligence</p>
         <h1 className="mt-3 max-w-4xl text-4xl font-black tracking-[-0.06em] text-white sm:text-6xl">
           Compare contracts against battle-tested secure pattern expectations.
         </h1>

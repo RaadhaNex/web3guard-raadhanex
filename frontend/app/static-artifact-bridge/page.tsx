@@ -1,7 +1,5 @@
-import { StaticArtifactBridgeClient } from "@/components/static-artifact-bridge/StaticArtifactBridgeClient";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default function StaticArtifactBridgePage() {
-  return <StaticArtifactBridgeClient />;
+export default function Page() {
+  redirect("/dashboard");
 }

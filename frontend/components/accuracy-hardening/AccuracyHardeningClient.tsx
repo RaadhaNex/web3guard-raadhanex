@@ -83,7 +83,7 @@ export function AccuracyHardeningClient() {
   return (
     <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <section className="rounded-[2rem] border border-cyan-300/15 bg-slate-950/75 p-5 shadow-2xl shadow-cyan-950/20 sm:p-8">
-        <StatePill>Phase 59</StatePill>
+        <StatePill>Accuracy hardening</StatePill>
         <h1 className="mt-4 max-w-5xl text-4xl font-black tracking-[-0.06em] text-white sm:text-6xl">
           Accuracy hardening, not fake accuracy claims.
         </h1>

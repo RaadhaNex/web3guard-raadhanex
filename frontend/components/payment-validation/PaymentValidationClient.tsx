@@ -200,7 +200,7 @@ export function PaymentValidationClient() {
       <section className="command-card p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="section-label">Phase 34 payment validation</p>
+            <p className="section-label">Payment validation</p>
             <h2 className="mt-3 text-2xl font-black text-white">First paid flow without fake payment success.</h2>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{status?.real_only_note}</p>
           </div>

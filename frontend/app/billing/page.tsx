@@ -10,7 +10,7 @@ export default function BillingPage() {
             <p className="section-label">Payment final</p>
             <h1 className="mt-3 text-4xl font-black sm:text-5xl">Razorpay + UPI billing is live only when backend verification is ready.</h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
-              Phase 14 moves Web3Guard from deferred billing to a real payment workflow: backend-created Razorpay orders, server-side checkout signature verification, signed webhook verification, manual UPI fallback, audit logs, and plan-limit visibility.
+              Billing moves Web3Guard from deferred billing to a real payment workflow: backend-created Razorpay orders, server-side checkout signature verification, signed webhook verification, manual UPI fallback, audit logs, and plan-limit visibility.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/pricing" className="btn-primary">Choose plan</Link>

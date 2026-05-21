@@ -1,10 +1,12 @@
+import asyncio
 import hashlib
 import html.parser
 import time
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from urllib.parse import urljoin, urlparse
+from typing import Any
+from urllib.parse import urlencode, urljoin, urlparse, urlunparse
 
 import httpx
 
@@ -94,6 +96,15 @@ PROOF_FETCH_PATHS = {
 SCRIPT_RISK_KEYWORDS = ["eval", "drainer", "walletconnect", "metamask", "claim", "mint"]
 DAPP_PAGE_KEYWORDS = ["walletconnect", "metamask", "connect wallet", "mint", "claim", "airdrop", "swap", "stake", "approve", "permit", "bridge", "presale"]
 EVM_ADDRESS_HINT_RE = re.compile(r"0x[a-fA-F0-9]{40}")
+CDN_HOST_HINTS = (
+    "cdn.", "cdnjs", "jsdelivr", "unpkg", "bootstrapcdn", "stackpath",
+    "cloudflare", "googleapis", "gstatic", "fontawesome", "tailwindcss",
+    "akamai", "fastly", "netdna", "assets.", "static.",
+)
+OPEN_REDIRECT_PARAMS = ("redirect", "url", "next", "return", "to")
+OPEN_REDIRECT_TARGET = "http://evil.com"
+ROBOTS_SENSITIVE_WORDS = ("admin", "api", "config", "debug", "internal", "staging", "backup")
+
 
 
 @dataclass
@@ -112,6 +123,9 @@ class ScriptParser(html.parser.HTMLParser):
     def __init__(self) -> None:
         super().__init__()
         self.scripts: list[str] = []
+        self.script_tags: list[dict[str, str]] = []
+        self.stylesheet_links: list[dict[str, str]] = []
+        self.image_tags: list[dict[str, str]] = []
         self.inline_script_count = 0
         self.forms: list[dict[str, str]] = []
         self.links: list[dict[str, str]] = []
@@ -128,8 +142,16 @@ class ScriptParser(html.parser.HTMLParser):
             src = attr_map.get("src", "")
             if src:
                 self.scripts.append(src)
+                self.script_tags.append(attr_map)
             else:
                 self.inline_script_count += 1
+        elif tag_name == "link":
+            rel_tokens = {token.strip().lower() for token in attr_map.get("rel", "").split()}
+            if "stylesheet" in rel_tokens and attr_map.get("href"):
+                self.stylesheet_links.append(attr_map)
+        elif tag_name == "img":
+            if attr_map.get("src"):
+                self.image_tags.append(attr_map)
         elif tag_name == "form":
             self.current_form = dict(attr_map)
             self.current_form.setdefault("password_input_count", "0")
@@ -173,6 +195,8 @@ def _finding(
         severity=severity,
         title=title,
         description=description,
+        evidence=description,
+        fix=recommendation,
         confidence=confidence,
         source="Passive Website Surface Scanner",
         category=category,
@@ -540,12 +564,118 @@ def _same_origin(url: str, base_url: str) -> bool:
     return _host_of(urljoin(base_url, url)) == _host_of(base_url)
 
 
+def _looks_like_cdn_host(host: str) -> bool:
+    clean = (host or "").lower()
+    return any(hint in clean for hint in CDN_HOST_HINTS)
+
+
+def _asset_record(tag: str, attr: dict[str, str], key: str, final_url: str) -> dict[str, Any]:
+    raw = attr.get(key, "")
+    absolute = urljoin(final_url, raw) if raw else ""
+    host = _host_of(absolute)
+    return {
+        "tag": tag,
+        "url": absolute,
+        "domain": host,
+        "external": bool(host and host != _host_of(final_url)),
+        "cdn_like": _looks_like_cdn_host(host),
+        "integrity_present": bool(attr.get("integrity")),
+        "crossorigin": attr.get("crossorigin", ""),
+    }
+
+
+def _build_probe_url(raw_url: str, param: str) -> str:
+    parsed = urlparse(raw_url)
+    query = f"{parsed.query}&" if parsed.query else ""
+    query += urlencode({param: OPEN_REDIRECT_TARGET})
+    return urlunparse((parsed.scheme, parsed.netloc, parsed.path or "/", parsed.params, query, ""))
+
+
+def _is_evil_redirect(location: str, current_url: str) -> bool:
+    target = urljoin(current_url, location or "")
+    parsed = urlparse(target)
+    return parsed.scheme == "http" and (parsed.hostname or "").lower() == "evil.com"
+
+
+async def _check_open_redirect(client: httpx.AsyncClient, base_url: str) -> dict[str, Any]:
+    checked: list[dict[str, Any]] = []
+    findings: list[dict[str, str]] = []
+    errors: list[str] = []
+    for param in OPEN_REDIRECT_PARAMS[:5]:
+        probe_url = _build_probe_url(base_url, param)
+        try:
+            validate_public_http_url(probe_url)
+            # Use the project safe fetch wrapper so tests can monkeypatch it, private-IP
+            # blocking remains active, and the probe never follows to the external target.
+            result = await asyncio.wait_for(_safe_fetch(client, "GET", probe_url, read_body=False, max_redirects=0), timeout=5)
+        except Exception as exc:
+            errors.append(f"{param}: {exc}")
+            checked.append({"param": param, "url": probe_url, "status_code": None, "location": None, "error": str(exc)[:220]})
+            continue
+        redirect = result.redirect_chain[0] if result.redirect_chain else {}
+        location = str(redirect.get("to") or "")
+        status = redirect.get("status_code") or result.status_code
+        entry = {"param": param, "url": probe_url, "status_code": status, "location": location or None, "open_redirect": False, "error": result.error}
+        if location and _is_evil_redirect(location, probe_url):
+            entry["open_redirect"] = True
+            findings.append({"param": param, "status_code": str(status or "3xx"), "location": location, "url": probe_url})
+        checked.append(entry)
+    return {"checked": checked, "findings": findings, "errors": errors[:5]}
+
+
+def _parse_sensitive_robots_lines(body: str) -> list[dict[str, str]]:
+    flagged: list[dict[str, str]] = []
+    for line_no, raw_line in enumerate((body or "").splitlines(), start=1):
+        clean = raw_line.strip()
+        if not clean or clean.startswith("#") or ":" not in clean:
+            continue
+        key, value = clean.split(":", 1)
+        if key.strip().lower() != "disallow":
+            continue
+        target = value.strip()
+        lowered = target.lower()
+        hit = next((word for word in ROBOTS_SENSITIVE_WORDS if word in lowered), None)
+        if hit:
+            flagged.append({"line": str(line_no), "keyword": hit, "disallow": target[:240]})
+    return flagged[:30]
+
+
+def _resolve_caa_records(host: str) -> dict[str, Any]:
+    try:
+        import dns.resolver  # type: ignore[import-not-found]
+    except Exception as exc:
+        return {"state": "Not Assessed", "reason": f"dnspython is not installed: {exc}"}
+    try:
+        answers = dns.resolver.resolve(host, "CAA", lifetime=5)
+        records = [str(answer) for answer in answers]
+        return {"state": "Assessed", "records": records, "record_count": len(records)}
+    except Exception as exc:
+        return {"state": "Assessed", "records": [], "record_count": 0, "reason": str(exc)[:220]}
+
+
+async def _check_dns_caa(host: str) -> dict[str, Any]:
+    if not host:
+        return {"state": "Not Assessed", "reason": "No hostname available for DNS CAA check."}
+    return await asyncio.to_thread(_resolve_caa_records, host)
+
+
 def _extract_html_evidence(html: str, final_url: str) -> dict:
     parser = ScriptParser()
     try:
         parser.feed(html[: settings.website_scan_max_body_bytes])
     except Exception:
         pass
+
+    sri_assets = []
+    mixed_assets = []
+    for tag, attr, key in [*( ("script", item, "src") for item in parser.script_tags ), *( ("link", item, "href") for item in parser.stylesheet_links ), *( ("img", item, "src") for item in parser.image_tags )]:
+        record = _asset_record(tag, attr, key, final_url)
+        if final_url.startswith("https://") and record["url"].startswith("http://"):
+            mixed_assets.append(record)
+        if tag in {"script", "link"} and record["external"] and record["cdn_like"]:
+            sri_assets.append(record)
+
+    cdn_assets_missing_sri = [asset for asset in sri_assets if not asset.get("integrity_present")]
 
     external_scripts = []
     same_origin_scripts = []
@@ -625,6 +755,9 @@ def _extract_html_evidence(html: str, final_url: str) -> dict:
         "external_scripts": external_scripts[:25],
         "same_origin_scripts": same_origin_scripts[:25],
         "mixed_content_scripts": mixed_content[:25],
+        "mixed_content_assets": mixed_assets[:30],
+        "cdn_assets_checked_for_sri": sri_assets[:30],
+        "cdn_assets_missing_sri": cdn_assets_missing_sri[:30],
         "risky_script_hints": risky_script_hints[:25],
         "dapp_keyword_hits": dapp_keyword_hits,
         "evm_address_hints": evm_address_hints,
@@ -673,7 +806,7 @@ def _build_response(url: str, project_name: str | None, findings: list[Finding],
         severity_breakdown=severity_breakdown(findings),
         priority_actions=priority_actions(findings),
         input_hash=_hash_input(url)[:16],
-        engine_version="web3guard-passive-website-engine-v2.9",
+        engine_version="web3guard-passive-website-engine-v3.0-deep-evidence",
         scan_metadata=metadata,
     )
 
@@ -872,6 +1005,8 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
                 "external_script_count": html_evidence.get("external_script_count", 0),
                 "inline_script_count": html_evidence.get("inline_script_count", 0),
                 "mixed_content_script_count": len(html_evidence.get("mixed_content_scripts", []) or []),
+                "mixed_content_asset_count": len(html_evidence.get("mixed_content_assets", []) or []),
+                "cdn_assets_missing_sri_count": len(html_evidence.get("cdn_assets_missing_sri", []) or []),
                 "risky_script_hint_count": len(html_evidence.get("risky_script_hints", []) or []),
                 "form_count": html_evidence.get("form_count", 0),
                 "dapp_keyword_hits": html_evidence.get("dapp_keyword_hits", []),
@@ -891,6 +1026,20 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
             if html_evidence["mixed_content_scripts"]:
                 findings.append(
                     _finding(idx, "high", "Mixed Content Script Hint", "One or more scripts appear to load over http:// instead of https://.", "Serve all scripts over HTTPS and remove insecure script sources.", "medium", "frontend_supply_chain", "WEB-MIXED-SCRIPT")
+                )
+                idx += 1
+            mixed_assets = html_evidence.get("mixed_content_assets", []) or []
+            if mixed_assets:
+                evidence = "; ".join(str(item.get("url")) for item in mixed_assets[:5] if isinstance(item, dict))
+                findings.append(
+                    _finding(idx, "high", "Mixed Content Asset Detected", f"HTTPS page references http:// asset(s): {evidence}.", "Serve images, scripts, and stylesheets over HTTPS only; remove or upgrade insecure asset URLs.", "high", "frontend_supply_chain", "WEB-MIXED-ASSET")
+                )
+                idx += 1
+            sri_missing = html_evidence.get("cdn_assets_missing_sri", []) or []
+            if sri_missing:
+                evidence = "; ".join(str(item.get("url")) for item in sri_missing[:5] if isinstance(item, dict))
+                findings.append(
+                    _finding(idx, "medium", "Third-Party CDN Asset Missing SRI", f"CDN script/stylesheet asset(s) are missing integrity= Subresource Integrity: {evidence}.", "Add integrity and crossorigin attributes for pinned third-party CDN scripts/styles, or self-host reviewed assets.", "medium", "frontend_supply_chain", "WEB-SRI-MISSING")
                 )
                 idx += 1
             if html_evidence["risky_script_hints"]:
@@ -999,6 +1148,28 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
                 metadata.setdefault("raw_response_evidence", {})["source_map_results"] = source_map_results
                 metadata["source_map_results"] = source_map_results
 
+        open_redirect = await _check_open_redirect(client, page.url or safe_url)
+        metadata["open_redirect_probe"] = open_redirect
+        metadata.setdefault("raw_response_evidence", {})["open_redirect_probe"] = open_redirect
+        for redirect_finding in open_redirect.get("findings", [])[:5]:
+            param = redirect_finding.get("param", "redirect")
+            location = redirect_finding.get("location", OPEN_REDIRECT_TARGET)
+            findings.append(
+                _finding(idx, "critical", "Open Redirect Confirmed", f"Parameter '{param}' redirected to {location} with a 3xx response.", "Reject absolute external redirect targets; allow-list trusted return paths and normalize relative redirects only.", "high", "navigation_security", "WEB-OPEN-REDIRECT")
+            )
+            idx += 1
+
+        caa_result = await _check_dns_caa(_host_of(page.url or safe_url))
+        metadata["dns_caa"] = caa_result
+        metadata.setdefault("raw_response_evidence", {})["dns_caa"] = caa_result
+        if caa_result.get("state") == "Assessed" and int(caa_result.get("record_count") or 0) == 0:
+            findings.append(
+                _finding(idx, "low", "DNS CAA Record Missing", f"No CAA records were found for {_host_of(page.url or safe_url)}.", "Add DNS CAA records to restrict which certificate authorities can issue certificates for this domain.", "medium", "dns_tls", "WEB-DNS-CAA-MISSING")
+            )
+            idx += 1
+        elif caa_result.get("state") != "Assessed":
+            metadata.setdefault("not_assessed", []).append({"check": "DNS CAA Record", "reason": caa_result.get("reason", "CAA check unavailable")})
+
         for public_path in ["/robots.txt", "/sitemap.xml", "/.well-known/security.txt"]:
             path_url = urljoin(page.url, public_path)
             path_result = await _safe_fetch(client, "HEAD", path_url, read_body=False)
@@ -1010,6 +1181,17 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
             else:
                 key = "security_txt_status"
             metadata[key] = status
+            if public_path == "/robots.txt" and status == 200:
+                robots_body = await _safe_fetch(client, "GET", path_url, read_body=True)
+                sensitive_lines = _parse_sensitive_robots_lines(robots_body.body_text)
+                metadata["robots_sensitive_disallow"] = sensitive_lines
+                metadata.setdefault("raw_response_evidence", {})["robots_sensitive_disallow"] = sensitive_lines
+                if sensitive_lines:
+                    evidence = "; ".join(f"line {item['line']}: Disallow: {item['disallow']}" for item in sensitive_lines[:6])
+                    findings.append(
+                        _finding(idx, "medium", "robots.txt Sensitive Path Disclosure", f"robots.txt discloses sensitive-looking paths: {evidence}.", "Remove sensitive admin/config/internal paths from robots.txt and protect them with authentication/authorization instead of obscurity.", "medium", "launch_readiness", "WEB-ROBOTS-SENSITIVE-DISALLOW")
+                    )
+                    idx += 1
             if status is None:
                 continue
             if public_path == "/.well-known/security.txt" and status >= 400:
@@ -1107,7 +1289,8 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
     metadata["bug_detection_coverage"] = {
         "phase": "49",
         "engine_version": "website-proof-coverage-v4.0",
-        "coverage_scope": [
+        "phase79_deep_checks_enabled": True,
+        "coverage_scope": [ 
             "reachability/status",
             "HTTPS/redirects",
             "security headers",
@@ -1115,6 +1298,11 @@ async def scan_website(url: str, project_name: str | None = None) -> ScanRespons
             "cookie flags",
             "HTML forms",
             "external/inline/mixed scripts",
+            "mixed content assets",
+            "CDN Subresource Integrity",
+            "open redirect probes",
+            "robots.txt sensitive disallow paths",
+            "DNS CAA record",
             "iframes/object embeds",
             "target=_blank noopener",
             "source-map hints",

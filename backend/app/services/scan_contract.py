@@ -526,6 +526,33 @@ def _token_specific_checks(code: str, findings: list[Finding], start_idx: int, c
     return idx
 
 
+
+
+def _deduplicate_findings_by_rule_id(findings: list[Finding]) -> list[Finding]:
+    """Keep one finding per Solidity rule_id for cleaner professional reports.
+
+    Some pattern checks can legitimately match multiple functions/lines with the same
+    rule_id. For the public report, duplicate rule_id spam makes the output noisy.
+    We keep the highest-severity representative finding and preserve all no-rule-id
+    findings by title/line/function.
+    """
+    severity_rank = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
+    seen: dict[str, Finding] = {}
+
+    for finding in findings:
+        key = finding.rule_id or f"no_rule:{finding.title}:{finding.affected_line}:{finding.affected_function}"
+        existing = seen.get(key)
+        if existing is None:
+            seen[key] = finding
+            continue
+
+        existing_rank = severity_rank.get(str(existing.severity), 0)
+        new_rank = severity_rank.get(str(finding.severity), 0)
+        if new_rank > existing_rank:
+            seen[key] = finding
+
+    return list(seen.values())
+
 def scan_solidity(solidity_code: str, project_name: str | None = None, contract_type: str | None = None) -> ScanResponse:
     code = solidity_code.strip()
     findings: list[Finding] = []
@@ -579,6 +606,8 @@ def scan_solidity(solidity_code: str, project_name: str | None = None, contract_
     idx = _immutable_and_constant_checks(code, findings, idx)
     idx = _eip712_domain_separator_checks(code, findings, idx)
     idx = _multicall_reentrancy(code, findings, idx)
+
+    findings = _deduplicate_findings_by_rule_id(findings)
 
     score = score_findings(findings)
     digest = sha12(code)

@@ -290,7 +290,7 @@ export function AgencyLaunchClient() {
     <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-8 grid gap-6 lg:grid-cols-[1fr_0.72fr] lg:items-end">
         <div>
-          <p className="section-label">Phase 26 / Agency Launch Layer</p>
+          <p className="section-label">Agency Launch Layer</p>
           <h1 className="mt-3 text-4xl font-black tracking-[-0.05em] sm:text-5xl">
             Client portfolio, white-label handoff, and agency workflow without fake enterprise claims.
           </h1>

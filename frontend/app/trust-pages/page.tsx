@@ -1,5 +1,5 @@
-import { PublicTrustClient } from "@/components/trust/PublicTrustClient";
+import { redirect } from "next/navigation";
 
-export default function TrustPagesPage() {
-  return <PublicTrustClient />;
+export default function Page() {
+  redirect("/dashboard");
 }

@@ -1,8 +1,5 @@
-import { CommunityReviewClient } from "@/components/community-review/CommunityReviewClient";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
-export default function CommunityReviewAdminPage() {
-  return <CommunityReviewClient adminMode />;
+export default function Page() {
+  redirect("/dashboard");
 }

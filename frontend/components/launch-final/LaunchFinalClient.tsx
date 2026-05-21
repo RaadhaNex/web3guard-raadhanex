@@ -333,7 +333,7 @@ export function LaunchFinalClient() {
       </article>
 
       <article className="glass-tile p-5">
-        <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">What remains after Phase 30</p>
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">What remains before launch</p>
         <h2 className="mt-2 text-2xl font-black text-white">Live proof, providers, workers, legal, and pilots</h2>
         <p className="mt-3 text-sm leading-7 text-slate-400">{remaining.summary}</p>
         <div className="mt-5 grid gap-4 lg:grid-cols-2">

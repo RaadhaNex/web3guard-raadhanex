@@ -22,9 +22,9 @@ export function RouteLoadingShell({
               <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base">{description}</p>
             </div>
             <div className="grid gap-3 rounded-2xl border border-white/[0.07] bg-black/20 p-4">
-              <div className="phase25-skeleton h-3 w-2/3 rounded-full" />
-              <div className="phase25-skeleton h-3 w-full rounded-full" />
-              <div className="phase25-skeleton h-3 w-5/6 rounded-full" />
+              <div className="loading-skeleton h-3 w-2/3 rounded-full" />
+              <div className="loading-skeleton h-3 w-full rounded-full" />
+              <div className="loading-skeleton h-3 w-5/6 rounded-full" />
             </div>
           </div>
         </div>
@@ -32,10 +32,10 @@ export function RouteLoadingShell({
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: cards }).map((_, index) => (
             <div key={index} className="rounded-3xl border border-white/[0.07] bg-white/[0.025] p-5">
-              <div className="phase25-skeleton h-10 w-10 rounded-2xl" />
-              <div className="phase25-skeleton mt-5 h-3 w-3/4 rounded-full" />
-              <div className="phase25-skeleton mt-3 h-3 w-full rounded-full" />
-              <div className="phase25-skeleton mt-3 h-3 w-2/3 rounded-full" />
+              <div className="loading-skeleton h-10 w-10 rounded-2xl" />
+              <div className="loading-skeleton mt-5 h-3 w-3/4 rounded-full" />
+              <div className="loading-skeleton mt-3 h-3 w-full rounded-full" />
+              <div className="loading-skeleton mt-3 h-3 w-2/3 rounded-full" />
             </div>
           ))}
         </div>

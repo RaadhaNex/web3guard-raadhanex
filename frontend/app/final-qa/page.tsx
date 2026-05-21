@@ -1,2 +1,5 @@
-import { FinalQaClient } from "@/components/security/FinalQaClient";
-export default function Page() { return <FinalQaClient />; }
+import { redirect } from "next/navigation";
+
+export default function Page() {
+  redirect("/dashboard");
+}

@@ -161,7 +161,7 @@ export function IndiaLaunchClient() {
         <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan/20 bg-cyan/[0.06] px-3.5 py-1.5 backdrop-blur-xl">
             <span className="pulse-dot h-2 w-2 rounded-full bg-cyan" />
-            <span className="text-xs font-black uppercase tracking-[0.22em] text-cyan">Phase 21 · India Launch Pack</span>
+            <span className="text-xs font-black uppercase tracking-[0.22em] text-cyan">India Launch Pack</span>
           </div>
           <h1 className="mt-5 max-w-5xl text-4xl font-black tracking-[-0.06em] sm:text-6xl">
             Founder-friendly security launch pack for Indian Web3 teams.

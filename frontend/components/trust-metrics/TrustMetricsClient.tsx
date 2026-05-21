@@ -321,7 +321,7 @@ export function TrustMetricsClient() {
     }
   }
 
-  if (loading) return <CommandLoadingState label="Loading Phase 29 trust metrics engine..." />;
+  if (loading) return <CommandLoadingState label="Loading trust metrics engine..." />;
   if (error && !status) {
     return (
       <div className="mt-8 grid gap-4">

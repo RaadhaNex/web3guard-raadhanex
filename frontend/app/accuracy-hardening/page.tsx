@@ -1,10 +1,5 @@
-import { AccuracyHardeningClient } from "@/components/accuracy-hardening/AccuracyHardeningClient";
+import { redirect } from "next/navigation";
 
-export const metadata = {
-  title: "Accuracy Hardening | Web3Guard AI",
-  description: "Benchmark, false-positive tuning, formal/fuzz artifacts, API harness, DeFi invariants, and trust-proof workflow.",
-};
-
-export default function AccuracyHardeningPage() {
-  return <AccuracyHardeningClient />;
+export default function Page() {
+  redirect("/dashboard");
 }

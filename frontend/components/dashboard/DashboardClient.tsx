@@ -233,7 +233,7 @@ export function DashboardClient() {
                 <div>
                   <p className="section-label">Workflow layer</p>
                   <h2 className="mt-2 text-2xl font-black">Project timeline, risk trend, and finding queue</h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">Phase 12 adds a real-record workflow board. It stays empty until projects, scans, and reports are saved.</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">The dashboard includes a real-record workflow board. It stays empty until projects, scans, and reports are saved.</p>
                 </div>
                 <Link href="/dashboard/workflow" className="btn-primary">Open workflow board →</Link>
               </div>

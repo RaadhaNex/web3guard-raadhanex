@@ -127,6 +127,8 @@ def _finding(
         severity=severity,  # type: ignore[arg-type]
         title=title[:180],
         description=description[:3000],
+        evidence=description[:3000],
+        fix=fix,
         affected_file=path,
         affected_line=line_no,
         affected_column=None,
