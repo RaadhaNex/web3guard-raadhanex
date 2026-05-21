@@ -551,6 +551,7 @@ button:disabled, .btn-primary[aria-disabled="true"] { opacity: 0.45; cursor: not
   padding: 1px;
   background: linear-gradient(135deg, rgba(6,182,212,0.28), rgba(139,92,246,0.18), rgba(6,182,212,0.10));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   opacity: .9;

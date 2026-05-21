@@ -837,6 +837,9 @@ export function UnifiedUrlScannerClient() {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyRailHidden, setHistoryRailHidden] = useState(false);
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyFilter, setHistoryFilter] = useState<"all" | "risky" | "clean">("all");
   const [termsOpen, setTermsOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -854,6 +857,29 @@ export function UnifiedUrlScannerClient() {
   const currentStage = scanStages[Math.min(stageIndex, scanStages.length - 1)];
   const activeScanMode = scanModeOptions.find((option) => option.id === scanMode) ?? scanModeOptions[0];
   const termsAccepted = authorized && realOnly;
+  const filteredHistory = useMemo(() => {
+    const query = historySearch.trim().toLowerCase();
+    return scanHistory.filter((scan) => {
+      const payload = getHistoryPayload(scan);
+      const haystack = [
+        scan.project_name,
+        scan.risk_label,
+        getHistoryWebsite(scan),
+        typeof payload.report_id === "string" ? payload.report_id : "",
+        typeof payload.project_type === "string" ? payload.project_type : "",
+        typeof payload.chain === "string" ? payload.chain : "",
+      ].filter(Boolean).join(" ").toLowerCase();
+      const matchesSearch = !query || haystack.includes(query);
+      const score = typeof scan.score === "number" ? scan.score : null;
+      const findingCount = scan.findings_count ?? 0;
+      const riskText = String(scan.risk_label || "").toLowerCase();
+      const matchesFilter =
+        historyFilter === "all" ||
+        (historyFilter === "risky" && (findingCount > 0 || (score !== null && score < 85) || riskText.includes("high") || riskText.includes("critical"))) ||
+        (historyFilter === "clean" && findingCount === 0 && (score === null || score >= 85));
+      return matchesSearch && matchesFilter;
+    });
+  }, [historyFilter, historySearch, scanHistory]);
 
   const deepEditorFields = [
     {
@@ -1127,6 +1153,7 @@ export function UnifiedUrlScannerClient() {
     setSelectedProjectId("");
     setSelectedHistoryId("");
     setProjectName("");
+    setWebsiteUrl("");
     setProjectType("");
     setCustomProjectType("");
     setChain("");
@@ -1149,14 +1176,32 @@ export function UnifiedUrlScannerClient() {
     setDefiSimulationJson("");
     setProtocolContextJson("");
     setReviewContextJson("");
+    setHarJson("");
+    setCrawlerArtifactJson("");
+    setAuthTestContextJson("");
+    setSecurityToolArtifactsJson("");
+    setFoundryTestOutput("");
+    setEchidnaOutputJson("");
+    setInvariantArtifactJson("");
+    setAccuracyFeedbackJson("");
     setAdvancedOpen(false);
     setScanMode("quick");
+    setActiveEvidenceEditor(null);
+    setHistorySearch("");
+    setHistoryFilter("all");
+    setTermsOpen(false);
+    setProgress(0);
+    setStageIndex(0);
     setResult(null);
     clearLatestUnifiedScan();
     setError(null);
     setFieldPrompt(null);
     setExportStatus(null);
     setSaveMessage(null);
+  }
+
+  function resetForm() {
+    startNewProject();
   }
 
   function applyHistory(scanId: string) {
@@ -1381,78 +1426,201 @@ export function UnifiedUrlScannerClient() {
     <main className="relative overflow-hidden scanner-console-page scanner-focus-page scanner-premium-page">
       <section className="mx-auto max-w-[1280px] px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-[1180px] space-y-5">
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] px-4 py-3">
-            <div>
-              <p className="text-sm font-black text-white">Scanner workspace</p>
-              <p className="text-xs text-slate-500">Run fresh scans or load previous scan history.</p>
-            </div>
+          {!historyRailHidden ? (
+            <aside className="fixed left-3 top-24 z-40 hidden w-14 flex-col items-center gap-2 rounded-2xl border border-white/[0.08] bg-[#050b18]/95 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl md:flex">
+              <button
+                type="button"
+                onClick={() => setHistoryOpen((value) => !value)}
+                title="Open scan history"
+                aria-label="Open scan history"
+                className={`flex h-10 w-10 items-center justify-center rounded-xl border text-lg transition ${historyOpen ? "border-cyan-300/40 bg-cyan-300/[0.14] text-cyan-100" : "border-white/[0.08] bg-white/[0.04] text-slate-300 hover:border-cyan-300/30 hover:bg-cyan-300/[0.08] hover:text-cyan-100"}`}
+              >
+                ☰
+              </button>
+              <button
+                type="button"
+                onClick={() => resetForm()}
+                title="New scan"
+                aria-label="New scan"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-lg text-slate-300 transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.08] hover:text-cyan-100"
+              >
+                ＋
+              </button>
+              <button
+                type="button"
+                onClick={() => void loadWorkspaceQuickData()}
+                title="Refresh history"
+                aria-label="Refresh history"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-lg text-slate-300 transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.08] hover:text-cyan-100"
+              >
+                ↻
+              </button>
+              <Link
+                href="/dashboard/scans"
+                title="Saved scans dashboard"
+                aria-label="Saved scans dashboard"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-lg text-slate-300 transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.08] hover:text-cyan-100"
+              >
+                ◫
+              </Link>
+              <div className="my-1 h-px w-8 bg-white/[0.08]" />
+              <button
+                type="button"
+                onClick={() => { setHistoryRailHidden(true); setHistoryOpen(false); }}
+                title="Hide sidebar"
+                aria-label="Hide sidebar"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-lg text-slate-400 transition hover:border-white/20 hover:text-white"
+              >
+                ‹
+              </button>
+            </aside>
+          ) : (
             <button
               type="button"
-              onClick={() => setHistoryOpen(true)}
-              className="rounded-full border border-cyan-300/25 bg-cyan-300/[0.08] px-4 py-2 text-xs font-black text-cyan-100 transition hover:border-cyan-300/45 hover:bg-cyan-300/[0.14]"
+              onClick={() => setHistoryRailHidden(false)}
+              title="Show sidebar"
+              aria-label="Show sidebar"
+              className="fixed left-0 top-24 z-40 hidden rounded-r-2xl border border-l-0 border-cyan-300/20 bg-[#050b18]/95 px-2.5 py-4 text-lg font-black text-cyan-100 shadow-2xl shadow-black/40 backdrop-blur-xl transition hover:bg-cyan-300/[0.10] md:block"
             >
-              History {scanHistory.length ? `(${scanHistory.length})` : ""}
+              ☰
             </button>
-          </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setHistoryOpen(true)}
+            className="fixed bottom-5 left-5 z-40 rounded-full border border-cyan-300/25 bg-[#050b18]/95 px-4 py-2 text-xs font-black text-cyan-100 shadow-2xl shadow-black/50 backdrop-blur-xl transition hover:border-cyan-300/45 hover:bg-cyan-300/[0.12] md:hidden"
+          >
+            History {scanHistory.length ? `(${scanHistory.length})` : ""}
+          </button>
 
           {historyOpen ? (
-            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => setHistoryOpen(false)}>
+            <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm" onClick={() => setHistoryOpen(false)}>
               <aside
-                className="ml-auto h-full w-full max-w-md overflow-y-auto border-l border-cyan-300/15 bg-[#050b18] p-5 shadow-2xl"
+                className="h-full w-full max-w-[360px] overflow-y-auto border-r border-cyan-300/15 bg-[#050b18] p-4 shadow-2xl shadow-black/60"
                 onClick={(event) => event.stopPropagation()}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="section-label">Scan history</p>
-                    <h2 className="mt-2 text-2xl font-black text-white">Load previous result</h2>
-                    <p className="mt-2 text-sm leading-6 text-slate-400">Saved scans stay read-only until you rerun or save a new report.</p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-300/[0.10] text-sm font-black text-cyan-100">W3</span>
+                    <div>
+                      <p className="text-sm font-black text-white">Scan history</p>
+                      <p className="text-[11px] text-slate-500">Load, search, refresh, or start fresh.</p>
+                    </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setHistoryOpen(false)}
-                    className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-black text-slate-300 hover:border-white/20 hover:text-white"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-lg text-slate-300 transition hover:border-white/20 hover:text-white"
+                    aria-label="Close history"
                   >
-                    Close
+                    ×
                   </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => void loadWorkspaceQuickData()}
-                  className="mt-5 w-full rounded-xl border border-cyan-300/20 bg-cyan-300/[0.08] px-4 py-3 text-sm font-black text-cyan-100 transition hover:border-cyan-300/40 hover:bg-cyan-300/[0.14]"
-                  disabled={historyLoading}
-                >
-                  {historyLoading ? "Refreshing history..." : "Refresh history"}
-                </button>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { resetForm(); setHistoryOpen(false); }}
+                    className="rounded-xl border border-cyan-300/25 bg-cyan-300/[0.10] px-3 py-2.5 text-left text-xs font-black text-cyan-100 transition hover:border-cyan-300/45 hover:bg-cyan-300/[0.16]"
+                  >
+                    ＋ New scan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void loadWorkspaceQuickData()}
+                    disabled={historyLoading}
+                    className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-left text-xs font-black text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-100 disabled:opacity-50"
+                  >
+                    {historyLoading ? "↻ Refreshing" : "↻ Refresh"}
+                  </button>
+                  <Link href="/results" className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-xs font-black text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-100">
+                    Results
+                  </Link>
+                  <Link href="/report" className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-xs font-black text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-100">
+                    Report
+                  </Link>
+                  <Link href="/dashboard/scans" className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-xs font-black text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-100">
+                    Dashboard scans
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => { clearLatestUnifiedScan(); setResult(null); setSaveMessage("Current local result cleared. Saved dashboard history is unchanged."); }}
+                    className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-left text-xs font-black text-slate-200 transition hover:border-red-300/30 hover:text-red-100"
+                  >
+                    Clear current
+                  </button>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Search scans</label>
+                  <input
+                    className="input mt-2"
+                    value={historySearch}
+                    onChange={(event) => setHistorySearch(event.target.value)}
+                    placeholder="Search project, URL, risk, report id..."
+                  />
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    {(["all", "risky", "clean"] as const).map((filter) => (
+                      <button
+                        key={filter}
+                        type="button"
+                        onClick={() => setHistoryFilter(filter)}
+                        className={`rounded-lg border px-2 py-1.5 text-[10px] font-black uppercase tracking-[0.08em] transition ${historyFilter === filter ? "border-cyan-300/35 bg-cyan-300/[0.12] text-cyan-100" : "border-white/[0.08] bg-white/[0.03] text-slate-500 hover:border-white/20 hover:text-slate-200"}`}
+                      >
+                        {filter}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 {historyError ? <p className="mt-4 rounded-xl border border-red-400/25 bg-red-500/10 p-3 text-sm text-red-100">{historyError}</p> : null}
 
-                <div className="mt-5 space-y-3">
-                  {scanHistory.length ? scanHistory.map((scan) => (
-                    <button
+                <div className="mt-5 flex items-center justify-between gap-3">
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">Recent scans</p>
+                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] font-black text-slate-400">{filteredHistory.length}/{scanHistory.length}</span>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {filteredHistory.length ? filteredHistory.map((scan) => (
+                    <div
                       key={scan.id}
-                      type="button"
-                      onClick={() => { applyHistory(scan.id); setHistoryOpen(false); }}
-                      className={`w-full rounded-2xl border p-4 text-left transition ${selectedHistoryId === scan.id ? "border-cyan-300/40 bg-cyan-300/[0.10]" : "border-white/[0.07] bg-white/[0.03] hover:border-cyan-300/20 hover:bg-white/[0.05]"}`}
+                      className={`rounded-2xl border p-3 transition ${selectedHistoryId === scan.id ? "border-cyan-300/40 bg-cyan-300/[0.10]" : "border-white/[0.07] bg-white/[0.03] hover:border-cyan-300/20 hover:bg-white/[0.05]"}`}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-black text-white">{scan.project_name || getHistoryWebsite(scan)}</p>
-                          <p className="mt-1 text-xs text-slate-500">{getHistoryWebsite(scan)}</p>
+                      <button
+                        type="button"
+                        onClick={() => { applyHistory(scan.id); setHistoryOpen(false); }}
+                        className="w-full text-left"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-black text-white">{scan.project_name || getHistoryWebsite(scan)}</p>
+                            <p className="mt-1 truncate text-xs text-slate-500">{getHistoryWebsite(scan)}</p>
+                          </div>
+                          <span className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-black ${typeof scan.score === "number" && scan.score >= 85 ? "border-emerald-300/25 bg-emerald-300/[0.10] text-emerald-200" : typeof scan.score === "number" && scan.score < 65 ? "border-red-300/25 bg-red-300/[0.10] text-red-200" : "border-amber-300/25 bg-amber-300/[0.10] text-amber-100"}`}>{scan.score ?? "—"}</span>
                         </div>
-                        <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[10px] font-black text-slate-300">{scan.score ?? "—"}</span>
+                        <div className="mt-3 flex flex-wrap gap-1.5 text-[10px] font-semibold text-slate-400">
+                          <span className="rounded-full bg-white/[0.05] px-2 py-1">{formatDateTime(scan.created_at)}</span>
+                          <span className="rounded-full bg-white/[0.05] px-2 py-1">{scan.findings_count ?? 0} findings</span>
+                          <span className="rounded-full bg-white/[0.05] px-2 py-1">{scan.risk_label || "Saved"}</span>
+                        </div>
+                      </button>
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        <button type="button" onClick={() => { applyHistory(scan.id); setHistoryOpen(false); }} className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[10px] font-black text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-100">Load</button>
+                        <Link href="/results" onClick={() => applyHistory(scan.id)} className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-center text-[10px] font-black text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-100">Results</Link>
+                        <Link href="/report" onClick={() => applyHistory(scan.id)} className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-center text-[10px] font-black text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-100">Report</Link>
                       </div>
-                      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-400">
-                        <span>{formatDateTime(scan.created_at)}</span>
-                        <span>·</span>
-                        <span>{scan.findings_count ?? 0} findings</span>
-                        <span>·</span>
-                        <span>{scan.risk_label || "Saved scan"}</span>
-                      </div>
-                    </button>
+                    </div>
                   )) : (
-                    <p className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 text-sm leading-6 text-slate-400">No saved scans found yet. Run a scan and save it to dashboard to see it here.</p>
+                    <p className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 text-sm leading-6 text-slate-400">
+                      {scanHistory.length ? "No scans match this search/filter." : "No saved scans found yet. Run a scan and save it to dashboard to see it here."}
+                    </p>
                   )}
+                </div>
+
+                <div className="mt-5 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3 text-xs leading-5 text-slate-500">
+                  <p className="font-black text-slate-300">History rules</p>
+                  <p className="mt-1">Loading a scan restores its saved result locally. Dashboard data is read-only from this panel; destructive delete is intentionally not included.</p>
                 </div>
               </aside>
             </div>
