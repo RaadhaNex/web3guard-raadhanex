@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.models.schemas import Finding, ModuleScore, ScanResponse
 from app.services.scan_contract import scan_solidity
 from app.services.static_analysis_tools import run_static_analysis_files
+from app.services.isolated_static_worker import run_isolated_static_worker_files
 from app.services.finding_normalizer import audit_grade_summary, prepare_professional_findings
 from app.services.scan_dapp_api import scan_api_backend, scan_dapp_frontend
 from app.services.scoring import priority_actions, risk_label, score_findings, severity_breakdown
@@ -637,11 +638,18 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
         static_tool_summary: dict[str, Any] | None = None
         if solidity_sources:
             try:
-                static_report = run_static_analysis_files(
+                static_report = await run_isolated_static_worker_files(
                     solidity_sources,
                     project_name=project_name or repo,
                     requested_tools=["slither", "semgrep", "aderyn"],
+                    source_label="github_solidity_auto_worker",
                 )
+                if static_report is None:
+                    static_report = run_static_analysis_files(
+                        solidity_sources,
+                        project_name=project_name or repo,
+                        requested_tools=["slither", "semgrep", "aderyn"],
+                    )
                 static_tool_summary = static_report.scan_metadata
                 linked_reports.append({
                     "module": "static_analysis",
@@ -650,7 +658,7 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
                     "findings_count": len(static_report.findings),
                     "critical_high_count": sum(1 for f in static_report.findings if f.severity in {"critical", "high"}),
                     "report_id": static_report.report_id,
-                    "source": "github_solidity_auto_tools",
+                    "source": (static_report.scan_metadata or {}).get("evidence_source") or "github_solidity_auto_tools",
                 })
                 for finding in static_report.findings[: settings.max_total_static_findings]:
                     data = finding.model_copy(update={
@@ -660,7 +668,7 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
                     findings.append(data)
                     idx += 1
             except Exception as exc:
-                static_tool_summary = {"state": "Not Assessed", "reason": str(exc)[:500]}
+                static_tool_summary = {"state": "Not Assessed", "reason": str(exc)[:500], "evidence_source": "isolated_static_worker_or_local_runner"}
                 findings.append(_finding(
                     idx=idx,
                     severity="info",
@@ -672,7 +680,7 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
                     source="GitHub Static Tool Runner",
                     business_impact="No fake tool findings were generated; only local rule-engine and repository evidence are shown.",
                     developer_explanation=str(exc)[:240],
-                    recommendation="Enable STATIC_ANALYSIS_ENABLED and install Slither/Semgrep/Aderyn on an isolated backend worker, or paste real JSON artifacts.",
+                    recommendation="Deploy/configure the isolated static-analysis worker, or paste real Slither/Semgrep/Aderyn JSON artifacts.",
                 ))
                 idx += 1
         else:

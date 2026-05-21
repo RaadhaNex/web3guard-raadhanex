@@ -1,0 +1,16 @@
+rules:
+  - id: web3guard-solidity-tx-origin
+    languages: [solidity]
+    severity: ERROR
+    message: Avoid tx.origin for authorization. Use msg.sender with explicit role checks.
+    pattern: tx.origin
+  - id: web3guard-solidity-dangerous-delegatecall
+    languages: [solidity]
+    severity: WARNING
+    message: delegatecall can execute untrusted code in this contract context. Confirm strict target control.
+    pattern: $X.delegatecall(...)
+  - id: web3guard-solidity-selfdestruct
+    languages: [solidity]
+    severity: WARNING
+    message: selfdestruct is dangerous/deprecated and can break protocol assumptions.
+    pattern: selfdestruct(...)

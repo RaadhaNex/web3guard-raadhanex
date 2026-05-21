@@ -153,6 +153,16 @@ class Settings(BaseSettings):
     max_total_static_findings: int = 90
     max_static_analysis_scan_per_hour: int = 12
 
+    # Isolated static analysis worker bridge. Disabled by default on the main public API.
+    # Enable only when a separate worker_static_analysis service is deployed with the same shared token.
+    static_worker_enabled: bool = False
+    static_worker_auto_dispatch_enabled: bool = False
+    static_worker_url: str | None = None
+    static_worker_token: str | None = None
+    static_worker_timeout_seconds: int = 75
+    static_worker_max_files: int = 12
+    static_worker_max_total_chars: int = 180000
+
 
     # Phase 27 real worker execution dashboard/probe. Disabled by default.
     worker_execution_enabled: bool = False

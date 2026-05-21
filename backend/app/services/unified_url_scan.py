@@ -15,6 +15,7 @@ from app.services.scan_website import scan_website
 from app.services.scan_github_repo import GitHubScanServiceError, scan_github_repository
 from app.services.scan_contract_address import scan_contract_address
 from app.services.static_analysis_tools import run_static_analysis, static_analysis_status
+from app.services.isolated_static_worker import run_isolated_static_worker_files, isolated_static_worker_status
 from app.services.static_analysis_artifacts import analyze_static_artifacts
 from app.services.real_findings_pipeline import build_real_findings_pipeline
 from app.services.accuracy_upgrade import build_accuracy_upgrade_package
@@ -1008,6 +1009,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
 
     auto_discovery = _auto_discovery_from_website(website_report, payload, safe_website_url)
     surface_hints["auto_discovery"] = auto_discovery
+    surface_hints["isolated_static_worker"] = isolated_static_worker_status()
     selected_auto = auto_discovery.get("selected", {}) if isinstance(auto_discovery, dict) else {}
     effective_api_base_url = payload.api_base_url or selected_auto.get("api_base_url")
     effective_github_repo_url = payload.github_repo_url or selected_auto.get("github_repo_url")
@@ -1087,12 +1089,19 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
             )
         )
         try:
-            static_report = run_static_analysis(
-                payload.solidity_code,
-                payload.project_name,
-                "Web3GuardUnified.sol",
-                ["slither", "semgrep", "aderyn"],
+            static_report = await run_isolated_static_worker_files(
+                [{"path": "Web3GuardUnified.sol", "content": payload.solidity_code}],
+                project_name=payload.project_name,
+                requested_tools=["slither", "semgrep", "aderyn"],
+                source_label="pasted_solidity_worker",
             )
+            if static_report is None:
+                static_report = run_static_analysis(
+                    payload.solidity_code,
+                    payload.project_name,
+                    "Web3GuardUnified.sol",
+                    ["slither", "semgrep", "aderyn"],
+                )
             static_summary = _static_summary_from_report(static_report)
         except Exception as exc:
             warnings.append(f"Slither/Semgrep/Aderyn static analysis was not completed: {exc}")
