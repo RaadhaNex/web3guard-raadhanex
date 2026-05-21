@@ -270,6 +270,183 @@ function fixGuideForFinding(title: string, module?: string): FixGuide {
 }
 
 
+type SimpleFindingGuide = {
+  label: string;
+  badgeClass: string;
+  proofLabel: string;
+  launchDecision: string;
+  owner: string;
+  effort: string;
+  simpleProblem: string;
+  simpleRisk: string;
+  fixNow: string;
+  verify: string;
+  whyNotExploitClaim: string;
+};
+
+function simpleOwner(module?: string | null, title?: string | null) {
+  const text = `${module || ""} ${title || ""}`.toLowerCase();
+  if (text.includes("contract") || text.includes("solidity") || text.includes("slither") || text.includes("aderyn")) return "Smart contract developer / auditor";
+  if (text.includes("api") || text.includes("cors") || text.includes("webhook") || text.includes("rate limit") || text.includes("bola") || text.includes("idor")) return "Backend developer";
+  if (text.includes("github") || text.includes("secret") || text.includes("ci") || text.includes("workflow") || text.includes("dependency")) return "DevOps / repository owner";
+  if (text.includes("wallet") || text.includes("signature") || text.includes("approval")) return "dApp frontend + wallet-flow developer";
+  if (text.includes("csp") || text.includes("header") || text.includes("cookie") || text.includes("hsts") || text.includes("iframe")) return "Frontend / hosting developer";
+  return "Project technical owner";
+}
+
+function simpleEffort(severity?: string | null, title?: string | null) {
+  const text = String(title || "").toLowerCase();
+  if (text.includes("csp") || text.includes("header") || text.includes("cookie") || text.includes("hsts")) return "Usually 30–90 minutes";
+  if (text.includes("rate limit") || text.includes("webhook") || text.includes("auth") || text.includes("bola") || text.includes("idor")) return "Usually 2–6 hours";
+  if (text.includes("contract") || text.includes("oracle") || text.includes("upgrade") || text.includes("signature")) return "Usually 1–3 days + reviewer check";
+  if (severity === "critical" || severity === "high") return "Same day priority";
+  if (severity === "medium") return "Before public beta";
+  return "When polishing launch readiness";
+}
+
+function simpleProblemForTitle(title: string, module?: string | null) {
+  const text = `${title} ${module || ""}`.toLowerCase();
+  if (text.includes("content-security-policy") || text.includes("csp")) return "Your site is missing or has a weak browser safety rule that controls which scripts/assets may run.";
+  if (text.includes("hsts")) return "Your site is not clearly telling browsers to always use HTTPS for future visits.";
+  if (text.includes("cookie")) return "A cookie setting may be missing security flags, so browser-side session protection is weaker.";
+  if (text.includes("cors")) return "Your API/browser access policy may be too open or not proven safe.";
+  if (text.includes("rate limit")) return "A public route may allow too many requests without throttling.";
+  if (text.includes("webhook")) return "A webhook/payment/integration event may not be proven signature-verified.";
+  if (text.includes("bola") || text.includes("idor")) return "The scan needs proof that users cannot access another user’s private object/report/order by changing an ID.";
+  if (text.includes("docs exposure") || text.includes("api docs") || text.includes("openapi")) return "Developer/API documentation may be exposed publicly on production.";
+  if (text.includes("secret")) return "The repo or public files may contain paths or patterns that need a secret-leak review.";
+  if (text.includes("dependency") || text.includes("osv")) return "A dependency/version risk was found or needs a real advisory check.";
+  if (text.includes("slither") || text.includes("semgrep") || text.includes("aderyn")) return "A static-analysis tool did not run or produced a finding that needs developer review.";
+  if (text.includes("contract") || text.includes("solidity")) return "Smart-contract code evidence is missing or a contract rule needs review.";
+  if (text.includes("wallet") || text.includes("signature") || text.includes("approval")) return "The wallet/signing flow needs clearer proof that users are not approving unsafe actions.";
+  return "The scanner found a launch-readiness issue or missing proof that should be checked before launch.";
+}
+
+function simpleRiskForTitle(title: string, severity?: string | null) {
+  const text = String(title || "").toLowerCase();
+  if (text.includes("content-security-policy") || text.includes("csp")) return "If an attacker finds a script-injection path, weak CSP can make account takeover, phishing, or wallet-drain pages easier.";
+  if (text.includes("rate limit")) return "Attackers or bots can overload a route, abuse free scans, spam auth/payment flows, or increase infrastructure cost.";
+  if (text.includes("webhook")) return "Fake webhook events can mark payments, reports, or trust states as valid if signature checks are missing.";
+  if (text.includes("bola") || text.includes("idor")) return "This is a serious user-data risk: one user could potentially view or modify another user’s private data if authorization is weak.";
+  if (text.includes("secret")) return "Leaked keys can give attackers access to APIs, cloud services, wallets, or private infrastructure.";
+  if (text.includes("contract") || text.includes("solidity")) return "Contract bugs can directly affect funds, ownership, upgrades, or protocol logic.";
+  if (text.includes("wallet") || text.includes("signature") || text.includes("approval")) return "Users may approve the wrong transaction, wrong chain, or unlimited token access if the flow is unclear.";
+  if (severity === "critical" || severity === "high") return "This can block a safe public launch until it is fixed or reviewed.";
+  if (severity === "medium") return "This may not be an active exploit yet, but it can become a real security problem after public traffic starts.";
+  return "This is mostly a hardening or evidence gap, but fixing it improves trust and launch quality.";
+}
+
+function findingTypeLabel(action: UnifiedUrlScanResponse["priority_actions"][number]) {
+  const text = `${action.title || ""} ${action.recommended_action || ""} ${action.module || ""}`.toLowerCase();
+  if (text.includes("not assessed") || text.includes("missing evidence") || text.includes("provide") || text.includes("add evidence")) {
+    return { label: "Evidence gap", badgeClass: "badge-amber", proofLabel: "Not enough proof to score this area" };
+  }
+  if (action.severity === "critical" || action.severity === "high") {
+    return { label: "Possible vulnerability", badgeClass: "badge-red", proofLabel: "Scanner-observed risk; needs human verification" };
+  }
+  if (action.severity === "medium") {
+    return { label: "Security issue", badgeClass: "badge-amber", proofLabel: "Observed hardening or configuration risk" };
+  }
+  return { label: "Hardening hint", badgeClass: "badge-cyan", proofLabel: "Improve before launch; not a confirmed exploit" };
+}
+
+function simpleLaunchDecision(severity?: string | null) {
+  if (severity === "critical") return "Do not launch until fixed or reviewed";
+  if (severity === "high") return "Fix before public launch";
+  if (severity === "medium") return "Fix before beta or accept risk with proof";
+  if (severity === "low") return "Good to fix during launch polish";
+  return "Monitor / add evidence";
+}
+
+function simpleGuideForAction(action: UnifiedUrlScanResponse["priority_actions"][number]): SimpleFindingGuide {
+  const type = findingTypeLabel(action);
+  const technical = fixGuideForFinding(action.title, action.module);
+  return {
+    label: type.label,
+    badgeClass: type.badgeClass,
+    proofLabel: type.proofLabel,
+    launchDecision: simpleLaunchDecision(action.severity),
+    owner: simpleOwner(action.module, action.title),
+    effort: simpleEffort(action.severity, action.title),
+    simpleProblem: simpleProblemForTitle(action.title, action.module),
+    simpleRisk: action.business_impact || simpleRiskForTitle(action.title, action.severity),
+    fixNow: technical.how_to_fix,
+    verify: technical.verify,
+    whyNotExploitClaim: "This is scanner evidence, not proof that someone exploited you. Treat it as a fix/review task before making strong security claims.",
+  };
+}
+
+function BeginnerBugSummaryCard({ result }: { result: UnifiedUrlScanResponse }) {
+  const actions = result.priority_actions || [];
+  const criticalHigh = actions.filter((item) => item.severity === "critical" || item.severity === "high").length;
+  const medium = actions.filter((item) => item.severity === "medium").length;
+  const notAssessed = result.module_cards.filter((card) => !isModuleAssessed(card)).length;
+  const assessed = result.module_cards.filter((card) => isModuleAssessed(card)).length;
+  const decision = criticalHigh > 0
+    ? "Fix critical/high items before public launch."
+    : medium > 0
+      ? "No critical/high item in the priority list, but fix medium items before beta."
+      : "No major priority blocker found in assessed modules.";
+
+  return (
+    <CardShell className="border-cyan/20 bg-cyan/[0.035]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="section-label">Beginner view</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Simple bug explanation</h2>
+          <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-300">
+            Read this like a launch checklist: a bug/security issue is something to fix, a vulnerability risk is something that can become dangerous, and Not Assessed means the scanner did not get enough evidence to judge that area.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/25 p-4 text-sm leading-6 text-slate-300 lg:max-w-sm">
+          <p className="font-black text-white">Plain decision</p>
+          <p className="mt-2">{decision}</p>
+          <p className="mt-2 text-xs text-slate-500">This is still not a certified audit or guarantee.</p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-red-400/15 bg-red-500/10 p-4">
+          <p className="mono text-[10px] uppercase tracking-[0.16em] text-red-100/70">Fix first</p>
+          <p className="mt-2 text-2xl font-black text-white">{criticalHigh}</p>
+          <p className="mt-1 text-xs leading-5 text-red-100/80">Critical/high possible vulnerabilities</p>
+        </div>
+        <div className="rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4">
+          <p className="mono text-[10px] uppercase tracking-[0.16em] text-amber-100/70">Fix next</p>
+          <p className="mt-2 text-2xl font-black text-white">{medium}</p>
+          <p className="mt-1 text-xs leading-5 text-amber-100/80">Medium security or hardening issues</p>
+        </div>
+        <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/10 p-4">
+          <p className="mono text-[10px] uppercase tracking-[0.16em] text-emerald-100/70">Checked</p>
+          <p className="mt-2 text-2xl font-black text-white">{assessed}/{result.module_cards.length || 0}</p>
+          <p className="mt-1 text-xs leading-5 text-emerald-100/80">Modules with real evidence</p>
+        </div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/25 p-4">
+          <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Unknown</p>
+          <p className="mt-2 text-2xl font-black text-white">{notAssessed}</p>
+          <p className="mt-1 text-xs leading-5 text-slate-400">Modules still Not Assessed</p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-3">
+        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+          <p className="text-sm font-black text-white">Bug / issue</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">A real signal from the scan that should be fixed or reviewed.</p>
+        </div>
+        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+          <p className="text-sm font-black text-white">Vulnerability risk</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">A weakness that could be abused if an attacker finds the right path. It needs priority review.</p>
+        </div>
+        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+          <p className="text-sm font-black text-white">Not Assessed</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">No proof was provided, so Web3Guard does not call it safe or unsafe.</p>
+        </div>
+      </div>
+    </CardShell>
+  );
+}
+
+
 type StaticToolUiRow = {
   id: string;
   label: string;
@@ -470,6 +647,11 @@ function buildInlineMarkdownReport(report: Record<string, unknown>) {
         `${index + 1}. **${String(finding.severity || "info").toUpperCase()} — ${String(finding.title || "Finding")}**`,
         `   - Module: ${String(finding.module || "unknown")}`,
         `   - Recommendation: ${String(finding.recommendation || "Review before launch.")}`,
+        `   - Simple meaning: ${String(((finding.beginner_explanation || {}) as Record<string, unknown>).plain_problem || "Review this issue before launch.")}`,
+        `   - Risk in plain words: ${String(((finding.beginner_explanation || {}) as Record<string, unknown>).plain_risk || "This may affect launch safety or user trust.")}`,
+        `   - Owner: ${String(((finding.beginner_explanation || {}) as Record<string, unknown>).owner || "Project technical owner")}`,
+        `   - Effort: ${String(((finding.beginner_explanation || {}) as Record<string, unknown>).effort || "Project-specific")}`,
+        `   - Launch decision: ${String(((finding.beginner_explanation || {}) as Record<string, unknown>).launch_decision || "Review before launch")}`,
         `   - Where to fix: ${String(fix.where_to_fix || "Manual review required")}`,
         `   - How to fix: ${String(fix.how_to_fix || "Apply project-specific fix.")}`,
         `   - Verify: ${String(fix.verify || "Re-run scan after the fix.")}`
@@ -515,15 +697,29 @@ function buildInlineReportFromResult(result: UnifiedUrlScanResponse) {
   const combined = (result.combined_report || {}) as Record<string, unknown>;
   const staticToolRows = buildStaticToolRows(result);
   const staticToolsSummary = staticToolSummary(result);
-  const realFindings = (result.priority_actions || []).map((item) => ({
-    severity: item.severity,
-    module: item.module,
-    title: item.title,
-    confidence: "medium",
-    recommendation: item.recommended_action,
-    business_impact: item.business_impact || "Fix before production launch if this affects users, funds, or admin control.",
-    fix_guidance: fixGuideForFinding(item.title, item.module),
-  }));
+  const realFindings = (result.priority_actions || []).map((item) => {
+    const simpleGuide = simpleGuideForAction(item);
+    return {
+      severity: item.severity,
+      module: item.module,
+      title: item.title,
+      confidence: "medium",
+      recommendation: item.recommended_action,
+      business_impact: item.business_impact || simpleGuide.simpleRisk,
+      fix_guidance: fixGuideForFinding(item.title, item.module),
+      beginner_explanation: {
+        type: simpleGuide.label,
+        proof: simpleGuide.proofLabel,
+        plain_problem: simpleGuide.simpleProblem,
+        plain_risk: simpleGuide.simpleRisk,
+        fix_now: simpleGuide.fixNow,
+        verify_after_fix: simpleGuide.verify,
+        owner: simpleGuide.owner,
+        effort: simpleGuide.effort,
+        launch_decision: simpleGuide.launchDecision,
+      },
+    };
+  });
 
   const evidenceRequired = result.module_cards.flatMap((card) =>
     (card.required_input || []).map((input) => ({
@@ -813,30 +1009,66 @@ function StaticToolStatusCard({ result }: { result: UnifiedUrlScanResponse }) {
 function FindingCard({ action }: { action: UnifiedUrlScanResponse["priority_actions"][number] }) {
   const severity = (action.severity || "info") as Severity;
   const guide = fixGuideForFinding(action.title, action.module);
-  const launchDecision = severity === "critical" || severity === "high" ? "Fix before launch" : severity === "medium" ? "Fix or accept risk with evidence" : "Hardening / monitor";
+  const simple = simpleGuideForAction(action);
   return (
     <details className="group rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 open:border-cyan/20 open:bg-cyan/[0.035]">
       <summary className="flex cursor-pointer list-none flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <SeverityBadge severity={severity} />
-          <h3 className="mt-2 text-base font-black text-white">{action.title}</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-400">{action.recommended_action}</p>
-          <p className="mt-2 inline-flex rounded-full border border-white/[0.08] bg-black/25 px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-300">{launchDecision}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <SeverityBadge severity={severity} />
+            <span className={`badge ${simple.badgeClass}`}>{simple.label}</span>
+            <span className="badge badge-cyan">{simple.launchDecision}</span>
+          </div>
+          <h3 className="mt-3 text-lg font-black text-white">{action.title}</h3>
+          <p className="mt-2 text-sm leading-6 text-slate-300"><b className="text-white">Simple meaning:</b> {simple.simpleProblem}</p>
+          <p className="mt-2 text-xs leading-5 text-slate-500">{simple.proofLabel}</p>
         </div>
         <span className="badge badge-cyan shrink-0">{action.module_label || action.module}</span>
       </summary>
-      <div className="mt-4 grid gap-3 border-t border-white/[0.07] pt-4 md:grid-cols-2">
-        {[
-          ["Where to fix", guide.where_to_fix],
-          ["Why it matters", guide.why_it_matters],
-          ["Fix direction", guide.how_to_fix],
-          ["Verify", guide.verify],
-        ].map(([title, text]) => (
-          <div key={title} className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
-            <p className="mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan">{title}</p>
-            <p className="mt-2 text-sm leading-6 text-slate-300">{text}</p>
+
+      <div className="mt-4 border-t border-white/[0.07] pt-4">
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-xl border border-red-400/15 bg-red-500/10 p-3">
+            <p className="mono text-[10px] font-bold uppercase tracking-[0.16em] text-red-100/70">Why this matters</p>
+            <p className="mt-2 text-sm leading-6 text-red-50/90">{simple.simpleRisk}</p>
           </div>
-        ))}
+          <div className="rounded-xl border border-cyan/10 bg-cyan/5 p-3">
+            <p className="mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan">Fix now</p>
+            <p className="mt-2 text-sm leading-6 text-cyan-50">{simple.fixNow}</p>
+          </div>
+          <div className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
+            <p className="mono text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Who should fix</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">{simple.owner}</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">Expected effort: {simple.effort}</p>
+          </div>
+          <div className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
+            <p className="mono text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">How to confirm fixed</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">{simple.verify}</p>
+          </div>
+        </div>
+
+        <div className="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100/90">
+          <p className="font-black text-amber-50">Important</p>
+          <p className="mt-1">{simple.whyNotExploitClaim}</p>
+        </div>
+
+        <details className="mt-3 rounded-xl border border-white/[0.06] bg-black/20 p-3">
+          <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.12em] text-slate-300">Show technical fix details</summary>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            {[
+              ["Where to fix", guide.where_to_fix],
+              ["Technical reason", guide.why_it_matters],
+              ["Developer fix", guide.how_to_fix],
+              ["Verification", guide.verify],
+            ].map(([title, text]) => (
+              <div key={title} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
+                <p className="mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan">{title}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-300">{text}</p>
+              </div>
+            ))}
+          </div>
+          {action.recommended_action ? <p className="mt-3 text-xs leading-5 text-slate-500">Original scanner recommendation: {action.recommended_action}</p> : null}
+        </details>
       </div>
     </details>
   );
@@ -1840,6 +2072,8 @@ export function UnifiedUrlScannerClient() {
               </div>
               {exportStatus ? <p className="mt-4 rounded-xl border border-cyan/20 bg-cyan/10 p-3 text-sm text-cyan-50">{exportStatus}</p> : null}
             </CardShell>
+
+            <BeginnerBugSummaryCard result={result} />
 
             {realEvidenceSummary ? (
               <CardShell>
