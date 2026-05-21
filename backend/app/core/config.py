@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     professional_accuracy_feedback_file: str = "app/data/db/professional_accuracy_feedback.jsonl"
     professional_benchmark_regression_file: str = "app/data/db/professional_benchmark_regression_cases.jsonl"
     professional_accuracy_benchmark_file: str = "app/data/db/professional_accuracy_benchmark_runs.jsonl"
+    professional_monitoring_baselines_file: str = "app/data/db/professional_monitoring_baselines.jsonl"
+    professional_monitoring_events_file: str = "app/data/db/professional_monitoring_events.jsonl"
+    professional_monitoring_runs_file: str = "app/data/db/professional_monitoring_runs.jsonl"
 
     # SecureScore Pro dashboard + finding workflow persistence.
     db_finding_workflow_file: str = "app/data/db/finding_workflow.jsonl"
