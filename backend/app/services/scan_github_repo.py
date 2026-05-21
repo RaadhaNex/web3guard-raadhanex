@@ -47,6 +47,10 @@ README_RE = re.compile(r"(?i)(^|/)(README|README\.md)$")
 GITIGNORE_RE = re.compile(r"(?i)(^|/)\.gitignore$")
 
 
+class GitHubScanServiceError(RuntimeError):
+    """Raised when the external GitHub API/raw fetch layer is unavailable or times out."""
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -90,17 +94,42 @@ def _headers() -> dict[str, str]:
 
 
 async def _get_json(client: httpx.AsyncClient, url: str) -> Any:
-    response = await client.get(url, headers=_headers())
-    if response.status_code == 404:
-        raise ValueError("GitHub repository/branch was not found or is not public.")
-    if response.status_code == 403:
-        raise ValueError("GitHub API rate limit or access policy blocked this scan. Add a GitHub token or retry later.")
-    response.raise_for_status()
-    return response.json()
+    try:
+        response = await client.get(url, headers=_headers())
+        if response.status_code == 404:
+            raise ValueError("GitHub repository/branch was not found or is not public.")
+        if response.status_code == 401:
+            raise ValueError("GitHub API token was rejected. Check GITHUB_API_TOKEN or scan a public repository without private access.")
+        if response.status_code == 403:
+            raise ValueError("GitHub API rate limit or access policy blocked this scan. Add a GitHub token or retry later.")
+        if response.status_code == 422:
+            raise ValueError("GitHub repository/branch could not be scanned. Check the branch name and repository URL.")
+        response.raise_for_status()
+        return response.json()
+    except ValueError:
+        raise
+    except httpx.TimeoutException as exc:
+        raise GitHubScanServiceError(
+            "GitHub API timed out while fetching repository evidence. Retry once, scan a smaller branch, or increase GITHUB_SCAN_TIMEOUT_SECONDS on the backend."
+        ) from exc
+    except httpx.HTTPStatusError as exc:
+        status_code = exc.response.status_code if exc.response is not None else "unknown"
+        raise GitHubScanServiceError(
+            f"GitHub API returned HTTP {status_code}. The repository scan was not completed; no fake result was generated."
+        ) from exc
+    except httpx.HTTPError as exc:
+        raise GitHubScanServiceError(
+            "GitHub API request failed while fetching repository evidence. Check Render network/GitHub availability and retry."
+        ) from exc
 
 
 async def _get_text(client: httpx.AsyncClient, url: str, *, max_bytes: int) -> str | None:
-    response = await client.get(url, headers={"User-Agent": _headers()["User-Agent"]}, follow_redirects=True)
+    try:
+        response = await client.get(url, headers={"User-Agent": _headers()["User-Agent"]}, follow_redirects=True)
+    except httpx.TimeoutException:
+        return None
+    except httpx.HTTPError:
+        return None
     if response.status_code != 200:
         return None
     content = response.content[: max_bytes + 1]

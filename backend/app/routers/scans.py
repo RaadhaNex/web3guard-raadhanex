@@ -13,7 +13,7 @@ from app.services.rate_limit import enforce_hourly_limit
 from app.services.auth_guard import resolve_user_id
 from app.services.scan_website import scan_website
 from app.services.unified_url_scan import REALNESS_MATRIX, run_unified_url_scan
-from app.services.scan_github_repo import github_scanner_status, scan_github_repository
+from app.services.scan_github_repo import GitHubScanServiceError, github_scanner_status, scan_github_repository
 from app.services.scan_contract_address import explorer_status, scan_contract_address
 from app.services.static_analysis_tools import static_analysis_status, run_static_analysis
 from app.services.deep_analysis_tools import deep_analysis_status, run_deep_analysis
@@ -418,6 +418,8 @@ async def scan_github_repo_endpoint(payload: GitHubRepoScanRequest, request: Req
         return await scan_github_repository(payload.repo_url, project_name=payload.project_name, branch=payload.branch)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except GitHubScanServiceError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.get("/feature-status")
