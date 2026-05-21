@@ -104,7 +104,7 @@ function DeepScanOrchestratorReportCard({ result }: { result: UnifiedUrlScanResp
     <section className="mt-5 rounded-[1.5rem] border border-cyan-300/15 bg-cyan-300/[0.04] p-5 shadow-2xl shadow-black/20">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="section-label">Scan orchestration</p>
+          <p className="section-label">Phase 78 orchestration</p>
           <h2 className="mt-2 text-2xl font-black text-white">Report shows what ran vs what needed evidence</h2>
           <p className="mt-2 text-sm leading-7 text-slate-300">{asString(summary.truth_rule, "Missing optional evidence is marked Not Assessed, not guessed.")}</p>
         </div>
@@ -138,7 +138,7 @@ function BugCoverageReportCard({ result }: { result: UnifiedUrlScanResponse | nu
     <section className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 shadow-2xl shadow-black/20">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="section-label">Proof coverage</p>
+          <p className="section-label">Phase 49 proof coverage</p>
           <h2 className="mt-2 text-2xl font-black text-white">Report-visible bug/proof coverage</h2>
           <p className="mt-2 text-sm leading-7 text-slate-300">{coverage.visibility_rule}</p>
         </div>
@@ -216,7 +216,7 @@ function DetectionExpansionReportCard({ result }: { result: UnifiedUrlScanRespon
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Deep findings</p><p className="mt-2 text-2xl font-black text-white">{String(summary.total_findings ?? 0)}</p></div>
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Critical/high</p><p className="mt-2 text-2xl font-black text-white">{String(summary.critical_high_findings ?? 0)}</p></div>
-        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Assessed layers</p><p className="mt-2 text-2xl font-black text-white">{String(summary.assessed_phase_count ?? "—")}</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Assessed phases</p><p className="mt-2 text-2xl font-black text-white">{String(summary.assessed_phase_count ?? "—")}</p></div>
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">High-confidence</p><p className="mt-2 text-2xl font-black text-white">{String(summary.confirmed_high_confidence_findings ?? 0)}</p></div>
       </div>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -255,7 +255,7 @@ function DeepEvidenceReportCard({ result }: { result: UnifiedUrlScanResponse | n
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Findings</p><p className="mt-2 text-2xl font-black text-white">{String(summary.total_findings ?? 0)}</p></div>
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Critical/high</p><p className="mt-2 text-2xl font-black text-white">{String(summary.critical_high_findings ?? 0)}</p></div>
-        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Assessed layers</p><p className="mt-2 text-2xl font-black text-white">{String(summary.assessed_phase_count ?? "—")}/10</p></div>
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Assessed phases</p><p className="mt-2 text-2xl font-black text-white">{String(summary.assessed_phase_count ?? "—")}/10</p></div>
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Evidence score</p><p className="mt-2 text-2xl font-black text-white">{summary.evidence_score === null || summary.evidence_score === undefined ? "Gated" : `${String(summary.evidence_score)}/100`}</p></div>
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.16em] text-slate-500">State</p><p className="mt-2 text-sm font-black text-white">{asString(deep.state, "Needs Evidence")}</p></div>
       </div>
@@ -299,7 +299,7 @@ export function ReportCenterClient() {
       return;
     }
     if (pipeline && (!pipeline.pipeline_ready || !pipeline.export_gate.export_ready)) {
-      setStatus("Export is blocked by pipeline validation. Fix pipeline blockers or rerun the scan before delivery.");
+      setStatus("Export is blocked by Phase 45 pipeline validation. Fix pipeline blockers or rerun the scan before delivery.");
       return;
     }
     setBusy(format);
@@ -336,6 +336,8 @@ export function ReportCenterClient() {
         <Link href="/results" className="btn-secondary">Latest results</Link>
         <Link href="/payment-validation" className="btn-secondary">₹999 validation</Link>
         <Link href="/dashboard/scans" className="btn-secondary">Saved scans</Link>
+        <Link href="/report/proof" className="btn-secondary">Public proof</Link>
+        <Link href="/report/delivery" className="btn-secondary">Client delivery</Link>
       </div>
 
       <section className="mt-6 rounded-[1.5rem] border border-cyan-300/15 bg-cyan-300/[0.04] p-6 shadow-2xl shadow-black/20">
@@ -378,7 +380,7 @@ export function ReportCenterClient() {
       <section className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 shadow-2xl shadow-black/20">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="section-label">Export integrity</p>
+            <p className="section-label">Phase 45 export integrity</p>
             <h2 className="mt-2 text-2xl font-black text-white">Report uses real findings pipeline</h2>
             <p className="mt-2 text-sm leading-7 text-slate-300">Export should unlock only when the latest scan has combined report data, report_hash, and no pipeline blocker. Older saved scans may show “not attached” until rerun.</p>
           </div>

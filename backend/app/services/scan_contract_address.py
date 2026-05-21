@@ -442,11 +442,12 @@ async def scan_contract_address(address: str, chain: str | None = None, project_
             severity_breakdown=severity_breakdown(findings),
             priority_actions=priority_actions(findings),
             input_hash=_hash(f"{chain_id}:{normalized_address}"),
-            engine_version="web3guard-contract-address-engine-v13.0",
+            engine_version="web3guard-contract-address-engine-v12.0",
             scan_metadata={
                 "address": normalized_address,
                 "chain_id": chain_id,
                 "source_verified": False,
+                "engine_version_current": "web3guard-contract-address-engine-v13.0",
                 "not_assessed": [{"module": "contract_static_tools", "reason": "Contract source not verified on Etherscan-compatible explorer. Paste Solidity source manually for full scan."}],
                 "explorer_record": {k: record.get(k) for k in ["ContractName", "CompilerVersion", "Proxy", "Implementation"]},
                 "abi_summary": abi_meta,
@@ -479,6 +480,7 @@ async def scan_contract_address(address: str, chain: str | None = None, project_
         "address": normalized_address,
         "chain_id": chain_id,
         "source_verified": True,
+        "engine_version_current": "web3guard-contract-address-engine-v13.0",
         "source_metadata": source_meta,
         "explorer_record": {
             "contract_name": record.get("ContractName"),
@@ -513,6 +515,6 @@ async def scan_contract_address(address: str, chain: str | None = None, project_
         severity_breakdown=severity_breakdown([f for f in findings if f.category != "tool_status"]),
         priority_actions=priority_actions([f for f in findings if f.category != "tool_status"]),
         input_hash=_hash(f"{chain_id}:{normalized_address}:{source_text[:5000]}"),
-        engine_version="web3guard-contract-address-engine-v13.0",
+        engine_version="web3guard-contract-address-engine-v12.0",
         scan_metadata=metadata,
     )

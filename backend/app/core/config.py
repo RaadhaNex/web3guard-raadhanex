@@ -88,6 +88,18 @@ class Settings(BaseSettings):
     onchain_webhook_secret: str | None = None
     professional_direct_level_min_reviewers: int = 2
 
+    # Phase N-S: operational direct-level console, reviewer onboarding, client delivery, and safe fuzz worker.
+    professional_reviewer_profiles_file: str = "app/data/db/professional_reviewer_profiles.jsonl"
+    professional_client_deliveries_file: str = "app/data/db/professional_client_deliveries.jsonl"
+    professional_worker_runs_file: str = "app/data/db/professional_worker_runs.jsonl"
+    professional_worker_runner_enabled: bool = False
+    professional_worker_allow_local_execution: bool = False
+    professional_worker_network_enabled: bool = False
+    professional_worker_cleanup_workspace: bool = True
+    professional_worker_timeout_seconds: int = 90
+    professional_worker_max_output_chars: int = 18000
+    professional_worker_max_code_chars: int = 180000
+
     # SecureScore Pro dashboard + finding workflow persistence.
     db_finding_workflow_file: str = "app/data/db/finding_workflow.jsonl"
 
