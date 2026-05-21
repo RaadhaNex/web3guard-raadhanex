@@ -83,6 +83,16 @@ type ProjectMode = "new" | "existing";
 type ScanMode = "quick" | "deep" | "expert";
 type ExportFormat = "pdf" | "html" | "markdown" | "json";
 
+type EvidenceGuideItem = {
+  id: string;
+  title: string;
+  unlocks: string;
+  helper: string;
+  ready: boolean;
+  mode: ScanMode;
+  editorId?: string;
+};
+
 type FixGuide = {
   where_to_fix: string;
   why_it_matters: string;
@@ -123,6 +133,10 @@ function unknownNumber(value: unknown): number | null {
 
 function unknownString(value: unknown, fallback = "—") {
   return typeof value === "string" && value.trim() ? value : fallback;
+}
+
+function hasText(value: string) {
+  return value.trim().length > 0;
 }
 
 function makeJsonSafe<T>(value: T): T {
@@ -615,6 +629,64 @@ function SplitScoreCard({ item }: { item: ReturnType<typeof scoreSplitCards>[num
   );
 }
 
+function EvidenceCoverageGuide({
+  items,
+  scanMode,
+  onOpenItem,
+}: {
+  items: EvidenceGuideItem[];
+  scanMode: ScanMode;
+  onOpenItem: (item: EvidenceGuideItem) => void;
+}) {
+  const readyCount = items.filter((item) => item.ready).length;
+  const completion = items.length ? Math.round((readyCount / items.length) * 100) : 0;
+  const nextItem = items.find((item) => !item.ready && item.mode !== "quick") || null;
+  const quickModeNote = scanMode === "quick"
+    ? "Quick Scan only needs the website URL. Missing GitHub/API/contract/wallet evidence will stay Not Assessed instead of being guessed."
+    : scanMode === "deep"
+      ? "Deep Scan becomes stronger when GitHub, API, contract, and source evidence are added."
+      : "Expert mode accepts pasted tool artifacts, HAR/crawler evidence, wallet-flow proof, and local test output.";
+
+  return (
+    <div className="rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.035] p-3">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="text-sm font-black text-white">Evidence coverage guide</p>
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">{quickModeNote}</p>
+          {nextItem ? <p className="mt-2 text-[11px] font-semibold text-cyan-100">Next useful evidence: {nextItem.title}</p> : null}
+        </div>
+        <div className="min-w-[220px] rounded-xl border border-white/10 bg-black/20 p-3">
+          <div className="flex items-center justify-between gap-3 text-xs font-black text-white">
+            <span>{readyCount}/{items.length} evidence groups</span>
+            <span>{completion}%</span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.06]">
+            <div className="h-full rounded-full bg-gradient-to-r from-cyan via-blue-500 to-purple-500 transition-all duration-500" style={{ width: `${completion}%` }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onOpenItem(item)}
+            className={`rounded-xl border p-3 text-left transition ${item.ready ? "border-emerald-300/20 bg-emerald-300/[0.08]" : "border-white/10 bg-white/[0.03] hover:border-cyan-300/20 hover:bg-white/[0.05]"}`}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs font-black text-white">{item.title}</p>
+              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] ${item.ready ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-200" : "border-white/10 bg-black/20 text-slate-400"}`}>{item.ready ? "Ready" : item.mode}</span>
+            </div>
+            <p className="mt-2 text-[11px] leading-5 text-slate-400">{item.unlocks}</p>
+            <p className="mt-2 text-[10px] leading-4 text-slate-500">{item.helper}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function FindingCard({ action }: { action: UnifiedUrlScanResponse["priority_actions"][number] }) {
   const severity = (action.severity || "info") as Severity;
   const guide = fixGuideForFinding(action.title, action.module);
@@ -974,6 +1046,107 @@ export function UnifiedUrlScannerClient() {
   const coverageCtaText = requiredInputs.length
     ? "Add GitHub, contract, API, HAR, wallet-flow, or test artifacts to unlock deeper coverage."
     : "Coverage evidence looks complete for the modules returned in this scan.";
+  const evidenceGuideItems = useMemo<EvidenceGuideItem[]>(() => [
+    {
+      id: "website-url",
+      title: "Website URL",
+      unlocks: "Headers, CSP, cookies, public exposure paths, JS/API discovery, and score proof.",
+      helper: "Enough for Quick Scan. It is still a partial pre-audit readiness check.",
+      ready: hasText(websiteUrl),
+      mode: "quick",
+    },
+    {
+      id: "github-repo",
+      title: "GitHub repo",
+      unlocks: "Dependency hygiene, repo exposure, optional Solidity discovery, and project context.",
+      helper: "Public repo URL only. Private repo scanning needs a safe future integration, not pasted secrets.",
+      ready: hasText(githubRepoUrl),
+      mode: "deep",
+    },
+    {
+      id: "api-evidence",
+      title: "API evidence",
+      unlocks: "API/auth/CORS/webhook/signature/readiness checks when base URL or OpenAPI evidence is present.",
+      helper: "Use only owned or authorized API surfaces. No brute force or exploit automation.",
+      ready: hasText(apiBaseUrl) || hasText(openapiJson) || hasText(apiObservationsJson),
+      mode: "deep",
+    },
+    {
+      id: "contract-source",
+      title: "Contract source",
+      unlocks: "Solidity rules, verified-address/source review, upgradeability/oracle/slippage/replay signals.",
+      helper: "Contract address, verified source, or pasted source improves contract coverage.",
+      ready: hasText(contractAddress) || hasText(solidityCode),
+      mode: "deep",
+      editorId: "solidity-source",
+    },
+    {
+      id: "static-tools",
+      title: "Static tool artifacts",
+      unlocks: "Slither, Semgrep, Aderyn, SCA, and secrets evidence when real artifacts are pasted.",
+      helper: "Missing tools remain Tool Not Installed / Not Assessed. No fake tool output.",
+      ready: hasText(slitherJson) || hasText(semgrepJson) || hasText(aderynJson) || hasText(securityToolArtifactsJson),
+      mode: "expert",
+      editorId: "slither-json",
+    },
+    {
+      id: "wallet-flow",
+      title: "Wallet flow proof",
+      unlocks: "Wallet UX, signing clarity, approval risk, chain mismatch, and no seed/private-key request evidence.",
+      helper: "Never paste seed phrase, private key, mnemonic, or wallet signature.",
+      ready: hasText(walletEvidenceJson) || hasText(signatureSamplesJson) || hasText(transactionSamplesJson),
+      mode: "expert",
+      editorId: "wallet-evidence-json",
+    },
+    {
+      id: "browser-artifacts",
+      title: "HAR / crawler / auth proof",
+      unlocks: "Browser network evidence, crawler exposure signals, and authorized access-control test context.",
+      helper: "Redact cookies, tokens, and personal data before pasting artifacts.",
+      ready: hasText(harJson) || hasText(crawlerArtifactJson) || hasText(authTestContextJson),
+      mode: "expert",
+      editorId: "har-json",
+    },
+    {
+      id: "fuzz-formal",
+      title: "Fuzz / invariant output",
+      unlocks: "Foundry, Echidna, invariant, and DeFi simulation evidence parsing.",
+      helper: "The main backend does not run unsafe worker execution; paste real local/worker artifacts only.",
+      ready: hasText(foundryTestOutput) || hasText(echidnaOutputJson) || hasText(invariantArtifactJson) || hasText(defiSimulationJson),
+      mode: "expert",
+      editorId: "foundry-forge-test-output",
+    },
+  ], [
+    aderynJson,
+    apiBaseUrl,
+    apiObservationsJson,
+    authTestContextJson,
+    contractAddress,
+    crawlerArtifactJson,
+    defiSimulationJson,
+    echidnaOutputJson,
+    foundryTestOutput,
+    githubRepoUrl,
+    harJson,
+    invariantArtifactJson,
+    openapiJson,
+    securityToolArtifactsJson,
+    semgrepJson,
+    signatureSamplesJson,
+    slitherJson,
+    solidityCode,
+    transactionSamplesJson,
+    walletEvidenceJson,
+    websiteUrl,
+  ]);
+
+  function openGuidedEvidence(item: EvidenceGuideItem) {
+    if (item.mode !== "quick") {
+      setScanMode(item.mode);
+      setAdvancedOpen(true);
+      setActiveEvidenceEditor(item.editorId || null);
+    }
+  }
 
   function setKnownProjectType(value?: string | null) {
     if (!value) return;
@@ -1366,6 +1539,8 @@ export function UnifiedUrlScannerClient() {
                     </div>
                   </div>
                 </div>
+
+                <EvidenceCoverageGuide items={evidenceGuideItems} scanMode={scanMode} onOpenItem={openGuidedEvidence} />
 
                 <div className="scanner-evidence-panel">
                   <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3">
