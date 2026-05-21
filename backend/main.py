@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.middleware import SecurityHeadersMiddleware
-from app.routers import admin, admin_super, agency_launch, ai, billing_final, bug_bounty, cicd, community_review, compliance, security_passport, continuous_monitoring, crosschain, database, developer_api, engine_depth, eon, india_launch, provider_readiness, provider_live, trust_metrics, public_trust_page, report_verification, dashboard_workflow, production_deployment_qa, final_qa, launch_final, launch_validation, scanner_results, worker_runs, payment_validation, pilot_experience, mvp_launch, scanner_depth, risk_intelligence, web_dast, admin_pentest, openzeppelin_pattern, scanner_correlation, scanner_truth_validation, real_findings_pipeline, static_artifact_bridge, manual_review, accuracy_upgrade, accuracy_hardening, detection_expansion, deep_evidence_accuracy, deep_scan_orchestrator, contract_benchmark, formal_fuzz_artifacts, public_proof_report, review_ops, health, leads, launch, learning, monitoring, notifications, ownership, packages, payments, public_beta, public_registry, qa, reports, scans, securescore, security_copilot, security_hardening, security_tests, sentinel, threat_intel, trust, trust_readiness, worker_execution, workspace
+from app.routers import admin, admin_super, agency_launch, ai, billing_final, bug_bounty, cicd, community_review, compliance, security_passport, continuous_monitoring, crosschain, database, developer_api, engine_depth, eon, india_launch, provider_readiness, provider_live, trust_metrics, public_trust_page, report_verification, dashboard_workflow, production_deployment_qa, final_qa, launch_final, launch_validation, scanner_results, worker_runs, payment_validation, pilot_experience, mvp_launch, scanner_depth, risk_intelligence, web_dast, admin_pentest, openzeppelin_pattern, scanner_correlation, scanner_truth_validation, real_findings_pipeline, static_artifact_bridge, manual_review, accuracy_upgrade, accuracy_hardening, detection_expansion, deep_evidence_accuracy, deep_scan_orchestrator, contract_benchmark, formal_fuzz_artifacts, public_proof_report, review_ops, professional_accuracy, health, leads, launch, learning, monitoring, notifications, ownership, packages, payments, public_beta, public_registry, qa, reports, scans, securescore, security_copilot, security_hardening, security_tests, sentinel, threat_intel, trust, trust_readiness, worker_execution, workspace
 
 app = FastAPI(
     title=settings.app_name,
@@ -101,6 +101,7 @@ app.include_router(contract_benchmark.router)
 app.include_router(formal_fuzz_artifacts.router)
 app.include_router(public_proof_report.router)
 app.include_router(review_ops.router)
+app.include_router(professional_accuracy.router)
 
 
 @app.get("/")

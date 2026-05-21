@@ -234,18 +234,19 @@ def _professional_scanner_summary(reports: list[ScanResponse], surface_hints: di
     source_counts = Counter(tool for f in real for tool in (getattr(f, "source_tools", []) or []))
     multi_tool = [f for f in real if len(getattr(f, "source_tools", []) or []) > 1]
     return {
-        "phase": "Professional Scanner Phase A",
+        "phase": "Professional Scanner Phase F",
         "status": "active",
-        "goal": "Audit-grade finding normalization, real tool verification, dedupe and report-ready evidence fields.",
+        "goal": "Audit-grade finding normalization, real tool verification, dedupe, benchmark accuracy tracking and false-positive calibration.",
         "real_findings_count": len(real),
         "with_file_or_line_count": len(with_location),
         "multi_tool_confirmed_count": len(multi_tool),
         "source_tool_counts": dict(source_counts),
         "tool_status": tool_status,
+        "accuracy_assurance": accuracy_readiness_summary(),
         "report_summaries": report_summaries,
         "report_ready_fields": ["evidence", "impact", "fix", "source_tools", "repro_steps", "verification_status", "affected_file", "affected_line"],
         "real_only_rule": "Tool status rows are never counted as vulnerabilities. Missing tools/evidence stay Tool Not Installed, Provider Not Configured, Not Applicable or Not Assessed.",
-        "next_upgrade": "Phase B should add benchmark datasets and deeper contract/economic rule packs.",
+        "next_upgrade": "Grow Phase F into real-world benchmark datasets, third-party validation and continuous calibration.",
     }
 
 
