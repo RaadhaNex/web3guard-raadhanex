@@ -8,56 +8,44 @@ const groups = [
       ["Results", "/results", "Read assessed, missing, tool, API-key, and manual-review states."],
       ["Report", "/report", "Prepare the clean founder readiness report path."],
       ["Saved scans", "/dashboard/scans", "Open previous work when login/storage are configured."],
-    ],
-  },
-  {
-    title: "Scanner intelligence",
-    note: "Advanced evidence engines added safely under More.",
-    items: [
-      ["Risk intelligence", "/risk-intelligence", "Explain impact, future risk, fix path, and verification."],
-      ["Scanner correlation", "/scanner-correlation", "Prioritize real findings into P0/P1/P2/P3 and attack-path hints."],
-      ["Static artifact bridge", "/static-artifact-bridge", "Parse real Slither/Semgrep JSON artifacts when backend tools are unavailable."],
-      ["Manual expert review", "/manual-review", "Triage findings, remove false positives, add reviewer notes, and gate reviewed reports."],
-      ["Accuracy upgrade", "/accuracy-upgrade", "Phases 52–58: OSV, static worker, API evidence, wallet UX, business logic, DeFi simulation, and reviewed confirmation."],
-      ["Accuracy hardening", "/accuracy-hardening", "Accuracy hardening: benchmark accuracy, false-positive tuning, formal/fuzz artifacts, API harness, DeFi invariants, and trust proof."],
-      ["Detection expansion", "/detection-expansion", "Phases 60–67: deep crawler, JS/API discovery, wallet/API/business/DeFi evidence, and false-positive learning."],
-      ["Deep evidence accuracy", "/deep-evidence", "Phases 68–77: HAR/API capture, authorized observations, SCA/secrets artifacts, fuzz/invariant evidence, wallet decoding, and accuracy feedback."],
-      ["Deep scan orchestrator", "/deep-scan-orchestrator", "Quick Scan default, Deep Scan optional evidence, Expert Evidence artifacts, and clear run/skip states."],
-      ["Truth validation", "/scanner-truth-validation", "Check latest scan output for real evidence mapping, missing states, and fake-claim blockers."],
-      ["OpenZeppelin patterns", "/openzeppelin-pattern", "Compare Solidity evidence against common OpenZeppelin-style secure patterns."],
-      ["Authorized Web DAST", "/web-dast", "Safe authorized web baseline checks with no exploit automation."],
-      ["Admin pentest governance", "/admin-pentest", "Scope, authorization, role, and governance readiness workflow."],
-    ],
-  },
-  {
-    title: "Trust and help",
-    note: "Use these to understand the beta.",
-    items: [
-      ["Docs", "/docs", "Methodology, limitations, responsible use, and setup pages."],
-      ["Feature status", "/feature-status", "See what is live, beta, manual, or setup-required."],
-      ["Responsible use", "/responsible-use", "Allowed usage, authorization, and safety boundaries."],
+      ["Dashboard", "/dashboard", "User workspace for projects, scans, reports, and billing status."],
     ],
   },
   {
     title: "Scanner surfaces",
-    note: "Use these for direct surface checks.",
+    note: "Public scanner entry points only. Admin/Ops tools are separated from this hub.",
     items: [
-      ["Website", "/scanner/website", "HTTPS, headers, policy pages, and launch surface."],
-      ["Smart contract", "/scanner/contract", "Contract evidence and static-analysis readiness."],
-      ["API", "/scanner/api-deep", "Auth, CORS, webhook, rate-limit, and admin exposure."],
+      ["Unified scanner", "/scanner/unified-url", "Website, contract, GitHub, API, wallet, and admin-readiness evidence in one flow."],
+      ["Website", "/scanner/website", "HTTPS, headers, policy pages, public exposure, and launch surface."],
+      ["Smart contract", "/scanner/contract", "Solidity source, verified contract, and static-analysis readiness."],
+      ["API", "/scanner/api-deep", "Auth, CORS, webhook, rate-limit, and admin exposure evidence."],
       ["Wallet UX", "/scanner/wallet", "Wallet-connect and transaction-flow safety review."],
-      ["GitHub", "/scanner/github", "Repo hygiene, packages, CI, and exposure signals."],
-      ["Admin OpSec", "/scanner/admin-opsec", "MFA, roles, multisig, and incident-response evidence."],
+      ["GitHub", "/scanner/github", "Repo hygiene, packages, CI, Solidity files, and exposure signals."],
+      ["Admin OpSec", "/scanner/admin-opsec", "MFA, roles, multisig, and incident-response evidence for user-submitted projects."],
     ],
   },
   {
-    title: "Setup / internal",
-    note: "Keep these away from the main user path.",
+    title: "Trust and help",
+    note: "Use these to understand the public beta.",
     items: [
-      ["Worker execution", "/worker-execution", "Slither/Semgrep/tool-worker execution states."],
-      ["Provider live", "/provider-live", "Explorer, advisory, GitHub, and external provider states."],
-      ["Payment validation", "/payment-validation", "Razorpay/UPI verification for the ₹999 pilot path."],
-      ["Trust metrics", "/trust-metrics", "Public-safe metrics without fake audit claims."],
+      ["Docs", "/docs", "Methodology, limitations, responsible use, and setup pages."],
+      ["Methodology", "/methodology", "Evidence-first scoring model, severity, confidence, and coverage gates."],
+      ["Limitations", "/limitations", "What is not scanned, what needs keys/tools, and what needs manual review."],
+      ["Feature status", "/feature-status", "See what is live, beta, manual, or setup-required."],
+      ["Responsible use", "/responsible-use", "Authorization, no exploit automation, and safe-use boundaries."],
+      ["Security", "/security", "Platform security posture and transparency notes."],
+    ],
+  },
+  {
+    title: "Launch support",
+    note: "Public business/support pages without internal admin clutter.",
+    items: [
+      ["Pricing", "/pricing", "Free scan, pilot report, and custom manual support options."],
+      ["Payment validation", "/payment-validation", "UPI/manual payment validation for the pilot path."],
+      ["Contact", "/contact", "Request manual review scope, provider setup, or launch-readiness support."],
+      ["Sample reports", "/sample-reports", "Public-safe examples of readiness report output."],
+      ["Free tools", "/free-tools", "Helpful founder tools that do not require admin access."],
+      ["Scope & refund", "/scope-refund", "Understand pilot scope, manual review boundaries, and refund rules."],
     ],
   },
 ];
@@ -67,9 +55,9 @@ export function MoreHub() {
     <main className="more-hub-page mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <section className="rounded-[2rem] border border-cyan-300/15 bg-slate-950/70 p-5 shadow-2xl shadow-cyan-950/20 sm:p-8">
         <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-200/80">More</p>
-        <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-[-0.06em] text-white sm:text-6xl">All extra screens, cleaned and grouped.</h1>
+        <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-[-0.06em] text-white sm:text-6xl">Public pages, cleanly grouped.</h1>
         <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
-          Main flow stays simple: Home → Scan → Results → Report → Price. Advanced scanner engines live here without cluttering the header.
+          Main flow stays simple: Home → Scan → Results → Report → Price. Internal admin, monitoring, QA, worker, and operations tools are separated from the public user path.
         </p>
       </section>
 
