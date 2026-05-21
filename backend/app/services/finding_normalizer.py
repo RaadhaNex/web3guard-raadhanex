@@ -113,7 +113,10 @@ def _dedupe_key(finding: Finding) -> tuple[Any, ...]:
     if category == "tool-status":
         return ("status", rule, title, path, line)
     if path or line:
-        # This merges the same issue confirmed by multiple tools at the same location.
+        # Keep distinct local rule IDs separate even when they point to the same line,
+        # but still merge multi-tool confirmations that do not share the same local rule id.
+        if rule:
+            return (module, category, rule, path, line or 0)
         return (module, category, path, line or 0)
     if rule:
         return (module, category, rule)

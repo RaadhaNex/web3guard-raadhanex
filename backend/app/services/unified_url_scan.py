@@ -21,6 +21,7 @@ from app.services.accuracy_upgrade import build_accuracy_upgrade_package
 from app.services.detection_expansion import build_detection_expansion_package
 from app.services.deep_evidence_accuracy import build_deep_evidence_accuracy_package
 from app.services.deep_scan_orchestrator import build_deep_scan_orchestrator
+from app.services.formal_fuzz_artifacts import analyze_formal_fuzz_artifacts, formal_fuzz_summary_from_report
 
 MODULE_LABELS = {
     "website": "Website Surface",
@@ -32,6 +33,7 @@ MODULE_LABELS = {
     "github": "GitHub Repository",
     "static_analysis": "Slither / Semgrep Static Analysis",
     "deep_detection": "Deep Detection Expansion",
+    "formal_fuzz": "Foundry / Echidna / Invariant Artifacts",
 }
 
 REALNESS_MATRIX = [
@@ -436,6 +438,35 @@ def _static_module_card(summary: dict[str, Any]) -> dict[str, Any]:
         "required_input": required_input,
     }
 
+
+
+def _formal_fuzz_module_card(summary: dict[str, Any]) -> dict[str, Any]:
+    tools = summary.get("tools") or []
+    evidence = [
+        f"{str(tool.get('tool', 'artifact')).replace('_', ' ').title()}: {tool.get('state', 'Not Assessed')} ({tool.get('real_findings', 0)} real finding(s))"
+        for tool in tools
+    ]
+    if not evidence:
+        evidence = ["No Foundry/Echidna/invariant artifact was supplied."]
+    assessed = bool(summary.get("assessed"))
+    return {
+        "module": "formal_fuzz",
+        "label": MODULE_LABELS.get("formal_fuzz", "Foundry / Echidna / Invariant Artifacts"),
+        "status": summary.get("state") or ("Assessed" if assessed else "Not Assessed"),
+        "score": summary.get("score") if assessed else None,
+        "risk_label": summary.get("risk_label") or ("Evidence findings present" if assessed else "Not Assessed"),
+        "assessed": assessed,
+        "report_id": summary.get("report_id"),
+        "findings_count": len(summary.get("findings") or []),
+        "critical_high_count": sum(1 for f in summary.get("findings") or [] if f.get("severity") in {"critical", "high"}),
+        "evidence": evidence,
+        "limitations": [
+            "Artifact parser only: Web3Guard does not run forge/Echidna in this path.",
+            "Failing tests/properties require reproduction and manual triage before report approval.",
+            "Passing artifacts are useful evidence but do not prove complete security or formal verification.",
+        ],
+        "required_input": [] if assessed else ["Foundry test output, Echidna JSON/text, invariant artifact JSON, or DeFi simulation artifact."],
+    }
 
 def _static_not_assessed_summary() -> dict[str, Any]:
     status = static_analysis_status()
@@ -859,6 +890,19 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
             )
         )
 
+
+    formal_fuzz_report = analyze_formal_fuzz_artifacts(
+        foundry_test_output=getattr(payload, "foundry_test_output", None),
+        echidna_output_json=getattr(payload, "echidna_output_json", None),
+        invariant_artifact_json=getattr(payload, "invariant_artifact_json", None),
+        defi_simulation_json=getattr(payload, "defi_simulation_json", None),
+        project_name=payload.project_name,
+    )
+    if formal_fuzz_report:
+        reports.append(formal_fuzz_report)
+    surface_hints["formal_fuzz_artifacts"] = formal_fuzz_summary_from_report(formal_fuzz_report)
+    module_cards.append(_formal_fuzz_module_card(surface_hints["formal_fuzz_artifacts"]))
+
     module_cards.append(
         _status_card(
             "wallet",
@@ -981,7 +1025,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "report_id": f"W3G-URL-LAUNCH-{_hash(safe_website_url)[:12]}",
         "generated_at": started.isoformat(),
         "project_name": payload.project_name,
-        "engine_version": "web3guard-unified-url-launch-scanner-v22.0-phase78-orchestrated-deep-scan",
+        "engine_version": "web3guard-unified-url-launch-scanner-v23.0-professional-phase-c-formal-fuzz-artifacts",
         "mode": "real_only_unified_url_scan",
         "website_url": safe_website_url,
         "chain": payload.chain,

@@ -111,7 +111,7 @@ class Settings(BaseSettings):
     aderyn_binary: str | None = None
     semgrep_binary: str | None = None
     aderyn_command_template: str = "{binary} --root {root} --output {output}"
-    audit_tool_timeout_seconds: int = 60
+    audit_tool_timeout_seconds: int = 45
     audit_tool_max_output_chars: int = 16000
     audit_tool_cleanup_workspace: bool = True
     max_static_analysis_code_chars: int = 180000

@@ -20,7 +20,7 @@ from app.services.solidity_utils import (
     sensitive_function_name,
 )
 
-ENGINE_VERSION = "web3guard-solidity-rule-engine-v2.0"
+ENGINE_VERSION = "web3guard-solidity-rule-engine-v2.1-phase-b"
 
 SECURITY_REFERENCES = {
     "reentrancy": ["SWC-107", "Checks-Effects-Interactions", "OpenZeppelin ReentrancyGuard"],
@@ -533,6 +533,306 @@ def _token_specific_checks(code: str, findings: list[Finding], start_idx: int, c
     return idx
 
 
+
+
+# ── Professional Scanner Phase B: deeper audit-grade Solidity heuristics ─────────────────────────────────────────────
+
+def _upgrade_authorization_deep_checks(code: str, findings: list[Finding], idx: int) -> int:
+    """Upgradeable contract controls, implementation lock, and storage-layout readiness."""
+    upgradeable = bool(re.search(r"UUPSUpgradeable|Initializable|Upgradeable|TransparentUpgradeableProxy|BeaconProxy|upgradeTo\s*\(|upgradeToAndCall\s*\(", code, re.IGNORECASE))
+    if not upgradeable:
+        return idx
+
+    if re.search(r"upgradeTo\s*\(|upgradeToAndCall\s*\(", code, re.IGNORECASE) and not re.search(r"function\s+_authorizeUpgrade\s*\(", code):
+        line, _ = first_match_line(code, r"upgradeTo\s*\(|upgradeToAndCall\s*\(")
+        _add_unique(findings, _finding(
+            idx, severity="critical",
+            title="Upgradeable Contract Without Clear _authorizeUpgrade Hook",
+            description="Upgradeability is detected, but the UUPS authorization hook is not visible in the submitted source.",
+            line=line, code=line_text(code, line),
+            business="If upgrade authorization is missing or weak, an attacker or mistaken operator can replace the implementation and take over funds or roles.",
+            dev="UUPS implementations must override _authorizeUpgrade and protect it with onlyOwner/onlyRole/multisig/timelock controls.",
+            fix="Implement _authorizeUpgrade(address newImplementation) internal override onlyOwner/onlyRole and protect the owner role with multisig/timelock.",
+            confidence="medium", category="upgradeability", rule_id="WG-SOL-UPGRADE-003",
+            references=["OpenZeppelin UUPSUpgradeable _authorizeUpgrade", "Proxy upgrade access control"],
+        ))
+        idx += 1
+
+    if re.search(r"Initializable|initializer|__\w+_init", code) and not re.search(r"_disableInitializers\s*\(", code):
+        line, _ = first_match_line(code, r"Initializable|initializer|__\w+_init")
+        _add_unique(findings, _finding(
+            idx, severity="high",
+            title="Upgradeable Implementation May Not Disable Initializers",
+            description="Initializable upgrade pattern is present but _disableInitializers() was not detected in a constructor.",
+            line=line, code=line_text(code, line),
+            business="A public implementation contract that remains initializable can be taken over, confusing integrations and sometimes enabling upgrade abuse.",
+            dev="OpenZeppelin upgradeable implementations should call _disableInitializers() in the implementation constructor.",
+            fix="Add constructor() { _disableInitializers(); } to the implementation contract and keep proxy initialization separate.",
+            confidence="medium", category="upgradeability", rule_id="WG-SOL-UPGRADE-004",
+            references=["OpenZeppelin Initializable", "Implementation contract initialization risk"],
+        ))
+        idx += 1
+
+    if re.search(r"Upgradeable|Initializable|__\w+_init", code) and not re.search(r"uint256\s*\[[0-9]+\]\s+private\s+__gap", code):
+        _add_unique(findings, _finding(
+            idx, severity="medium",
+            title="Upgradeable Storage Gap Not Detected",
+            description="Upgradeable-style code is present but a reserved storage gap was not detected.",
+            line=None, code=None,
+            business="Future upgrades can accidentally shift storage layout and corrupt balances, owners, or protocol configuration.",
+            dev="Upgradeable contracts commonly reserve storage slots using uint256[__] private __gap; and require storage-layout review per upgrade.",
+            fix="Add an appropriate __gap storage reserve and verify layout compatibility before every upgrade.",
+            confidence="low", category="upgradeability", rule_id="WG-SOL-UPGRADE-005",
+            references=["OpenZeppelin upgradeable storage gaps", "Storage layout compatibility"],
+        ))
+        idx += 1
+    return idx
+
+
+def _oracle_staleness_and_decimal_checks(code: str, findings: list[Finding], idx: int) -> int:
+    """Chainlink/oracle freshness, round validation, decimal normalization."""
+    oracle_like = bool(re.search(r"latestRoundData|latestAnswer|AggregatorV3Interface|priceFeed|oracle\.|getPrice", code, re.IGNORECASE))
+    if not oracle_like:
+        return idx
+
+    line, _ = first_match_line(code, r"latestRoundData|latestAnswer|AggregatorV3Interface|priceFeed|oracle\.|getPrice")
+    if re.search(r"latestRoundData\s*\(", code) and not re.search(r"updatedAt|answeredInRound|roundId", code):
+        _add_unique(findings, _finding(
+            idx, severity="high",
+            title="Oracle latestRoundData Used Without Freshness Validation",
+            description="Chainlink-style latestRoundData appears to be used without visible updatedAt/round validation.",
+            line=line, code=line_text(code, line),
+            business="Stale oracle prices can cause bad liquidations, undercollateralized borrows, or incorrect swaps.",
+            dev="Validate updatedAt, answer > 0, and completed round data before using oracle prices in value-bearing logic.",
+            fix="Require answer > 0 and updatedAt >= block.timestamp - MAX_STALENESS. Consider checking answeredInRound >= roundId where relevant.",
+            confidence="medium", category="oracle", rule_id="WG-SOL-ORACLE-001",
+            references=["Chainlink latestRoundData freshness checks", "Oracle manipulation risk"],
+        ))
+        idx += 1
+
+    if re.search(r"latestRoundData|AggregatorV3Interface|decimals\s*\(", code, re.IGNORECASE) and not re.search(r"decimals\s*\(|10\s*\*\*\s*\w*decimals|1e8|1e18", code):
+        _add_unique(findings, _finding(
+            idx, severity="medium",
+            title="Oracle Decimal Normalization Not Obvious",
+            description="Oracle price usage is present, but decimal normalization is not obvious in the submitted source.",
+            line=line, code=line_text(code, line),
+            business="Decimal mismatch can overvalue or undervalue collateral and break DeFi accounting.",
+            dev="Different oracle feeds can use different decimals. Token decimals and oracle decimals must be normalized explicitly.",
+            fix="Read oracle decimals or document feed decimals, then normalize all prices to the protocol's accounting precision.",
+            confidence="low", category="oracle", rule_id="WG-SOL-ORACLE-002",
+            references=["Chainlink feed decimals", "DeFi accounting precision"],
+        ))
+        idx += 1
+    return idx
+
+
+def _dex_and_slippage_deep_checks(code: str, findings: list[Finding], idx: int) -> int:
+    """DEX router slippage and deadline anti-MEV checks."""
+    swap_like = bool(re.search(r"swapExact|exactInput|exactOutput|amountOutMin|amountInMaximum|ISwapRouter|IUniswap|PancakeRouter", code, re.IGNORECASE))
+    if not swap_like:
+        return idx
+
+    zero_min_pattern = r"amountOutMin\s*[,=]\s*0|amountOutMinimum\s*[:=]\s*0|minAmountOut\s*[:=]\s*0|swapExact\w+\s*\([^;]{0,180},\s*0\s*,"
+    if re.search(zero_min_pattern, code, re.IGNORECASE | re.DOTALL):
+        line, _ = first_match_line(code, zero_min_pattern)
+        _add_unique(findings, _finding(
+            idx, severity="high",
+            title="Swap Allows Zero Minimum Output",
+            description="A swap path appears to allow amountOutMin / amountOutMinimum to be zero.",
+            line=line, code=line_text(code, line),
+            business="Users or protocol funds can receive almost nothing during MEV, sandwich attacks, or bad routing.",
+            dev="Zero slippage protection is unsafe for value-bearing swaps. The caller should provide a minimum output from a quote with slippage bounds.",
+            fix="Require a non-zero minimum output and pass user-approved slippage settings. Reject stale quotes.",
+            confidence="medium", category="mev", rule_id="WG-SOL-MEV-001",
+            references=["DEX slippage protection", "MEV sandwich attack"],
+        ))
+        idx += 1
+
+    if re.search(r"deadline\s*[:=,]\s*block\.timestamp|deadline\s*[:=,]\s*type\(uint256\)\.max", code):
+        line, _ = first_match_line(code, r"deadline\s*[:=,]\s*block\.timestamp|deadline\s*[:=,]\s*type\(uint256\)\.max")
+        _add_unique(findings, _finding(
+            idx, severity="medium",
+            title="Weak Swap Deadline Handling",
+            description="A swap deadline appears to be block.timestamp or an unlimited max value.",
+            line=line, code=line_text(code, line),
+            business="Weak deadlines make stale transactions easier to execute in unfavorable market conditions.",
+            dev="Deadline should be caller-provided and bounded. Unlimited deadlines are unsafe for swaps.",
+            fix="Require deadline >= block.timestamp and deadline <= block.timestamp + MAX_DEADLINE_WINDOW.",
+            confidence="medium", category="mev", rule_id="WG-SOL-MEV-002",
+            references=["Uniswap router deadline usage", "Stale transaction risk"],
+        ))
+        idx += 1
+    return idx
+
+
+def _permit_nonce_deadline_deep_checks(code: str, findings: list[Finding], idx: int) -> int:
+    """Signature replay and malleability checks beyond basic EIP-712 domain checks."""
+    signature_like = bool(re.search(r"permit\s*\(|ecrecover\s*\(|ECDSA|_hashTypedData|SignatureChecker", code, re.IGNORECASE))
+    if not signature_like:
+        return idx
+
+    line, _ = first_match_line(code, r"permit\s*\(|ecrecover\s*\(|ECDSA|_hashTypedData|SignatureChecker")
+    if not re.search(r"nonce|nonces\s*\[|_useNonce|_nonces", code, re.IGNORECASE):
+        _add_unique(findings, _finding(
+            idx, severity="high",
+            title="Signature Flow Missing Obvious Nonce Protection",
+            description="Signature verification is present, but nonce usage was not detected.",
+            line=line, code=line_text(code, line),
+            business="A valid signature may be replayed multiple times to drain funds, repeat approvals, or bypass one-time authorization.",
+            dev="Every off-chain authorization should bind a unique nonce and consume it exactly once.",
+            fix="Include nonce in the signed struct/hash and increment or consume nonce before/with execution.",
+            confidence="medium", category="signature", rule_id="WG-SOL-SIG-003",
+            references=["EIP-2612 permit nonce", "Signature replay protection"],
+        ))
+        idx += 1
+
+    if re.search(r"permit\s*\(|ecrecover\s*\(|_hashTypedData", code, re.IGNORECASE) and not re.search(r"deadline|expiry|expiresAt|validUntil", code, re.IGNORECASE):
+        _add_unique(findings, _finding(
+            idx, severity="medium",
+            title="Signature Flow Missing Expiry / Deadline",
+            description="Signature authorization is present, but no expiry/deadline field was detected.",
+            line=line, code=line_text(code, line),
+            business="Long-lived signatures increase damage if leaked or signed by mistake.",
+            dev="Permits and meta-transactions should include a deadline and reject expired signatures.",
+            fix="Add deadline/expiry to the signed data and require(block.timestamp <= deadline).",
+            confidence="medium", category="signature", rule_id="WG-SOL-SIG-004",
+            references=["EIP-2612 deadline", "EIP-712 signed data expiry"],
+        ))
+        idx += 1
+
+    if re.search(r"ecrecover\s*\(", code) and not re.search(r"ECDSA\.recover|SignatureChecker|s\s*<=|v\s*==\s*27|v\s*==\s*28", code):
+        _add_unique(findings, _finding(
+            idx, severity="medium",
+            title="Raw ecrecover Without Obvious Malleability Guards",
+            description="Raw ecrecover is used without obvious v/s malleability checks or OpenZeppelin ECDSA wrapper.",
+            line=line, code=line_text(code, line),
+            business="Signature malleability can break signature uniqueness assumptions and complicate replay prevention.",
+            dev="Use OpenZeppelin ECDSA.recover or validate v and low-s per EIP-2.",
+            fix="Replace raw ecrecover with ECDSA.recover from OpenZeppelin or enforce strict v and low-s checks.",
+            confidence="medium", category="signature", rule_id="WG-SOL-SIG-005",
+            references=["OpenZeppelin ECDSA", "EIP-2 low-s signatures"],
+        ))
+        idx += 1
+    return idx
+
+
+def _erc4626_vault_deep_checks(code: str, findings: list[Finding], idx: int) -> int:
+    """ERC4626/share vault rounding, donation, and initialization risk signals."""
+    vault_like = bool(re.search(r"ERC4626|totalAssets\s*\(|convertToShares\s*\(|previewDeposit\s*\(|previewRedeem\s*\(|deposit\s*\(|redeem\s*\(", code))
+    if not vault_like:
+        return idx
+
+    line, _ = first_match_line(code, r"ERC4626|convertToShares\s*\(|previewDeposit\s*\(|deposit\s*\(")
+    if not re.search(r"virtualAssets|virtualShares|_decimalsOffset|MINIMUM_LIQUIDITY|seed|initialDeposit", code, re.IGNORECASE):
+        _add_unique(findings, _finding(
+            idx, severity="high",
+            title="ERC4626 / Vault Inflation Protection Not Obvious",
+            description="Vault/share accounting is detected, but common first-deposit or donation attack protections were not obvious.",
+            line=line, code=line_text(code, line),
+            business="An attacker may manipulate share price during the first deposit and steal value from later depositors.",
+            dev="ERC4626-style vaults need inflation/donation attack defenses such as virtual shares/assets, decimal offset, or seeded liquidity.",
+            fix="Add virtual share/asset accounting, seed initial liquidity safely, and add tests for first-deposit/donation attacks.",
+            confidence="medium", category="vault", rule_id="WG-SOL-VAULT-001",
+            references=["ERC4626 inflation attack", "OpenZeppelin ERC4626 virtual offset"],
+        ))
+        idx += 1
+
+    if re.search(r"convertToShares|convertToAssets|previewDeposit|previewMint", code) and not re.search(r"Math\.Rounding|rounding|mulDiv", code):
+        _add_unique(findings, _finding(
+            idx, severity="medium",
+            title="Vault Share Rounding Policy Not Obvious",
+            description="Vault conversion/preview functions are present without an obvious rounding policy.",
+            line=line, code=line_text(code, line),
+            business="Rounding mistakes can leak value, harm users, or create profitable edge-case arbitrage.",
+            dev="Share math should use reviewed mulDiv and explicit rounding direction per function.",
+            fix="Use Math.mulDiv with explicit Math.Rounding and add tests for small deposits, large deposits, zero supply, and donation scenarios.",
+            confidence="low", category="vault", rule_id="WG-SOL-VAULT-002",
+            references=["ERC4626 rounding requirements", "OpenZeppelin Math.mulDiv"],
+        ))
+        idx += 1
+    return idx
+
+
+def _admin_parameter_cap_checks(code: str, findings: list[Finding], idx: int) -> int:
+    """Owner-adjustable fees/limits without caps, delay, or events."""
+    setter_matches = re.finditer(
+        r"function\s+(set|update|change)(Fee|Tax|Rate|Limit|Cap|Treasury|Router|Oracle)\w*\s*\([^)]*\)\s*(?:external|public)[^{]*\{(?P<body>[^}]*)\}",
+        code,
+        re.IGNORECASE | re.DOTALL,
+    )
+    for match in list(setter_matches)[:4]:
+        body = match.group("body")
+        line = code[:match.start()].count("\n") + 1
+        function_source = match.group(0)[:800]
+        has_cap = bool(re.search(r"require\s*\([^;]*(<=|<)\s*(MAX|max|[0-9_]+)", body))
+        has_event = bool(re.search(r"emit\s+\w+", body))
+        has_delay = bool(re.search(r"timelock|delay|eta|queued|schedule", function_source, re.IGNORECASE))
+        if not (has_cap and has_event):
+            _add_unique(findings, _finding(
+                idx, severity="medium",
+                title="Admin Parameter Setter Needs Cap/Event Review",
+                description="A privileged-looking parameter setter lacks an obvious cap and/or event emission.",
+                line=line, code=line_text(code, line),
+                business="Silent or uncapped parameter changes can create rug-pull, fee abuse, oracle switch, or governance trust risk.",
+                dev="Critical setters should enforce maximum bounds, emit events, and ideally be protected by timelock/multisig.",
+                fix="Add require(value <= MAX_ALLOWED), emit an event, and route critical changes through multisig/timelock. Document admin powers.",
+                confidence="medium", category="centralization", rule_id="WG-SOL-ADMIN-005",
+                references=["Admin parameter bounds", "Timelock governance controls"],
+            ))
+            idx += 1
+            break
+        if not has_delay and re.search(r"Oracle|Router|Treasury", match.group(0), re.IGNORECASE):
+            _add_unique(findings, _finding(
+                idx, severity="low",
+                title="Critical Address Setter Without Timelock Signal",
+                description="A setter for oracle/router/treasury-like address does not show an obvious timelock signal.",
+                line=line, code=line_text(code, line),
+                business="Critical infrastructure address changes can redirect funds or manipulate prices if executed instantly.",
+                dev="This may be acceptable for early beta, but production protocols should use multisig/timelock or governance delay.",
+                fix="Move critical address setters behind multisig and timelock, and emit events for monitoring.",
+                confidence="low", category="centralization", rule_id="WG-SOL-ADMIN-006",
+                references=["Timelock Controller", "Protocol admin operations"],
+            ))
+            idx += 1
+            break
+    return idx
+
+
+def _l2_crosschain_sender_checks(code: str, findings: list[Finding], idx: int) -> int:
+    """Cross-chain messenger and bridge sender validation."""
+    if not re.search(r"xDomainMessageSender|ICrossDomainMessenger|IInbox|ArbSys|LayerZero|lzReceive|ccipReceive|Any2EVMMessage|bridge|relayMessage", code, re.IGNORECASE):
+        return idx
+    if not re.search(r"xDomainMessageSender\s*\(\)|trustedRemote|trustedSender|sourceChainSelector|onlyMessenger|msg\.sender\s*==\s*\w*Messenger", code, re.IGNORECASE):
+        line, _ = first_match_line(code, r"xDomainMessageSender|ICrossDomainMessenger|LayerZero|lzReceive|ccipReceive|bridge|relayMessage")
+        _add_unique(findings, _finding(
+            idx, severity="high",
+            title="Cross-Chain Message Sender Validation Not Obvious",
+            description="Cross-chain messaging or bridge code is detected without obvious trusted sender/source validation.",
+            line=line, code=line_text(code, line),
+            business="Forged or misrouted cross-chain messages can mint assets, unlock bridge funds, or execute admin actions on the destination chain.",
+            dev="Destination handlers must validate the messenger contract, source chain, and original sender/remote endpoint.",
+            fix="Require msg.sender == trusted messenger and verify source chain + trusted remote/original sender before executing messages.",
+            confidence="medium", category="crosschain", rule_id="WG-SOL-XCHAIN-001",
+            references=["Cross-chain bridge message validation", "LayerZero trusted remote", "Optimism xDomainMessageSender"],
+        ))
+        idx += 1
+    return idx
+
+
+def _phase_b_rule_coverage_summary(code: str, findings: list[Finding]) -> dict:
+    """Non-finding metadata for benchmark/report readiness."""
+    categories = sorted({f.category for f in findings if f.category})
+    phase_b_ids = [f.rule_id for f in findings if f.rule_id and f.rule_id.startswith(("WG-SOL-ORACLE", "WG-SOL-MEV", "WG-SOL-VAULT", "WG-SOL-XCHAIN"))]
+    return {
+        "phase": "professional_scanner_phase_b",
+        "new_rule_families": ["upgradeability", "oracle", "mev_slippage", "signature_replay", "erc4626_vault", "admin_parameter_controls", "crosschain"],
+        "triggered_phase_b_rule_ids": sorted(set(phase_b_ids)),
+        "finding_categories": categories,
+        "line_count": len(lines(code)),
+        "note": "Heuristic findings are evidence-first pre-audit signals and require reviewer triage before certified-audit wording.",
+    }
+
+
 def scan_solidity(solidity_code: str, project_name: str | None = None, contract_type: str | None = None) -> ScanResponse:
     code = solidity_code.strip()
     findings: list[Finding] = []
@@ -586,6 +886,13 @@ def scan_solidity(solidity_code: str, project_name: str | None = None, contract_
     idx = _immutable_and_constant_checks(code, findings, idx)
     idx = _eip712_domain_separator_checks(code, findings, idx)
     idx = _multicall_reentrancy(code, findings, idx)
+    idx = _upgrade_authorization_deep_checks(code, findings, idx)
+    idx = _oracle_staleness_and_decimal_checks(code, findings, idx)
+    idx = _dex_and_slippage_deep_checks(code, findings, idx)
+    idx = _permit_nonce_deadline_deep_checks(code, findings, idx)
+    idx = _erc4626_vault_deep_checks(code, findings, idx)
+    idx = _admin_parameter_cap_checks(code, findings, idx)
+    idx = _l2_crosschain_sender_checks(code, findings, idx)
 
     findings = prepare_professional_findings(findings, default_source_tool="web3guard_local_rules")
     score = score_findings(findings)
@@ -602,7 +909,8 @@ def scan_solidity(solidity_code: str, project_name: str | None = None, contract_
         engine_version=ENGINE_VERSION,
         scan_metadata={
             "audit_grade_finding_summary": audit_grade_summary(findings),
-            "finding_engine": "professional_normalized_rule_engine",
+            "phase_b_rule_coverage": _phase_b_rule_coverage_summary(code, findings),
+            "finding_engine": "professional_normalized_rule_engine_phase_b",
             "real_only_note": "Local Solidity rules produce preliminary evidence only; findings require triage before certified-audit wording.",
         },
     )
@@ -663,6 +971,21 @@ def available_contract_rules() -> list[dict[str, str]]:
         {"id": "WG-SOL-GAS-005",     "name": "Address should be immutable", "category": "gas"},
         {"id": "WG-SOL-SIG-002",     "name": "EIP-712 missing chainId", "category": "signature"},
         {"id": "WG-SOL-MULTI-001",   "name": "Multicall msg.value reuse", "category": "defi"},
+        {"id": "WG-SOL-UPGRADE-003", "name": "UUPS authorize upgrade hook", "category": "upgradeability"},
+        {"id": "WG-SOL-UPGRADE-004", "name": "Disable implementation initializers", "category": "upgradeability"},
+        {"id": "WG-SOL-UPGRADE-005", "name": "Upgradeable storage gap", "category": "upgradeability"},
+        {"id": "WG-SOL-ORACLE-001", "name": "Oracle freshness validation", "category": "oracle"},
+        {"id": "WG-SOL-ORACLE-002", "name": "Oracle decimal normalization", "category": "oracle"},
+        {"id": "WG-SOL-MEV-001", "name": "Zero minimum swap output", "category": "mev"},
+        {"id": "WG-SOL-MEV-002", "name": "Weak swap deadline", "category": "mev"},
+        {"id": "WG-SOL-SIG-003", "name": "Signature nonce protection", "category": "signature"},
+        {"id": "WG-SOL-SIG-004", "name": "Signature expiry/deadline", "category": "signature"},
+        {"id": "WG-SOL-SIG-005", "name": "Raw ecrecover malleability", "category": "signature"},
+        {"id": "WG-SOL-VAULT-001", "name": "ERC4626 inflation protection", "category": "vault"},
+        {"id": "WG-SOL-VAULT-002", "name": "Vault rounding policy", "category": "vault"},
+        {"id": "WG-SOL-ADMIN-005", "name": "Admin parameter cap/event", "category": "centralization"},
+        {"id": "WG-SOL-ADMIN-006", "name": "Critical address timelock", "category": "centralization"},
+        {"id": "WG-SOL-XCHAIN-001", "name": "Cross-chain sender validation", "category": "crosschain"},
     ]
 
 
