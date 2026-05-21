@@ -83,16 +83,6 @@ type ProjectMode = "new" | "existing";
 type ScanMode = "quick" | "deep" | "expert";
 type ExportFormat = "pdf" | "html" | "markdown" | "json";
 
-type EvidenceGuideItem = {
-  id: string;
-  title: string;
-  unlocks: string;
-  helper: string;
-  ready: boolean;
-  mode: ScanMode;
-  editorId?: string;
-};
-
 type FixGuide = {
   where_to_fix: string;
   why_it_matters: string;
@@ -133,10 +123,6 @@ function unknownNumber(value: unknown): number | null {
 
 function unknownString(value: unknown, fallback = "—") {
   return typeof value === "string" && value.trim() ? value : fallback;
-}
-
-function hasText(value: string) {
-  return value.trim().length > 0;
 }
 
 function makeJsonSafe<T>(value: T): T {
@@ -191,9 +177,9 @@ function riskBadgeClass(label?: string | null) {
 
 function statusBadgeClass(status?: string | null) {
   const value = String(status || "").toLowerCase();
-  if (value.includes("live") || value.includes("assessed") || value.includes("complete")) return "badge-green";
+  if (value.includes("not assessed") || value.includes("not installed") || value.includes("not configured") || value.includes("key")) return "badge";
   if (value.includes("manual") || value.includes("input") || value.includes("needed")) return "badge-amber";
-  if (value.includes("not assessed") || value.includes("not installed") || value.includes("key")) return "badge";
+  if (value.includes("live") || value.includes("assessed") || value.includes("complete")) return "badge-green";
   return "badge-cyan";
 }
 
@@ -280,6 +266,127 @@ function fixGuideForFinding(title: string, module?: string): FixGuide {
     why_it_matters: "This item depends on project-specific architecture and launch context.",
     how_to_fix: "Document the affected flow, add the missing control or evidence, then re-run the scanner.",
     verify: "Re-test the exact flow and confirm the finding is resolved or explicitly accepted as risk.",
+  };
+}
+
+
+type StaticToolUiRow = {
+  id: string;
+  label: string;
+  state: string;
+  status: string;
+  installed: boolean | null;
+  enabledByEnv: boolean | null;
+  willRun: boolean | null;
+  realFindings: number;
+  evidenceSource: string;
+  detail: string;
+  action: string;
+};
+
+function boolOrNull(value: unknown) {
+  return typeof value === "boolean" ? value : null;
+}
+
+function yesNo(value: boolean | null) {
+  if (value === null) return "unknown";
+  return value ? "yes" : "no";
+}
+
+function toolLabel(tool: string) {
+  const clean = tool.replace(/_artifact$/i, "").toLowerCase();
+  if (clean === "slither") return "Slither";
+  if (clean === "semgrep") return "Semgrep";
+  if (clean === "aderyn") return "Aderyn";
+  return tool.replace(/_/g, " ");
+}
+
+function toolAction(state: string, label: string, evidenceSource: string) {
+  const value = state.toLowerCase();
+  if (evidenceSource.includes("artifact")) return `Review the parsed ${label} artifact findings and keep the raw JSON attached for reviewer verification.`;
+  if (value.includes("not assessed")) return `Add Solidity source or a verified contract/source artifact, then rerun. URL-only scans do not execute ${label}.`;
+  if (value.includes("not installed")) return `Install ${label} in the isolated tools environment, or paste a valid ${label} JSON artifact in Expert Evidence.`;
+  if (value.includes("assessed")) return `Review real ${label} output and fix confirmed findings before public launch.`;
+  if (value.includes("provider not configured") || value.includes("not configured")) return `Enable ${label} only in a safe tools/worker environment, or paste a valid ${label} JSON artifact.`;
+  if (value.includes("manual")) return `Check backend tool logs for ${label}; if the tool cannot run safely, attach manual reviewer notes or a valid artifact.`;
+  return `Add Solidity source or a verified contract/source artifact, then rerun. URL-only scans do not execute ${label}.`;
+}
+
+function buildStaticToolRows(result: UnifiedUrlScanResponse | null): StaticToolUiRow[] {
+  if (!result) return [];
+  const staticSummary = plainRecord(result.surface_hints?.static_analysis);
+  const staticCard = result.module_cards.find((card) => card.module === "static_analysis");
+  const rawTools = unknownArray(staticSummary.tools).filter(isPlainRecord);
+  const expected = ["slither", "semgrep", "aderyn"];
+  const rows: StaticToolUiRow[] = [];
+
+  expected.forEach((id) => {
+    const tool = rawTools.find((item) => String(item.tool || "").toLowerCase() === id);
+    const label = toolLabel(id);
+    const state = tool ? unknownString(tool.state, "Not Assessed") : staticCard?.status || "Not Assessed";
+    const status = tool ? unknownString(tool.status, "not_run") : "not_reported";
+    const installed = tool ? boolOrNull(tool.installed) : null;
+    const enabledByEnv = tool ? boolOrNull(tool.enabled_by_env) : null;
+    const willRun = tool ? boolOrNull(tool.will_run) : null;
+    const realFindings = tool ? unknownNumber(tool.real_findings) ?? 0 : 0;
+    const evidenceSource = tool ? unknownString(tool.evidence_source, "backend_tool_status") : "not_reported";
+    rows.push({
+      id,
+      label,
+      state,
+      status,
+      installed,
+      enabledByEnv,
+      willRun,
+      realFindings,
+      evidenceSource,
+      detail: `installed: ${yesNo(installed)} · enabled: ${yesNo(enabledByEnv)} · will run: ${yesNo(willRun)} · findings: ${realFindings}`,
+      action: toolAction(state, label, evidenceSource),
+    });
+  });
+
+  rawTools
+    .filter((item) => String(item.tool || "").toLowerCase().endsWith("_artifact"))
+    .forEach((tool) => {
+      const id = String(tool.tool || "artifact");
+      const label = `${toolLabel(id)} artifact`;
+      const state = unknownString(tool.state, "User Artifact");
+      const status = unknownString(tool.status, "artifact_status");
+      const realFindings = unknownNumber(tool.real_findings) ?? 0;
+      const evidenceSource = unknownString(tool.evidence_source, "user_supplied_json_artifact");
+      rows.push({
+        id,
+        label,
+        state,
+        status,
+        installed: false,
+        enabledByEnv: true,
+        willRun: false,
+        realFindings,
+        evidenceSource,
+        detail: `user artifact parsed · findings: ${realFindings}`,
+        action: toolAction(state, label, evidenceSource),
+      });
+    });
+
+  return rows;
+}
+
+function staticToolSummary(result: UnifiedUrlScanResponse | null) {
+  if (!result) return null;
+  const staticSummary = plainRecord(result.surface_hints?.static_analysis);
+  const verification = plainRecord(staticSummary.tool_verification);
+  const staticCard = result.module_cards.find((card) => card.module === "static_analysis");
+  return {
+    state: unknownString(staticSummary.state, staticCard?.status || "Not Assessed"),
+    score: typeof staticSummary.score === "number" ? staticSummary.score : staticCard?.score ?? null,
+    riskLabel: unknownString(staticSummary.risk_label, staticCard?.risk_label || "Not Assessed"),
+    completedCount: unknownNumber(verification.completed_count) ?? 0,
+    ranCount: unknownNumber(verification.ran_count) ?? 0,
+    failedCount: unknownNumber(verification.failed_count) ?? 0,
+    realFindingsCount: unknownNumber(verification.real_findings_count) ?? staticCard?.findings_count ?? 0,
+    evidenceRule: unknownString(verification.evidence_rule, "Only real executed tool output or valid supplied artifacts count. Missing tools are not fake vulnerabilities."),
+    note: unknownString(staticSummary.real_only_note, "URL-only scans do not run Slither/Semgrep/Aderyn. Add source/artifacts for static-analysis evidence."),
   };
 }
 
@@ -372,6 +479,20 @@ function buildInlineMarkdownReport(report: Record<string, unknown>) {
     lines.push("No findings were detected in the assessed modules of this scan payload.");
   }
 
+  const staticToolRows = Array.isArray(report.static_analysis_tool_status) ? (report.static_analysis_tool_status as Array<Record<string, unknown>>) : [];
+  const staticSummary = (report.static_analysis_summary || {}) as Record<string, unknown>;
+
+  lines.push("", "## Static-analysis tool status");
+  if (staticToolRows.length) {
+    lines.push(`State: ${String(staticSummary.state || "Not Assessed")}`);
+    staticToolRows.forEach((tool) => {
+      lines.push(`- **${String(tool.label || tool.id || "Tool")}**: ${String(tool.state || "Not Assessed")} · ${String(tool.detail || "No detail")}`);
+      lines.push(`  - Next action: ${String(tool.action || "Add valid evidence and rerun.")}`);
+    });
+  } else {
+    lines.push("No Slither/Semgrep/Aderyn status was attached to this scan payload.");
+  }
+
   lines.push("", "## Evidence required / Not Assessed modules");
   if (evidenceRequired.length) {
     evidenceRequired.forEach((item) => {
@@ -392,6 +513,8 @@ function buildInlineMarkdownReport(report: Record<string, unknown>) {
 
 function buildInlineReportFromResult(result: UnifiedUrlScanResponse) {
   const combined = (result.combined_report || {}) as Record<string, unknown>;
+  const staticToolRows = buildStaticToolRows(result);
+  const staticToolsSummary = staticToolSummary(result);
   const realFindings = (result.priority_actions || []).map((item) => ({
     severity: item.severity,
     module: item.module,
@@ -450,6 +573,8 @@ function buildInlineReportFromResult(result: UnifiedUrlScanResponse) {
       evidence: card.evidence || [],
       limitations: card.limitations || [],
     })),
+    static_analysis_tool_status: staticToolRows,
+    static_analysis_summary: staticToolsSummary,
     dynamic_score_trace: result.dynamic_score_trace || result.real_evidence_summary?.dynamic_score_trace || null,
     detection_expansion: (result as unknown as { detection_expansion?: unknown }).detection_expansion || null,
     executive_summary: result.safe_public_summary || combined.executive_summary || "Preliminary launch-surface report generated from scanner evidence.",
@@ -629,67 +754,66 @@ function SplitScoreCard({ item }: { item: ReturnType<typeof scoreSplitCards>[num
   );
 }
 
-function EvidenceCoverageGuide({
-  items,
-  scanMode,
-  onOpenItem,
-}: {
-  items: EvidenceGuideItem[];
-  scanMode: ScanMode;
-  onOpenItem: (item: EvidenceGuideItem) => void;
-}) {
-  const readyCount = items.filter((item) => item.ready).length;
-  const completion = items.length ? Math.round((readyCount / items.length) * 100) : 0;
-  const nextItem = items.find((item) => !item.ready && item.mode !== "quick") || null;
-  const quickModeNote = scanMode === "quick"
-    ? "Quick Scan only needs the website URL. Missing GitHub/API/contract/wallet evidence will stay Not Assessed instead of being guessed."
-    : scanMode === "deep"
-      ? "Deep Scan becomes stronger when GitHub, API, contract, and source evidence are added."
-      : "Expert mode accepts pasted tool artifacts, HAR/crawler evidence, wallet-flow proof, and local test output.";
 
+function StaticToolStatusCard({ result }: { result: UnifiedUrlScanResponse }) {
+  const rows = buildStaticToolRows(result);
+  const summary = staticToolSummary(result);
+  if (!summary) return null;
+  const staticCard = result.module_cards.find((card) => card.module === "static_analysis");
   return (
-    <div className="rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.035] p-3">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <CardShell>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <p className="text-sm font-black text-white">Evidence coverage guide</p>
-          <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">{quickModeNote}</p>
-          {nextItem ? <p className="mt-2 text-[11px] font-semibold text-cyan-100">Next useful evidence: {nextItem.title}</p> : null}
+          <p className="section-label">Static analysis</p>
+          <h2 className="mt-2 text-2xl font-black text-white">Slither / Semgrep / Aderyn status</h2>
+          <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-400">
+            This block explains whether external static-analysis tools actually ran, were not installed, were disabled by configuration, or were only supplied as JSON artifacts.
+          </p>
+          <p className="mt-2 text-xs leading-5 text-slate-500">{summary.evidenceRule}</p>
         </div>
-        <div className="min-w-[220px] rounded-xl border border-white/10 bg-black/20 p-3">
-          <div className="flex items-center justify-between gap-3 text-xs font-black text-white">
-            <span>{readyCount}/{items.length} evidence groups</span>
-            <span>{completion}%</span>
+        <div className="grid min-w-[280px] gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+            <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">State</p>
+            <p className="mt-2 text-sm font-black text-white">{summary.state}</p>
           </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.06]">
-            <div className="h-full rounded-full bg-gradient-to-r from-cyan via-blue-500 to-purple-500 transition-all duration-500" style={{ width: `${completion}%` }} />
+          <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+            <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Tools ran</p>
+            <p className="mt-2 text-2xl font-black text-white">{summary.ranCount}</p>
+          </div>
+          <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+            <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Real findings</p>
+            <p className="mt-2 text-2xl font-black text-white">{summary.realFindingsCount}</p>
           </div>
         </div>
       </div>
-
-      <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-        {items.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onOpenItem(item)}
-            className={`rounded-xl border p-3 text-left transition ${item.ready ? "border-emerald-300/20 bg-emerald-300/[0.08]" : "border-white/10 bg-white/[0.03] hover:border-cyan-300/20 hover:bg-white/[0.05]"}`}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-xs font-black text-white">{item.title}</p>
-              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] ${item.ready ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-200" : "border-white/10 bg-black/20 text-slate-400"}`}>{item.ready ? "Ready" : item.mode}</span>
+      <div className="mt-5 grid gap-3 md:grid-cols-3">
+        {rows.map((tool) => (
+          <div key={tool.id} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-base font-black text-white">{tool.label}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">{tool.status} · {tool.evidenceSource}</p>
+              </div>
+              <span className={`badge ${statusBadgeClass(tool.state)}`}>{tool.state}</span>
             </div>
-            <p className="mt-2 text-[11px] leading-5 text-slate-400">{item.unlocks}</p>
-            <p className="mt-2 text-[10px] leading-4 text-slate-500">{item.helper}</p>
-          </button>
+            <p className="mt-3 text-xs leading-5 text-slate-400">{tool.detail}</p>
+            <p className="mt-3 rounded-xl border border-cyan/10 bg-cyan/5 p-3 text-xs leading-5 text-cyan-50">{tool.action}</p>
+          </div>
         ))}
       </div>
-    </div>
+      <div className="mt-5 rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">
+        <p className="font-black">Why it may show Not Assessed</p>
+        <p className="mt-2">{summary.note}</p>
+        {staticCard?.required_input?.length ? <p className="mt-2 text-xs text-amber-100/80">Next evidence: {staticCard.required_input[0]}</p> : null}
+      </div>
+    </CardShell>
   );
 }
 
 function FindingCard({ action }: { action: UnifiedUrlScanResponse["priority_actions"][number] }) {
   const severity = (action.severity || "info") as Severity;
   const guide = fixGuideForFinding(action.title, action.module);
+  const launchDecision = severity === "critical" || severity === "high" ? "Fix before launch" : severity === "medium" ? "Fix or accept risk with evidence" : "Hardening / monitor";
   return (
     <details className="group rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 open:border-cyan/20 open:bg-cyan/[0.035]">
       <summary className="flex cursor-pointer list-none flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -697,6 +821,7 @@ function FindingCard({ action }: { action: UnifiedUrlScanResponse["priority_acti
           <SeverityBadge severity={severity} />
           <h3 className="mt-2 text-base font-black text-white">{action.title}</h3>
           <p className="mt-2 text-sm leading-6 text-slate-400">{action.recommended_action}</p>
+          <p className="mt-2 inline-flex rounded-full border border-white/[0.08] bg-black/25 px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-300">{launchDecision}</p>
         </div>
         <span className="badge badge-cyan shrink-0">{action.module_label || action.module}</span>
       </summary>
@@ -1046,107 +1171,6 @@ export function UnifiedUrlScannerClient() {
   const coverageCtaText = requiredInputs.length
     ? "Add GitHub, contract, API, HAR, wallet-flow, or test artifacts to unlock deeper coverage."
     : "Coverage evidence looks complete for the modules returned in this scan.";
-  const evidenceGuideItems = useMemo<EvidenceGuideItem[]>(() => [
-    {
-      id: "website-url",
-      title: "Website URL",
-      unlocks: "Headers, CSP, cookies, public exposure paths, JS/API discovery, and score proof.",
-      helper: "Enough for Quick Scan. It is still a partial pre-audit readiness check.",
-      ready: hasText(websiteUrl),
-      mode: "quick",
-    },
-    {
-      id: "github-repo",
-      title: "GitHub repo",
-      unlocks: "Dependency hygiene, repo exposure, optional Solidity discovery, and project context.",
-      helper: "Public repo URL only. Private repo scanning needs a safe future integration, not pasted secrets.",
-      ready: hasText(githubRepoUrl),
-      mode: "deep",
-    },
-    {
-      id: "api-evidence",
-      title: "API evidence",
-      unlocks: "API/auth/CORS/webhook/signature/readiness checks when base URL or OpenAPI evidence is present.",
-      helper: "Use only owned or authorized API surfaces. No brute force or exploit automation.",
-      ready: hasText(apiBaseUrl) || hasText(openapiJson) || hasText(apiObservationsJson),
-      mode: "deep",
-    },
-    {
-      id: "contract-source",
-      title: "Contract source",
-      unlocks: "Solidity rules, verified-address/source review, upgradeability/oracle/slippage/replay signals.",
-      helper: "Contract address, verified source, or pasted source improves contract coverage.",
-      ready: hasText(contractAddress) || hasText(solidityCode),
-      mode: "deep",
-      editorId: "solidity-source",
-    },
-    {
-      id: "static-tools",
-      title: "Static tool artifacts",
-      unlocks: "Slither, Semgrep, Aderyn, SCA, and secrets evidence when real artifacts are pasted.",
-      helper: "Missing tools remain Tool Not Installed / Not Assessed. No fake tool output.",
-      ready: hasText(slitherJson) || hasText(semgrepJson) || hasText(aderynJson) || hasText(securityToolArtifactsJson),
-      mode: "expert",
-      editorId: "slither-json",
-    },
-    {
-      id: "wallet-flow",
-      title: "Wallet flow proof",
-      unlocks: "Wallet UX, signing clarity, approval risk, chain mismatch, and no seed/private-key request evidence.",
-      helper: "Never paste seed phrase, private key, mnemonic, or wallet signature.",
-      ready: hasText(walletEvidenceJson) || hasText(signatureSamplesJson) || hasText(transactionSamplesJson),
-      mode: "expert",
-      editorId: "wallet-evidence-json",
-    },
-    {
-      id: "browser-artifacts",
-      title: "HAR / crawler / auth proof",
-      unlocks: "Browser network evidence, crawler exposure signals, and authorized access-control test context.",
-      helper: "Redact cookies, tokens, and personal data before pasting artifacts.",
-      ready: hasText(harJson) || hasText(crawlerArtifactJson) || hasText(authTestContextJson),
-      mode: "expert",
-      editorId: "har-json",
-    },
-    {
-      id: "fuzz-formal",
-      title: "Fuzz / invariant output",
-      unlocks: "Foundry, Echidna, invariant, and DeFi simulation evidence parsing.",
-      helper: "The main backend does not run unsafe worker execution; paste real local/worker artifacts only.",
-      ready: hasText(foundryTestOutput) || hasText(echidnaOutputJson) || hasText(invariantArtifactJson) || hasText(defiSimulationJson),
-      mode: "expert",
-      editorId: "foundry-forge-test-output",
-    },
-  ], [
-    aderynJson,
-    apiBaseUrl,
-    apiObservationsJson,
-    authTestContextJson,
-    contractAddress,
-    crawlerArtifactJson,
-    defiSimulationJson,
-    echidnaOutputJson,
-    foundryTestOutput,
-    githubRepoUrl,
-    harJson,
-    invariantArtifactJson,
-    openapiJson,
-    securityToolArtifactsJson,
-    semgrepJson,
-    signatureSamplesJson,
-    slitherJson,
-    solidityCode,
-    transactionSamplesJson,
-    walletEvidenceJson,
-    websiteUrl,
-  ]);
-
-  function openGuidedEvidence(item: EvidenceGuideItem) {
-    if (item.mode !== "quick") {
-      setScanMode(item.mode);
-      setAdvancedOpen(true);
-      setActiveEvidenceEditor(item.editorId || null);
-    }
-  }
 
   function setKnownProjectType(value?: string | null) {
     if (!value) return;
@@ -1540,8 +1564,6 @@ export function UnifiedUrlScannerClient() {
                   </div>
                 </div>
 
-                <EvidenceCoverageGuide items={evidenceGuideItems} scanMode={scanMode} onOpenItem={openGuidedEvidence} />
-
                 <div className="scanner-evidence-panel">
                   <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -1851,6 +1873,8 @@ export function UnifiedUrlScannerClient() {
             ) : null}
 
             <DynamicScoreTraceCard trace={dynamicScoreTrace} />
+
+            <StaticToolStatusCard result={result} />
 
             <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
               <CardShell>
