@@ -8,25 +8,129 @@ services:
     envVars:
       - key: APP_ENV
         value: production
+
+      - key: FRONTEND_ORIGIN
+        value: https://web3guard-raadhanex.vercel.app
+
       - key: FRONTEND_URL
-        sync: false
+        value: https://web3guard-raadhanex.vercel.app
+
       - key: BACKEND_URL
-        sync: false
+        value: https://web3guard-raadhanex-backend.onrender.com
+
       - key: ADMIN_TOKEN
         sync: false
-      - key: RAADHANEX_UPI_ID
+
+      - key: ETHERSCAN_API_KEY
         sync: false
-      - key: RAADHANEX_UPI_NAME
-        value: RAADHANEX
-      - key: AI_ENABLED
-        value: "false"
-      - key: AI_PROVIDER
-        value: none
-      - key: AI_SEND_CODE
-        value: "false"
+
+      - key: ETHERSCAN_V2_API_BASE
+        value: https://api.etherscan.io/v2/api
+
+      - key: POLYGONSCAN_API_KEY
+        sync: false
+
+      - key: BSCSCAN_API_KEY
+        sync: false
+
+      - key: ARBISCAN_API_KEY
+        sync: false
+
+      - key: OPTIMISMSCAN_API_KEY
+        sync: false
+
+      - key: BASESCAN_API_KEY
+        sync: false
+
+      - key: GITHUB_API_BASE
+        value: https://api.github.com
+
+      - key: GITHUB_API_TOKEN
+        sync: false
+
       - key: STATIC_ANALYSIS_ENABLED
         value: "true"
+
+      - key: WORKER_EXECUTION_ENABLED
+        value: "false"
+
       - key: SLITHER_ENABLED
         value: "true"
+
+      - key: SLITHER_BINARY
+        value: slither
+
+      - key: SEMGREP_ENABLED
+        value: "false"
+
+      - key: SEMGREP_BINARY
+        value: semgrep
+
+      - key: ADERYN_ENABLED
+        value: "false"
+
+      - key: ADERYN_BINARY
+        value: aderyn
+
+      - key: MYTHRIL_ENABLED
+        value: "false"
+
+      - key: MYTHRIL_DOCKER_ENABLED
+        value: "false"
+
+      - key: MANTICORE_ENABLED
+        value: "false"
+
+      - key: ECHIDNA_ENABLED
+        value: "false"
+
+      - key: FOUNDRY_ENABLED
+        value: "false"
+
+      - key: DEEP_ANALYSIS_ENABLED
+        value: "false"
+
       - key: LAUNCH_VALIDATION_NETWORK_ENABLED
         value: "false"
+
+      - key: AI_ENABLED
+        value: "false"
+
+      - key: AI_PROVIDER
+        value: none
+
+      - key: AI_SEND_CODE
+        value: "false"
+
+      - key: OPENAI_API_KEY
+        sync: false
+
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+      - key: RAZORPAY_ENABLED
+        value: "false"
+
+      - key: PAYMENT_MODE
+        value: upi_manual
+
+      - key: RAZORPAY_KEY_ID
+        sync: false
+
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+
+      - key: RAADHANEX_UPI_ID
+        sync: false
+
+      - key: RAADHANEX_UPI_NAME
+        value: RAADHANEX
+
+      - key: GOPLUS_ENABLED
+        value: "false"
+
+      - key: GOPLUS_API_KEY
+        sync: false
