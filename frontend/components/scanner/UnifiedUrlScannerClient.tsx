@@ -552,119 +552,8 @@ function DynamicScoreTraceCard({ trace }: { trace: Record<string, unknown> }) {
   );
 }
 
-
-function getStaticAnalysisSummary(result: UnifiedUrlScanResponse): Record<string, unknown> {
-  const hints = plainRecord(result.surface_hints);
-  return plainRecord(hints.static_analysis);
-}
-
-function toolStateClass(state: string, status: string) {
-  const value = `${state} ${status}`.toLowerCase();
-  if (value.includes("assessed") || value.includes("completed") || value.includes("ran")) return "border-emerald-400/25 bg-emerald-400/10 text-emerald-100";
-  if (value.includes("error") || value.includes("failed") || value.includes("timeout")) return "border-red-400/25 bg-red-500/10 text-red-100";
-  if (value.includes("manual") || value.includes("configured") || value.includes("not assessed")) return "border-amber-300/25 bg-amber-300/10 text-amber-100";
-  return "border-white/10 bg-white/[0.04] text-slate-300";
-}
-
-function cleanToolName(value: unknown) {
-  const text = unknownString(value, "tool").replace(/_/g, " ");
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
-function StaticToolStatusPanel({ result }: { result: UnifiedUrlScanResponse }) {
-  const summary = getStaticAnalysisSummary(result);
-  const tools = unknownArray(summary.tools).filter(isPlainRecord);
-  const verification = plainRecord(summary.tool_verification);
-  const findings = unknownArray(summary.findings).filter(isPlainRecord);
-  const messages = unknownArray(summary.status_messages).filter(isPlainRecord);
-  if (!tools.length && !findings.length && !messages.length) return null;
-
-  const ranCount = unknownNumber(verification.ran_count) ?? tools.filter((tool) => ["completed", "completed_with_errors", "artifact_parsed"].includes(unknownString(tool.status, ""))).length;
-  const realFindings = unknownNumber(verification.real_findings_count) ?? tools.reduce((sum, tool) => sum + (unknownNumber(tool.real_findings) ?? 0), 0);
-  const failedCount = unknownNumber(verification.failed_count) ?? tools.filter((tool) => Boolean(tool.timed_out) || unknownString(tool.status, "").includes("error")).length;
-
-  return (
-    <CardShell className="border-cyan-300/15 bg-cyan-300/[0.035]">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <p className="section-label">Tool verification</p>
-          <h2 className="mt-2 text-2xl font-black text-white">Slither · Semgrep · Aderyn status</h2>
-          <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-400">
-            Real tool results are counted only when the backend actually ran the binary or parsed user-supplied JSON artifacts. Not-run rows stay informational.
-          </p>
-          {verification.evidence_rule ? <p className="mt-2 text-xs leading-5 text-slate-500">{unknownString(verification.evidence_rule)}</p> : null}
-        </div>
-        <div className="grid min-w-[280px] gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
-            <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Ran</p>
-            <p className="mt-2 text-2xl font-black text-white">{ranCount}</p>
-          </div>
-          <div className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
-            <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Findings</p>
-            <p className="mt-2 text-2xl font-black text-white">{realFindings}</p>
-          </div>
-          <div className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
-            <p className="mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Failed</p>
-            <p className="mt-2 text-2xl font-black text-white">{failedCount}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 grid gap-3 md:grid-cols-3">
-        {tools.map((tool, index) => {
-          const state = unknownString(tool.state, "Not Assessed");
-          const status = unknownString(tool.status, "not_run");
-          const statusText = `${state} · ${status}`;
-          const stderr = unknownString(tool.stderr_tail, "");
-          const stdout = unknownString(tool.stdout_tail, "");
-          return (
-            <div key={`${unknownString(tool.tool, "tool")}-${index}`} className={`rounded-2xl border p-4 ${toolStateClass(state, status)}`}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-black text-white">{cleanToolName(tool.tool)}</p>
-                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] opacity-80">{statusText}</p>
-                </div>
-                <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[10px] font-black text-white">{unknownNumber(tool.real_findings) ?? 0}</span>
-              </div>
-              <div className="mt-3 grid gap-2 text-[11px]">
-                <span>Installed: <b>{Boolean(tool.installed) ? "Yes" : "No"}</b></span>
-                <span>Enabled: <b>{Boolean(tool.enabled_by_env) ? "Yes" : "No"}</b></span>
-                <span>Will run: <b>{Boolean(tool.will_run) ? "Yes" : "No"}</b></span>
-              </div>
-              {stderr && stderr !== "—" ? <p className="mt-3 max-h-20 overflow-auto rounded-xl bg-black/25 p-2 text-[11px] leading-5 text-red-100/85">{stderr}</p> : null}
-              {!stderr && stdout && stdout !== "—" ? <p className="mt-3 max-h-20 overflow-auto rounded-xl bg-black/25 p-2 text-[11px] leading-5 text-slate-300">{stdout}</p> : null}
-            </div>
-          );
-        })}
-      </div>
-
-      {findings.length ? (
-        <details className="mt-5 rounded-2xl border border-white/[0.08] bg-black/20 p-4">
-          <summary className="cursor-pointer text-sm font-black text-white">Show parsed tool findings with file/line</summary>
-          <div className="mt-4 grid gap-3">
-            {findings.slice(0, 12).map((finding, index) => (
-              <div key={`${unknownString(finding.rule_id, "tool-finding")}-${index}`} className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="font-black text-white">{unknownString(finding.title, "Tool finding")}</p>
-                    <p className="mt-1 mono text-[11px] text-slate-500">
-                      {unknownString(finding.affected_file, "file not reported")}:{unknownString(finding.affected_line, "line not reported")}
-                    </p>
-                  </div>
-                  <SeverityBadge severity={(unknownString(finding.severity, "info") as Severity)} />
-                </div>
-                <p className="mt-2 text-xs leading-5 text-slate-400">{unknownString(finding.description, "Tool did not provide description.")}</p>
-              </div>
-            ))}
-          </div>
-        </details>
-      ) : null}
-    </CardShell>
-  );
-}
-
 function CardShell({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <section className={`card p-4 sm:p-5 ${className}`}>{children}</section>;
+  return <section className={`card p-5 sm:p-6 ${className}`}>{children}</section>;
 }
 
 function FieldLabel({ label, required, children, helper }: { label: string; required?: boolean; children: React.ReactNode; helper?: string }) {
@@ -756,8 +645,21 @@ function FindingCard({ action }: { action: UnifiedUrlScanResponse["priority_acti
   );
 }
 
+function isModuleAssessed(card: UnifiedModuleCard) {
+  return Boolean(card.assessed || card.score !== null);
+}
+
+function severityRank(severity?: string | null) {
+  const value = String(severity || "info").toLowerCase();
+  if (value === "critical") return 0;
+  if (value === "high") return 1;
+  if (value === "medium") return 2;
+  if (value === "low") return 3;
+  return 4;
+}
+
 function ModuleCard({ card }: { card: UnifiedModuleCard }) {
-  const assessed = Boolean(card.assessed || card.score !== null);
+  const assessed = isModuleAssessed(card);
   return (
     <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
       <div className="flex items-start justify-between gap-3">
@@ -836,11 +738,6 @@ export function UnifiedUrlScannerClient() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState("");
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [historyRailHidden, setHistoryRailHidden] = useState(false);
-  const [historySearch, setHistorySearch] = useState("");
-  const [historyFilter, setHistoryFilter] = useState<"all" | "risky" | "clean">("all");
-  const [termsOpen, setTermsOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -851,35 +748,12 @@ export function UnifiedUrlScannerClient() {
   const [saveLoading, setSaveLoading] = useState(false);
   const [result, setResult] = useState<UnifiedUrlScanResponse | null>(null);
   const [exportStatus, setExportStatus] = useState<string | null>(null);
+  const [severityFilter, setSeverityFilter] = useState<"all" | Severity>("all");
 
   const selectedProject = projects.find((project) => project.id === selectedProjectId) || null;
   const selectedHistory = scanHistory.find((scan) => scan.id === selectedHistoryId) || null;
   const currentStage = scanStages[Math.min(stageIndex, scanStages.length - 1)];
   const activeScanMode = scanModeOptions.find((option) => option.id === scanMode) ?? scanModeOptions[0];
-  const termsAccepted = authorized && realOnly;
-  const filteredHistory = useMemo(() => {
-    const query = historySearch.trim().toLowerCase();
-    return scanHistory.filter((scan) => {
-      const payload = getHistoryPayload(scan);
-      const haystack = [
-        scan.project_name,
-        scan.risk_label,
-        getHistoryWebsite(scan),
-        typeof payload.report_id === "string" ? payload.report_id : "",
-        typeof payload.project_type === "string" ? payload.project_type : "",
-        typeof payload.chain === "string" ? payload.chain : "",
-      ].filter(Boolean).join(" ").toLowerCase();
-      const matchesSearch = !query || haystack.includes(query);
-      const score = typeof scan.score === "number" ? scan.score : null;
-      const findingCount = scan.findings_count ?? 0;
-      const riskText = String(scan.risk_label || "").toLowerCase();
-      const matchesFilter =
-        historyFilter === "all" ||
-        (historyFilter === "risky" && (findingCount > 0 || (score !== null && score < 85) || riskText.includes("high") || riskText.includes("critical"))) ||
-        (historyFilter === "clean" && findingCount === 0 && (score === null || score >= 85));
-      return matchesSearch && matchesFilter;
-    });
-  }, [historyFilter, historySearch, scanHistory]);
 
   const deepEditorFields = [
     {
@@ -1070,7 +944,8 @@ export function UnifiedUrlScannerClient() {
       if (!chain.trim()) missing.push("Chain / surface");
       if (chain === "Other" && !customChain.trim()) missing.push("Custom chain");
     }
-    if (!authorized || !realOnly) missing.push("Terms and scan authorization");
+    if (!authorized) missing.push("Authorization confirmation");
+    if (!realOnly) missing.push("Evidence-only acknowledgement");
     return missing;
   }, [authorized, chain, customChain, customProjectType, projectType, realOnly, scanMode, websiteUrl]);
 
@@ -1085,6 +960,20 @@ export function UnifiedUrlScannerClient() {
   const overallAllowed = coverageGate ? coverageGate.overall_confidence_allowed : Boolean(result?.overall_score);
   const heroScore = overallAllowed ? result?.overall_score ?? null : scoreSplit?.website_surface_score?.score ?? null;
   const heroLabel = overallAllowed ? "confidence" : "site score";
+  const priorityActions = result?.priority_actions || [];
+  const sortedPriorityActions = [...priorityActions].sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
+  const filteredPriorityActions = severityFilter === "all" ? sortedPriorityActions : sortedPriorityActions.filter((action) => action.severity === severityFilter);
+  const fixFirstActions = sortedPriorityActions.slice(0, 3);
+  const severityCounts = priorityActions.reduce<Record<string, number>>((counts, action) => {
+    const severity = action.severity || "info";
+    counts[severity] = (counts[severity] || 0) + 1;
+    return counts;
+  }, {});
+  const assessedCards = cards.filter(isModuleAssessed);
+  const notAssessedCards = cards.filter((card) => !isModuleAssessed(card));
+  const coverageCtaText = requiredInputs.length
+    ? "Add GitHub, contract, API, HAR, wallet-flow, or test artifacts to unlock deeper coverage."
+    : "Coverage evidence looks complete for the modules returned in this scan.";
 
   function setKnownProjectType(value?: string | null) {
     if (!value) return;
@@ -1106,12 +995,6 @@ export function UnifiedUrlScannerClient() {
       setChain("Other");
       setCustomChain(value);
     }
-  }
-
-  function setScanTermsAccepted(next: boolean) {
-    setAuthorized(next);
-    setRealOnly(next);
-    if (next) setFieldPrompt(null);
   }
 
   async function loadWorkspaceQuickData() {
@@ -1153,7 +1036,6 @@ export function UnifiedUrlScannerClient() {
     setSelectedProjectId("");
     setSelectedHistoryId("");
     setProjectName("");
-    setWebsiteUrl("");
     setProjectType("");
     setCustomProjectType("");
     setChain("");
@@ -1176,32 +1058,14 @@ export function UnifiedUrlScannerClient() {
     setDefiSimulationJson("");
     setProtocolContextJson("");
     setReviewContextJson("");
-    setHarJson("");
-    setCrawlerArtifactJson("");
-    setAuthTestContextJson("");
-    setSecurityToolArtifactsJson("");
-    setFoundryTestOutput("");
-    setEchidnaOutputJson("");
-    setInvariantArtifactJson("");
-    setAccuracyFeedbackJson("");
     setAdvancedOpen(false);
     setScanMode("quick");
-    setActiveEvidenceEditor(null);
-    setHistorySearch("");
-    setHistoryFilter("all");
-    setTermsOpen(false);
-    setProgress(0);
-    setStageIndex(0);
     setResult(null);
     clearLatestUnifiedScan();
     setError(null);
     setFieldPrompt(null);
     setExportStatus(null);
     setSaveMessage(null);
-  }
-
-  function resetForm() {
-    startNewProject();
   }
 
   function applyHistory(scanId: string) {
@@ -1424,208 +1288,8 @@ export function UnifiedUrlScannerClient() {
 
   return (
     <main className="relative overflow-hidden scanner-console-page scanner-focus-page scanner-premium-page">
-      <section className="mx-auto max-w-[1280px] px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-[1180px] space-y-5">
-          {!historyRailHidden ? (
-            <aside className="fixed left-3 top-24 z-40 hidden w-14 flex-col items-center gap-2 rounded-2xl border border-white/[0.08] bg-[#050b18]/95 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl md:flex">
-              <button
-                type="button"
-                onClick={() => setHistoryOpen((value) => !value)}
-                title="Open scan history"
-                aria-label="Open scan history"
-                className={`flex h-10 w-10 items-center justify-center rounded-xl border text-lg transition ${historyOpen ? "border-cyan-300/40 bg-cyan-300/[0.14] text-cyan-100" : "border-white/[0.08] bg-white/[0.04] text-slate-300 hover:border-cyan-300/30 hover:bg-cyan-300/[0.08] hover:text-cyan-100"}`}
-              >
-                ☰
-              </button>
-              <button
-                type="button"
-                onClick={() => resetForm()}
-                title="New scan"
-                aria-label="New scan"
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-lg text-slate-300 transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.08] hover:text-cyan-100"
-              >
-                ＋
-              </button>
-              <button
-                type="button"
-                onClick={() => void loadWorkspaceQuickData()}
-                title="Refresh history"
-                aria-label="Refresh history"
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-lg text-slate-300 transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.08] hover:text-cyan-100"
-              >
-                ↻
-              </button>
-              <Link
-                href="/dashboard/scans"
-                title="Saved scans dashboard"
-                aria-label="Saved scans dashboard"
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-lg text-slate-300 transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.08] hover:text-cyan-100"
-              >
-                ◫
-              </Link>
-              <div className="my-1 h-px w-8 bg-white/[0.08]" />
-              <button
-                type="button"
-                onClick={() => { setHistoryRailHidden(true); setHistoryOpen(false); }}
-                title="Hide sidebar"
-                aria-label="Hide sidebar"
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-lg text-slate-400 transition hover:border-white/20 hover:text-white"
-              >
-                ‹
-              </button>
-            </aside>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setHistoryRailHidden(false)}
-              title="Show sidebar"
-              aria-label="Show sidebar"
-              className="fixed left-0 top-24 z-40 hidden rounded-r-2xl border border-l-0 border-cyan-300/20 bg-[#050b18]/95 px-2.5 py-4 text-lg font-black text-cyan-100 shadow-2xl shadow-black/40 backdrop-blur-xl transition hover:bg-cyan-300/[0.10] md:block"
-            >
-              ☰
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setHistoryOpen(true)}
-            className="fixed bottom-5 left-5 z-40 rounded-full border border-cyan-300/25 bg-[#050b18]/95 px-4 py-2 text-xs font-black text-cyan-100 shadow-2xl shadow-black/50 backdrop-blur-xl transition hover:border-cyan-300/45 hover:bg-cyan-300/[0.12] md:hidden"
-          >
-            History {scanHistory.length ? `(${scanHistory.length})` : ""}
-          </button>
-
-          {historyOpen ? (
-            <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm" onClick={() => setHistoryOpen(false)}>
-              <aside
-                className="h-full w-full max-w-[360px] overflow-y-auto border-r border-cyan-300/15 bg-[#050b18] p-4 shadow-2xl shadow-black/60"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-300/[0.10] text-sm font-black text-cyan-100">W3</span>
-                    <div>
-                      <p className="text-sm font-black text-white">Scan history</p>
-                      <p className="text-[11px] text-slate-500">Load, search, refresh, or start fresh.</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setHistoryOpen(false)}
-                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-lg text-slate-300 transition hover:border-white/20 hover:text-white"
-                    aria-label="Close history"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => { resetForm(); setHistoryOpen(false); }}
-                    className="rounded-xl border border-cyan-300/25 bg-cyan-300/[0.10] px-3 py-2.5 text-left text-xs font-black text-cyan-100 transition hover:border-cyan-300/45 hover:bg-cyan-300/[0.16]"
-                  >
-                    ＋ New scan
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void loadWorkspaceQuickData()}
-                    disabled={historyLoading}
-                    className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-left text-xs font-black text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-100 disabled:opacity-50"
-                  >
-                    {historyLoading ? "↻ Refreshing" : "↻ Refresh"}
-                  </button>
-                  <Link href="/results" className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-xs font-black text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-100">
-                    Results
-                  </Link>
-                  <Link href="/report" className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-xs font-black text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-100">
-                    Report
-                  </Link>
-                  <Link href="/dashboard/scans" className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-xs font-black text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-100">
-                    Dashboard scans
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => { clearLatestUnifiedScan(); setResult(null); setSaveMessage("Current local result cleared. Saved dashboard history is unchanged."); }}
-                    className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-left text-xs font-black text-slate-200 transition hover:border-red-300/30 hover:text-red-100"
-                  >
-                    Clear current
-                  </button>
-                </div>
-
-                <div className="mt-4 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Search scans</label>
-                  <input
-                    className="input mt-2"
-                    value={historySearch}
-                    onChange={(event) => setHistorySearch(event.target.value)}
-                    placeholder="Search project, URL, risk, report id..."
-                  />
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    {(["all", "risky", "clean"] as const).map((filter) => (
-                      <button
-                        key={filter}
-                        type="button"
-                        onClick={() => setHistoryFilter(filter)}
-                        className={`rounded-lg border px-2 py-1.5 text-[10px] font-black uppercase tracking-[0.08em] transition ${historyFilter === filter ? "border-cyan-300/35 bg-cyan-300/[0.12] text-cyan-100" : "border-white/[0.08] bg-white/[0.03] text-slate-500 hover:border-white/20 hover:text-slate-200"}`}
-                      >
-                        {filter}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {historyError ? <p className="mt-4 rounded-xl border border-red-400/25 bg-red-500/10 p-3 text-sm text-red-100">{historyError}</p> : null}
-
-                <div className="mt-5 flex items-center justify-between gap-3">
-                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">Recent scans</p>
-                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] font-black text-slate-400">{filteredHistory.length}/{scanHistory.length}</span>
-                </div>
-
-                <div className="mt-3 space-y-2">
-                  {filteredHistory.length ? filteredHistory.map((scan) => (
-                    <div
-                      key={scan.id}
-                      className={`rounded-2xl border p-3 transition ${selectedHistoryId === scan.id ? "border-cyan-300/40 bg-cyan-300/[0.10]" : "border-white/[0.07] bg-white/[0.03] hover:border-cyan-300/20 hover:bg-white/[0.05]"}`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => { applyHistory(scan.id); setHistoryOpen(false); }}
-                        className="w-full text-left"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-black text-white">{scan.project_name || getHistoryWebsite(scan)}</p>
-                            <p className="mt-1 truncate text-xs text-slate-500">{getHistoryWebsite(scan)}</p>
-                          </div>
-                          <span className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-black ${typeof scan.score === "number" && scan.score >= 85 ? "border-emerald-300/25 bg-emerald-300/[0.10] text-emerald-200" : typeof scan.score === "number" && scan.score < 65 ? "border-red-300/25 bg-red-300/[0.10] text-red-200" : "border-amber-300/25 bg-amber-300/[0.10] text-amber-100"}`}>{scan.score ?? "—"}</span>
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-1.5 text-[10px] font-semibold text-slate-400">
-                          <span className="rounded-full bg-white/[0.05] px-2 py-1">{formatDateTime(scan.created_at)}</span>
-                          <span className="rounded-full bg-white/[0.05] px-2 py-1">{scan.findings_count ?? 0} findings</span>
-                          <span className="rounded-full bg-white/[0.05] px-2 py-1">{scan.risk_label || "Saved"}</span>
-                        </div>
-                      </button>
-                      <div className="mt-3 grid grid-cols-3 gap-2">
-                        <button type="button" onClick={() => { applyHistory(scan.id); setHistoryOpen(false); }} className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[10px] font-black text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-100">Load</button>
-                        <Link href="/results" onClick={() => applyHistory(scan.id)} className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-center text-[10px] font-black text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-100">Results</Link>
-                        <Link href="/report" onClick={() => applyHistory(scan.id)} className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-center text-[10px] font-black text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-100">Report</Link>
-                      </div>
-                    </div>
-                  )) : (
-                    <p className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 text-sm leading-6 text-slate-400">
-                      {scanHistory.length ? "No scans match this search/filter." : "No saved scans found yet. Run a scan and save it to dashboard to see it here."}
-                    </p>
-                  )}
-                </div>
-
-                <div className="mt-5 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3 text-xs leading-5 text-slate-500">
-                  <p className="font-black text-slate-300">History rules</p>
-                  <p className="mt-1">Loading a scan restores its saved result locally. Dashboard data is read-only from this panel; destructive delete is intentionally not included.</p>
-                </div>
-              </aside>
-            </div>
-          ) : null}
-
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl space-y-6">
           <CardShell className="scanner-premium-console scanner-premium-console-clean card-glow">
             <div className="scanner-premium-aurora" aria-hidden="true" />
             <div className="scanner-premium-grid scanner-premium-grid-single">
@@ -1795,32 +1459,21 @@ export function UnifiedUrlScannerClient() {
                   </div>
                 </div>
 
-                <div className="mt-5">
-                  <label className={`scanner-terms-card ${termsAccepted ? "scanner-terms-card-on" : ""}`}>
-                    <input type="checkbox" checked={termsAccepted} onChange={(event) => setScanTermsAccepted(event.target.checked)} />
-                    <span className="scanner-terms-switch" aria-hidden="true"><span /></span>
-                    <span className="min-w-0 flex-1">
-                      <strong>Permission + Evidence Terms accepted</strong>
-                      <small>I own this project or have permission to review it. Unavailable modules stay Not Assessed.</small>
+                <div className="scanner-consent-grid">
+                  <label className={`scanner-check-card ${authorized ? "scanner-check-card-on" : ""}`}>
+                    <input type="checkbox" checked={authorized} onChange={(event) => setAuthorized(event.target.checked)} />
+                    <span>
+                      <strong>Permission confirmed</strong>
+                      <small>I own this project or have permission to review it.</small>
                     </span>
-                    <button type="button" onClick={(event) => { event.preventDefault(); setTermsOpen((value) => !value); }} className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-black text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-100">
-                      {termsOpen ? "Hide terms" : "View terms"}
-                    </button>
                   </label>
-                  {termsOpen ? (
-                    <div className="mt-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.045] p-4 text-xs leading-6 text-slate-300">
-                      <p className="font-black text-white">Scan terms and conditions</p>
-                      <ul className="mt-3 list-disc space-y-2 pl-5">
-                        <li>You confirm that you own the project or have explicit permission to review it.</li>
-                        <li>Web3Guard runs evidence-first readiness checks only; it is not a certified audit or security guarantee.</li>
-                        <li>No private key, seed phrase, mnemonic, wallet signing, exploit automation, DoS, brute force, credential stuffing, or destructive testing is allowed.</li>
-                        <li>Missing provider keys, disabled tools, absent artifacts, or unavailable evidence remain Not Assessed instead of invented findings.</li>
-                        <li>Tool output from Slither, Semgrep, and Aderyn is shown only when the backend really runs the tool or parses valid user-supplied artifacts.</li>
-                        <li>Findings are pre-audit signals and must be manually verified before launch, public claims, or client delivery.</li>
-                        <li>You agree not to scan third-party systems without authorization.</li>
-                      </ul>
-                    </div>
-                  ) : null}
+                  <label className={`scanner-check-card ${realOnly ? "scanner-check-card-on" : ""}`}>
+                    <input type="checkbox" checked={realOnly} onChange={(event) => setRealOnly(event.target.checked)} />
+                    <span>
+                      <strong>Evidence-only result</strong>
+                      <small>Unavailable modules stay Not Assessed.</small>
+                    </span>
+                  </label>
                 </div>
 
                 {fieldPrompt ? <p className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100">{fieldPrompt}</p> : null}
@@ -1884,25 +1537,54 @@ export function UnifiedUrlScannerClient() {
                   </div>
                   <h2 className="mt-4 text-3xl font-black text-white">{result.project_name || result.website_url}</h2>
                   <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{result.safe_public_summary || "Launch readiness result generated from supplied evidence."}</p>
-                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <div className="mt-5 grid gap-3 sm:grid-cols-4">
                     <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
                       <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Assessed</p>
-                      <p className="mt-1 text-2xl font-black text-white">{result.assessed_modules?.length || result.live_module_count || 0}</p>
+                      <p className="mt-1 text-2xl font-black text-white">{assessedCards.length || result.live_module_count || 0}</p>
                     </div>
                     <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
-                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Not Assessed</p>
-                      <p className="mt-1 text-2xl font-black text-white">{result.not_assessed_modules?.length || 0}</p>
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Need evidence</p>
+                      <p className="mt-1 text-2xl font-black text-white">{notAssessedCards.length}</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Critical/High</p>
+                      <p className="mt-1 text-2xl font-black text-white">{(severityCounts.critical || 0) + (severityCounts.high || 0)}</p>
                     </div>
                     <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
                       <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Actions</p>
-                      <p className="mt-1 text-2xl font-black text-white">{result.priority_actions?.length || 0}</p>
+                      <p className="mt-1 text-2xl font-black text-white">{priorityActions.length}</p>
                     </div>
                   </div>
                 </div>
               </div>
             </CardShell>
 
-            <StaticToolStatusPanel result={result} />
+            <CardShell className="border-cyan/15 bg-cyan/[0.04]">
+              <div className="grid gap-5 lg:grid-cols-[1fr_0.9fr]">
+                <div>
+                  <p className="section-label">Public beta summary</p>
+                  <h2 className="mt-2 text-2xl font-black text-white">What to fix first</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">This view is compressed for founders: fix the highest-risk items first, then add missing evidence for deeper assessment.</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="badge badge-amber">Pre-audit readiness only</span>
+                    <span className="badge badge-cyan">{coverageCtaText}</span>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {fixFirstActions.length ? fixFirstActions.map((action, index) => (
+                    <div key={`${action.title}-${index}-fix-first`} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-sm font-black text-white">{index + 1}. {action.title}</p>
+                        <SeverityBadge severity={(action.severity || "info") as Severity} />
+                      </div>
+                      <p className="mt-2 text-xs leading-5 text-slate-400">{action.recommended_action}</p>
+                    </div>
+                  )) : (
+                    <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">No priority fixes were returned for the assessed evidence.</div>
+                  )}
+                </div>
+              </div>
+            </CardShell>
 
             {coverageGate ? (
               <CardShell className={overallAllowed ? "border-emerald-400/20 bg-emerald-400/10" : "border-amber-300/20 bg-amber-300/10"}>
@@ -1997,34 +1679,69 @@ export function UnifiedUrlScannerClient() {
 
             <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
               <CardShell>
-                <p className="section-label">Priority actions</p>
-                <h2 className="mt-2 text-2xl font-black text-white">Findings with fix hints</h2>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="section-label">Priority actions</p>
+                    <h2 className="mt-2 text-2xl font-black text-white">Findings with fix hints</h2>
+                    <p className="mt-2 text-sm leading-6 text-slate-400">Use the filter to focus on the highest-impact work first.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {(["all", "critical", "high", "medium", "low", "info"] as Array<"all" | Severity>).map((severity) => (
+                      <button
+                        key={severity}
+                        type="button"
+                        onClick={() => setSeverityFilter(severity)}
+                        className={`rounded-full border px-3 py-2 text-xs font-black uppercase tracking-[0.12em] transition ${severityFilter === severity ? "border-cyan/40 bg-cyan/15 text-cyan-50" : "border-white/[0.08] bg-white/[0.03] text-slate-400 hover:border-white/20 hover:text-white"}`}
+                      >
+                        {severity === "all" ? "All" : `${severity} ${severityCounts[severity] || 0}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="mt-5 space-y-3">
-                  {result.priority_actions?.length ? result.priority_actions.map((action, index) => <FindingCard key={`${action.title}-${index}`} action={action} />) : <p className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">No priority findings were returned for the assessed evidence.</p>}
+                  {filteredPriorityActions.length ? filteredPriorityActions.map((action, index) => <FindingCard key={`${action.title}-${index}-${severityFilter}`} action={action} />) : <p className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">No priority findings matched this filter.</p>}
                 </div>
               </CardShell>
 
               <CardShell>
-                <p className="section-label">Evidence gaps</p>
-                <h2 className="mt-2 text-2xl font-black text-white">Not Assessed queue</h2>
-                <div className="mt-5 space-y-3">
-                  {requiredInputs.length ? requiredInputs.map(({ label, item, guide }) => (
-                    <div key={`${label}-${item}`} className="rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4">
-                      <p className="text-sm font-black text-amber-50">{label}</p>
-                      <p className="mt-2 text-sm leading-6 text-amber-100/90">{item}</p>
-                      <p className="mt-3 text-xs leading-5 text-amber-100/70">{guide}</p>
-                    </div>
-                  )) : <p className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">No missing evidence listed in this result.</p>}
+                <p className="section-label">Deep scan coverage</p>
+                <h2 className="mt-2 text-2xl font-black text-white">Add evidence to unlock deeper results</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-400">Not Assessed does not mean safe or unsafe. It means Web3Guard did not receive enough real evidence to score that module.</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <button type="button" className="btn-secondary !justify-center" onClick={() => { setScanMode("deep"); setAdvancedOpen(true); }}>Add GitHub / Contract</button>
+                  <button type="button" className="btn-secondary !justify-center" onClick={() => { setScanMode("deep"); setAdvancedOpen(true); }}>Add API evidence</button>
+                  <button type="button" className="btn-secondary !justify-center" onClick={() => { setScanMode("expert"); setAdvancedOpen(true); }}>Add expert artifacts</button>
                 </div>
+                <details className="mt-5 rounded-2xl border border-amber-300/15 bg-amber-300/10 p-4">
+                  <summary className="cursor-pointer list-none text-sm font-black text-amber-50">Show Not Assessed queue ({requiredInputs.length})</summary>
+                  <div className="mt-4 space-y-3">
+                    {requiredInputs.length ? requiredInputs.map(({ label, item, guide }) => (
+                      <div key={`${label}-${item}`} className="rounded-2xl border border-amber-300/15 bg-black/20 p-4">
+                        <p className="text-sm font-black text-amber-50">{label}</p>
+                        <p className="mt-2 text-sm leading-6 text-amber-100/90">{item}</p>
+                        <p className="mt-3 text-xs leading-5 text-amber-100/70">{guide}</p>
+                      </div>
+                    )) : <p className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">No missing evidence listed in this result.</p>}
+                  </div>
+                </details>
               </CardShell>
             </div>
 
             <CardShell>
               <p className="section-label">Module matrix</p>
-              <h2 className="mt-2 text-2xl font-black text-white">Assessed vs Not Assessed</h2>
+              <h2 className="mt-2 text-2xl font-black text-white">Assessed modules first</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-400">Public beta output now keeps assessed evidence visible and moves evidence gaps into a collapsible section.</p>
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {cards.map((card) => <ModuleCard key={card.module} card={card} />)}
+                {(assessedCards.length ? assessedCards : cards.slice(0, 3)).map((card) => <ModuleCard key={card.module} card={card} />)}
               </div>
+              {notAssessedCards.length ? (
+                <details className="mt-5 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+                  <summary className="cursor-pointer list-none text-sm font-black text-white">Show {notAssessedCards.length} Not Assessed modules</summary>
+                  <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {notAssessedCards.map((card) => <ModuleCard key={card.module} card={card} />)}
+                  </div>
+                </details>
+              ) : null}
             </CardShell>
 
             {result.warnings?.length || result.blocked_claims?.length ? (
