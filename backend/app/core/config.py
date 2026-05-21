@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     manual_review_fix_verifications_file: str = "app/data/db/manual_review_fix_verifications.jsonl"
     manual_review_approval_events_file: str = "app/data/db/manual_review_approval_events.jsonl"
     professional_accuracy_feedback_file: str = "app/data/db/professional_accuracy_feedback.jsonl"
+    professional_benchmark_regression_file: str = "app/data/db/professional_benchmark_regression_cases.jsonl"
     professional_accuracy_benchmark_file: str = "app/data/db/professional_accuracy_benchmark_runs.jsonl"
 
     # SecureScore Pro dashboard + finding workflow persistence.
