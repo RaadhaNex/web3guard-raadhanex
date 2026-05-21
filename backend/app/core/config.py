@@ -71,6 +71,7 @@ class Settings(BaseSettings):
 
     # Professional/public report storage.
     public_reports_file: str = "app/data/db/public_reports.jsonl"
+    public_proof_reports_file: str = "app/data/db/public_proof_reports.jsonl"
 
     # SecureScore Pro dashboard + finding workflow persistence.
     db_finding_workflow_file: str = "app/data/db/finding_workflow.jsonl"
