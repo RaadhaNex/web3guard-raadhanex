@@ -52,7 +52,9 @@ app = FastAPI(
 
 ENGINE_VERSION = "web3guard-isolated-static-worker-v1.0"
 SUPPORTED_TOOLS = ("slither", "semgrep", "aderyn")
-SAFE_EXTENSIONS = {".sol"}
+SAFE_EXTENSIONS = {".sol", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".py", ".yml", ".yaml", ".json", ".toml", ".env.example"}
+SOLIDITY_EXTENSIONS = {".sol"}
+WEB_RULE_FILE = Path(__file__).resolve().parent / "rules" / "web_security.yml"
 PRIVATE_KEY_PATTERNS = [
     re.compile(r"\bprivate[_-]?key\b\s*[:=]", re.I),
     re.compile(r"\bmnemonic\b\s*[:=]", re.I),
@@ -151,8 +153,8 @@ def _sanitize_path(raw: str, fallback: str) -> Path:
         parts.append(re.sub(r"[^A-Za-z0-9_.-]", "_", part)[:100] or "file")
     if not parts:
         parts = [fallback]
-    if not parts[-1].endswith(".sol"):
-        parts[-1] = f"{parts[-1]}.sol"
+    if not Path(parts[-1]).suffix:
+        parts[-1] = f"{parts[-1]}.txt"
     return Path(*parts)
 
 
@@ -163,8 +165,9 @@ def _sanitize_files(files: list[SourceFile]) -> tuple[list[dict[str, str]], list
     for idx, item in enumerate(files[: settings.static_worker_max_files + 8], start=1):
         path = item.path.replace("\\", "/").lstrip("/")
         content = item.content
-        if Path(path).suffix.lower() not in SAFE_EXTENSIONS:
-            rejected.append({"path": path, "reason": "Only .sol files are accepted by this worker phase."})
+        suffix = Path(path).suffix.lower()
+        if suffix not in SAFE_EXTENSIONS:
+            rejected.append({"path": path, "reason": "Unsupported file type for isolated worker. Semgrep accepts web/config files; Slither/Aderyn require .sol."})
             continue
         if ".." in Path(path).parts or path.startswith("."):
             rejected.append({"path": path, "reason": "Unsafe path."})
@@ -335,12 +338,17 @@ def _run_tool(tool: str, workdir: Path, primary_source: Path, info: dict[str, An
     path = info.get("path")
     if not info.get("will_run") or not path:
         return {"status": "not_run", "real_findings": 0, "reason": info.get("state")}, []
+    sol_files = list(workdir.rglob("*.sol"))
+    if tool in {"slither", "aderyn"} and not sol_files:
+        return {"status": "not_run", "real_findings": 0, "reason": "No Solidity .sol files were supplied. This tool is contract-only."}, []
     if tool == "slither":
         out = workdir / "slither.json"
-        run = _run([str(path), str(primary_source), "--json", str(out), "--disable-color"], workdir)
+        target = sol_files[0] if sol_files else primary_source
+        run = _run([str(path), str(target), "--json", str(out), "--disable-color"], workdir)
         findings = _parse_slither(out)
     elif tool == "semgrep":
-        run = _run([str(path), "--config", str(RULE_FILE), "--json", "--no-git-ignore", str(workdir)], workdir)
+        rule_file = WEB_RULE_FILE if WEB_RULE_FILE.exists() else RULE_FILE
+        run = _run([str(path), "--config", str(rule_file), "--json", "--no-git-ignore", str(workdir)], workdir)
         findings = _parse_semgrep(run.get("stdout") or "")
     else:
         out = workdir / "aderyn.json"
@@ -412,7 +420,7 @@ def run(payload: RunRequest, authorization: str | None = Header(default=None)) -
             "ok": True,
             "status": "Not Assessed",
             "engine_version": ENGINE_VERSION,
-            "reason": "No safe Solidity files supplied.",
+            "reason": "No safe source files supplied. Semgrep accepts web/config files; Slither/Aderyn require Solidity.",
             "rejected_files": rejected,
             "tool_status": _tool_status(),
             "tool_runs": {},
@@ -451,5 +459,5 @@ def run(payload: RunRequest, authorization: str | None = Header(default=None)) -
             "tools_requested": payload.tools,
             "tools_completed": [tool for tool, run in tool_runs.items() if run.get("status") in {"completed", "completed_with_errors"}],
         },
-        "real_only_note": "Only actual Slither/Semgrep/Aderyn process output is returned. Not-run/missing tools are not converted into fake vulnerabilities.",
+        "real_only_note": "Only actual Slither/Semgrep/Aderyn process output is returned. Semgrep can scan web/config files; Slither/Aderyn run only on Solidity. Not-run/missing tools are not converted into fake vulnerabilities.",
     }

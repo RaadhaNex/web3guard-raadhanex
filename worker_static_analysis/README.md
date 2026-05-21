@@ -57,3 +57,16 @@ uvicorn main:app --host 0.0.0.0 --port $PORT
 - No exploit automation.
 - No certified audit or 100% secure claim.
 - Missing tools return Not Assessed / Tool Not Installed / Provider Not Configured.
+
+
+## Phase Worker-2 note
+
+This worker can now run Semgrep on safe web/config files fetched from a public GitHub repository. Slither and Aderyn are still Solidity-only and will only run when `.sol` files are supplied.
+
+Supported Semgrep input examples:
+
+- Next.js/React: `.ts`, `.tsx`, `.js`, `.jsx`
+- FastAPI/Python: `.py`
+- Config/manifests: `.json`, `.yml`, `.yaml`, `.toml`, `.env.example`
+
+No repository cloning or dependency installation is performed by the main backend. The main backend only forwards selected safe file contents to this isolated worker.

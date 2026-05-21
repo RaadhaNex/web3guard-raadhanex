@@ -14,6 +14,7 @@ from app.services.solidity_utils import sha12
 
 ENGINE_VERSION = "web3guard-isolated-static-worker-bridge-v1.0"
 SUPPORTED_TOOLS = ("slither", "semgrep", "aderyn")
+SAFE_WORKER_EXTENSIONS = {".sol", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".py", ".yml", ".yaml", ".json", ".toml", ".env.example"}
 
 
 def _now_iso() -> str:
@@ -48,7 +49,7 @@ def isolated_static_worker_status() -> dict[str, Any]:
         "max_files": int(settings.static_worker_max_files),
         "max_total_chars": int(settings.static_worker_max_total_chars),
         "main_backend_executes_tools": False,
-        "real_only_note": "Main backend only sends safe source files to a separately deployed isolated worker. If the worker is missing/disabled, the result remains Not Assessed and no fake Slither/Semgrep/Aderyn findings are generated.",
+        "real_only_note": "Main backend only sends safe source files to a separately deployed isolated worker. Semgrep can scan web/config files; Slither/Aderyn run only when Solidity source is present. If the worker is missing/disabled, the result remains Not Assessed and no fake findings are generated.",
         "required_main_backend_env": [
             "STATIC_WORKER_ENABLED=true",
             "STATIC_WORKER_AUTO_DISPATCH_ENABLED=true",
@@ -83,8 +84,9 @@ def _sanitize_source_files(source_files: list[dict[str, str]]) -> tuple[list[dic
         if ".." in raw_path.split("/") or raw_path.startswith("."):
             rejected.append({"path": raw_path, "reason": "unsafe path"})
             continue
-        if not raw_path.endswith(".sol"):
-            rejected.append({"path": raw_path, "reason": "only Solidity .sol files are sent to the static-analysis worker in this phase"})
+        suffix = ".env.example" if raw_path.endswith(".env.example") else "." + raw_path.rsplit(".", 1)[-1].lower() if "." in raw_path else ""
+        if suffix not in SAFE_WORKER_EXTENSIONS:
+            rejected.append({"path": raw_path, "reason": "unsupported file type for isolated worker"})
             continue
         total_chars += len(content)
         if len(cleaned) >= max_files:

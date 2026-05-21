@@ -1,0 +1,60 @@
+rules:
+  - id: web3guard-js-dangerous-html
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: "Potential unsafe HTML injection surface. Ensure content is sanitized before rendering."
+    patterns:
+      - pattern-either:
+          - pattern: dangerouslySetInnerHTML={...}
+          - pattern: $EL.innerHTML = $VALUE
+          - pattern: $EL.outerHTML = $VALUE
+
+  - id: web3guard-js-eval-or-function
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: "Dynamic code execution detected. Avoid eval/new Function with user-controlled input."
+    patterns:
+      - pattern-either:
+          - pattern: eval($X)
+          - pattern: new Function(...)
+
+  - id: web3guard-js-open-redirect-shape
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: "Redirect uses a dynamic URL. Validate allowlisted destinations to prevent open redirect issues."
+    patterns:
+      - pattern-either:
+          - pattern: router.push($URL)
+          - pattern: redirect($URL)
+          - pattern: location.href = $URL
+          - pattern: window.location = $URL
+
+  - id: web3guard-py-cors-allow-all
+    languages: [python]
+    severity: WARNING
+    message: "CORS appears broadly open. Restrict allowed origins in production."
+    pattern-regex: "allow_origins\\s*=\\s*\\[\\s*['\\\"]\\*['\\\"]\\s*\\]"
+
+  - id: web3guard-py-debug-enabled
+    languages: [python]
+    severity: WARNING
+    message: "Debug mode appears enabled. Disable debug mode in production."
+    pattern-regex: "debug\\s*=\\s*True"
+
+  - id: web3guard-generic-secret-like-assignment
+    languages: [generic]
+    severity: WARNING
+    message: "Secret-like assignment found in a scanned source/config file. Confirm it is not a real secret."
+    pattern-regex: "(?i)(api[_-]?key|secret|private[_-]?key|token|password)\\s*[:=]\\s*['\\\"][A-Za-z0-9_./+=-]{16,}['\\\"]"
+
+  - id: web3guard-solidity-tx-origin
+    languages: [solidity]
+    severity: ERROR
+    message: "tx.origin authorization detected. Use msg.sender based authorization instead."
+    pattern: tx.origin
+
+  - id: web3guard-solidity-unchecked-call
+    languages: [solidity]
+    severity: WARNING
+    message: "Low-level call detected. Check return values and protect reentrancy-sensitive paths."
+    pattern: $X.call{...}(...)

@@ -35,6 +35,7 @@ TEXT_EXTENSIONS = {
     ".sol", ".ts", ".tsx", ".js", ".jsx", ".json", ".py", ".go", ".rs", ".toml", ".yml", ".yaml", ".env", ".example", ".md", ".config",
 }
 SOLIDITY_EXTENSIONS = {".sol"}
+STATIC_WORKER_WEB_EXTENSIONS = {".sol", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".py", ".yml", ".yaml", ".json", ".toml", ".env.example"}
 PACKAGE_FILENAMES = {"package.json"}
 ENV_RISK_NAMES = {".env", ".env.local", ".env.production", ".env.development", ".env.staging"}
 CONFIG_HINT_NAMES = {"hardhat.config.js", "hardhat.config.ts", "foundry.toml", "truffle-config.js", "truffle.js", "next.config.js", "next.config.mjs", "vite.config.ts", "vite.config.js"}
@@ -545,6 +546,7 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
         linked_reports: list[dict[str, Any]] = []
         dependency_manifests: list[dict[str, Any]] = []
         solidity_sources: list[dict[str, str]] = []
+        worker_sources: list[dict[str, str]] = []
         total_bytes = 0
 
         priority_paths: list[str] = []
@@ -586,6 +588,10 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
             idx = len(findings) + 1
             if path.endswith(".sol"):
                 solidity_sources.append({"path": path, "content": raw})
+            suffix = ".env.example" if path.endswith(".env.example") else ("." + path.rsplit(".", 1)[-1].lower() if "." in path else "")
+            if suffix in STATIC_WORKER_WEB_EXTENSIONS:
+                worker_sources.append({"path": path, "content": raw})
+            if path.endswith(".sol"):
                 try:
                     contract_report = scan_solidity(raw, project_name or repo, "GitHub Solidity")
                     linked_reports.append({
@@ -636,20 +642,29 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
                 frontend_texts.append(path)
 
         static_tool_summary: dict[str, Any] | None = None
-        if solidity_sources:
+        if worker_sources:
+            requested_worker_tools = ["semgrep"] + (["slither", "aderyn"] if solidity_sources else [])
             try:
                 static_report = await run_isolated_static_worker_files(
-                    solidity_sources,
+                    worker_sources,
                     project_name=project_name or repo,
-                    requested_tools=["slither", "semgrep", "aderyn"],
-                    source_label="github_solidity_auto_worker",
+                    requested_tools=requested_worker_tools,
+                    source_label="github_repo_auto_worker",
                 )
-                if static_report is None:
+                if static_report is None and solidity_sources:
                     static_report = run_static_analysis_files(
                         solidity_sources,
                         project_name=project_name or repo,
                         requested_tools=["slither", "semgrep", "aderyn"],
                     )
+                if static_report is None:
+                    static_tool_summary = {
+                        "state": "Not Assessed",
+                        "reason": "Isolated worker is not configured for Semgrep web-code dispatch.",
+                        "evidence_source": "github_repo_auto_worker",
+                        "source_file_count": len(worker_sources),
+                    }
+                    raise RuntimeError(static_tool_summary["reason"])
                 static_tool_summary = static_report.scan_metadata
                 linked_reports.append({
                     "module": "static_analysis",
@@ -673,18 +688,18 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
                     idx=idx,
                     severity="info",
                     title="Static Tool Runner Not Completed",
-                    description="GitHub Solidity files were fetched, but Slither/Semgrep/Aderyn auto-run did not complete.",
+                    description="GitHub source files were fetched, but isolated static-analysis auto-run did not complete.",
                     category="tool_status",
                     rule_id="GITHUB-STATIC-TOOLS-NOT-COMPLETED",
                     confidence="high",
                     source="GitHub Static Tool Runner",
                     business_impact="No fake tool findings were generated; only local rule-engine and repository evidence are shown.",
                     developer_explanation=str(exc)[:240],
-                    recommendation="Deploy/configure the isolated static-analysis worker, or paste real Slither/Semgrep/Aderyn JSON artifacts.",
+                    recommendation="Deploy/configure the isolated static-analysis worker, or paste real Semgrep/Slither/Aderyn JSON artifacts.",
                 ))
                 idx += 1
         else:
-            static_tool_summary = {"state": "Not Assessed", "reason": "No Solidity files were fetched from this public repository."}
+            static_tool_summary = {"state": "Not Assessed", "reason": "No supported source files were fetched from this public repository."}
 
     # Add structure-level findings after fetch completes.
     if summary["solidity_count"] == 0:
