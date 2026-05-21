@@ -20,7 +20,7 @@ from app.services.solidity_utils import (
     sensitive_function_name,
 )
 
-ENGINE_VERSION = "web3guard-solidity-rule-engine-v2.1-phase-b"
+ENGINE_VERSION = "web3guard-solidity-rule-engine-v2.2-phase-h-tuned"
 
 SECURITY_REFERENCES = {
     "reentrancy": ["SWC-107", "Checks-Effects-Interactions", "OpenZeppelin ReentrancyGuard"],
@@ -543,23 +543,36 @@ def _upgrade_authorization_deep_checks(code: str, findings: list[Finding], idx: 
     if not upgradeable:
         return idx
 
-    if re.search(r"upgradeTo\s*\(|upgradeToAndCall\s*\(", code, re.IGNORECASE) and not re.search(r"function\s+_authorizeUpgrade\s*\(", code):
-        line, _ = first_match_line(code, r"upgradeTo\s*\(|upgradeToAndCall\s*\(")
-        _add_unique(findings, _finding(
-            idx, severity="critical",
-            title="Upgradeable Contract Without Clear _authorizeUpgrade Hook",
-            description="Upgradeability is detected, but the UUPS authorization hook is not visible in the submitted source.",
-            line=line, code=line_text(code, line),
-            business="If upgrade authorization is missing or weak, an attacker or mistaken operator can replace the implementation and take over funds or roles.",
-            dev="UUPS implementations must override _authorizeUpgrade and protect it with onlyOwner/onlyRole/multisig/timelock controls.",
-            fix="Implement _authorizeUpgrade(address newImplementation) internal override onlyOwner/onlyRole and protect the owner role with multisig/timelock.",
-            confidence="medium", category="upgradeability", rule_id="WG-SOL-UPGRADE-003",
-            references=["OpenZeppelin UUPSUpgradeable _authorizeUpgrade", "Proxy upgrade access control"],
+    if re.search(r"upgradeTo\s*\(|upgradeToAndCall\s*\(", code, re.IGNORECASE):
+        hook_match = re.search(
+            r"function\s+_authorizeUpgrade\s*\([^)]*\)\s*(?:internal|public|external|private)?[^\{]*\{(?P<body>[^}]*)\}",
+            code,
+            re.IGNORECASE | re.DOTALL,
+        )
+        hook_body = hook_match.group("body") if hook_match else ""
+        hook_source = hook_match.group(0) if hook_match else ""
+        hook_has_access_control = bool(re.search(
+            r"onlyOwner|onlyRole|hasRole|msg\.sender\s*==\s*(owner|admin)|_checkRole|AccessControl|timelock|multisig",
+            hook_body + hook_source,
+            re.IGNORECASE,
         ))
-        idx += 1
+        if not hook_match or not hook_has_access_control:
+            line, _ = first_match_line(code, r"_authorizeUpgrade|upgradeTo\s*\(|upgradeToAndCall\s*\(")
+            _add_unique(findings, _finding(
+                idx, severity="critical",
+                title="Upgradeable Contract Without Strong _authorizeUpgrade Protection",
+                description="Upgradeability is detected, but the UUPS authorization hook is missing or does not show obvious access control.",
+                line=line, code=line_text(code, line),
+                business="If upgrade authorization is missing or weak, an attacker or mistaken operator can replace the implementation and take over funds or roles.",
+                dev="UUPS implementations must override _authorizeUpgrade and protect it with onlyOwner/onlyRole/multisig/timelock controls.",
+                fix="Implement _authorizeUpgrade(address newImplementation) internal override onlyOwner/onlyRole and protect the owner role with multisig/timelock.",
+                confidence="high" if hook_match and not hook_has_access_control else "medium", category="upgradeability", rule_id="WG-SOL-UPGRADE-003",
+                references=["OpenZeppelin UUPSUpgradeable _authorizeUpgrade", "Proxy upgrade access control"],
+            ))
+            idx += 1
 
-    if re.search(r"Initializable|initializer|__\w+_init", code) and not re.search(r"_disableInitializers\s*\(", code):
-        line, _ = first_match_line(code, r"Initializable|initializer|__\w+_init")
+    if re.search(r"Initializable|initializer|function\s+initialize\s*\(|__\w+_init", code, re.IGNORECASE) and not re.search(r"_disableInitializers\s*\(", code):
+        line, _ = first_match_line(code, r"Initializable|initializer|function\s+initialize\s*\(|__\w+_init")
         _add_unique(findings, _finding(
             idx, severity="high",
             title="Upgradeable Implementation May Not Disable Initializers",
@@ -610,7 +623,8 @@ def _oracle_staleness_and_decimal_checks(code: str, findings: list[Finding], idx
         ))
         idx += 1
 
-    if re.search(r"latestRoundData|AggregatorV3Interface|decimals\s*\(", code, re.IGNORECASE) and not re.search(r"decimals\s*\(|10\s*\*\*\s*\w*decimals|1e8|1e18", code):
+    decimal_normalized = bool(re.search(r"\.\s*decimals\s*\(|10\s*\*\*|1e8|1e18|decimalScale|priceScale", code, re.IGNORECASE))
+    if re.search(r"latestRoundData|AggregatorV3Interface|latestAnswer|priceFeed", code, re.IGNORECASE) and not decimal_normalized:
         _add_unique(findings, _finding(
             idx, severity="medium",
             title="Oracle Decimal Normalization Not Obvious",
@@ -648,8 +662,13 @@ def _dex_and_slippage_deep_checks(code: str, findings: list[Finding], idx: int) 
         ))
         idx += 1
 
-    if re.search(r"deadline\s*[:=,]\s*block\.timestamp|deadline\s*[:=,]\s*type\(uint256\)\.max", code):
-        line, _ = first_match_line(code, r"deadline\s*[:=,]\s*block\.timestamp|deadline\s*[:=,]\s*type\(uint256\)\.max")
+    weak_deadline_pattern = (
+        r"deadline\s*[:=,]\s*block\.timestamp|deadline\s*[:=,]\s*type\(uint256\)\.max|"
+        r"swapExact\w+\s*\([^;]{0,260},\s*block\.timestamp\s*\)|"
+        r"exactInput\s*\([^;]{0,260}deadline\s*:\s*block\.timestamp"
+    )
+    if re.search(weak_deadline_pattern, code, re.IGNORECASE | re.DOTALL):
+        line, _ = first_match_line(code, weak_deadline_pattern)
         _add_unique(findings, _finding(
             idx, severity="medium",
             title="Weak Swap Deadline Handling",
@@ -723,7 +742,12 @@ def _erc4626_vault_deep_checks(code: str, findings: list[Finding], idx: int) -> 
         return idx
 
     line, _ = first_match_line(code, r"ERC4626|convertToShares\s*\(|previewDeposit\s*\(|deposit\s*\(")
-    if not re.search(r"virtualAssets|virtualShares|_decimalsOffset|MINIMUM_LIQUIDITY|seed|initialDeposit", code, re.IGNORECASE):
+    has_inflation_guard = bool(re.search(
+        r"virtualAssets|virtualShares|_decimalsOffset|MINIMUM_LIQUIDITY|MIN_SHARES|minShares|seed|initialDeposit|minimumShares|donation",
+        code,
+        re.IGNORECASE,
+    ))
+    if not has_inflation_guard:
         _add_unique(findings, _finding(
             idx, severity="high",
             title="ERC4626 / Vault Inflation Protection Not Obvious",
@@ -737,7 +761,8 @@ def _erc4626_vault_deep_checks(code: str, findings: list[Finding], idx: int) -> 
         ))
         idx += 1
 
-    if re.search(r"convertToShares|convertToAssets|previewDeposit|previewMint", code) and not re.search(r"Math\.Rounding|rounding|mulDiv", code):
+    has_rounding_policy = bool(re.search(r"Math\.Rounding|rounding|mulDiv|MIN_SHARES|minShares|previewDeposit", code, re.IGNORECASE))
+    if re.search(r"convertToShares|convertToAssets|previewDeposit|previewMint|totalSupply\s*==\s*0", code) and not has_rounding_policy:
         _add_unique(findings, _finding(
             idx, severity="medium",
             title="Vault Share Rounding Policy Not Obvious",
@@ -802,8 +827,14 @@ def _l2_crosschain_sender_checks(code: str, findings: list[Finding], idx: int) -
     """Cross-chain messenger and bridge sender validation."""
     if not re.search(r"xDomainMessageSender|ICrossDomainMessenger|IInbox|ArbSys|LayerZero|lzReceive|ccipReceive|Any2EVMMessage|bridge|relayMessage", code, re.IGNORECASE):
         return idx
-    if not re.search(r"xDomainMessageSender\s*\(\)|trustedRemote|trustedSender|sourceChainSelector|onlyMessenger|msg\.sender\s*==\s*\w*Messenger", code, re.IGNORECASE):
-        line, _ = first_match_line(code, r"xDomainMessageSender|ICrossDomainMessenger|LayerZero|lzReceive|ccipReceive|bridge|relayMessage")
+    has_messenger_gate = bool(re.search(r"onlyMessenger|msg\.sender\s*==\s*\w*(?:Messenger|messenger)", code, re.IGNORECASE))
+    has_original_sender_or_replay = bool(re.search(
+        r"xDomainMessageSender\s*\(\)|trustedRemote|trustedSender|sourceChainSelector|originalSender|remoteSender|messageId|processed\s*\[|nonce|replay",
+        code,
+        re.IGNORECASE,
+    ))
+    if (not has_messenger_gate) or (not has_original_sender_or_replay):
+        line, _ = first_match_line(code, r"xDomainMessageSender|ICrossDomainMessenger|LayerZero|lzReceive|ccipReceive|bridge|Bridge|messenger|relayMessage|execute")
         _add_unique(findings, _finding(
             idx, severity="high",
             title="Cross-Chain Message Sender Validation Not Obvious",
@@ -910,7 +941,8 @@ def scan_solidity(solidity_code: str, project_name: str | None = None, contract_
         scan_metadata={
             "audit_grade_finding_summary": audit_grade_summary(findings),
             "phase_b_rule_coverage": _phase_b_rule_coverage_summary(code, findings),
-            "finding_engine": "professional_normalized_rule_engine_phase_b",
+            "phase_h_rule_tuning": _phase_b_rule_coverage_summary(code, findings),
+            "finding_engine": "professional_normalized_rule_engine_phase_h_tuned",
             "real_only_note": "Local Solidity rules produce preliminary evidence only; findings require triage before certified-audit wording.",
         },
     )
@@ -1599,7 +1631,7 @@ def _integer_overflow_old_solidity(code: str, findings: list[Finding], idx: int)
         pragma_str = pragma_match.group()
         is_old = bool(re.search(r"0\.[0-7]\.", pragma_str))
         if is_old:
-            if re.search(r"\+\s*\d|\*\s*\d|uint\d*\s+\w+\s*=\s*\w+\s*\+", code):
+            if re.search(r"\+\s*\d|\*\s*\d|uint\d*\s+\w+\s*=\s*\w+\s*\+|\w+\s*=\s*\w+\s*[+\-*]\s*\w+", code):
                 _add_unique(findings, _finding(
                     idx, severity="critical",
                     title="Integer Overflow/Underflow — Pre-0.8.0 Solidity",
@@ -1783,18 +1815,20 @@ def _eip712_domain_separator_checks(code: str, findings: list[Finding], idx: int
 def _multicall_reentrancy(code: str, findings: list[Finding], idx: int) -> int:
     """Multicall + reentrancy combo — msg.value reuse attack."""
     if re.search(r"multicall|multiCall|multiExecute|batchExecute", code, re.IGNORECASE):
-        if re.search(r"msg\.value", code):
-            if not re.search(r"nonReentrant|_checkMsgValue|valueUsed", code):
-                _add_unique(findings, _finding(
-                    idx, severity="critical",
-                    title="Multicall with msg.value — ETH Reuse Attack Vector",
-                    description="A multicall function that uses msg.value allows attackers to reuse the same ETH across multiple calls in one transaction, effectively multiplying their payment.",
-                    line=None, code=None,
-                    business="Attacker sends 1 ETH via multicall, executes 5 deposit calls each claiming 1 ETH. Protocol credits 5 ETH but only received 1 ETH. Uniswap's Universal Router addressed this specifically.",
-                    dev="Never use msg.value inside a loop or multicall. Track ETH value explicitly per call with a local variable, not msg.value.",
-                    fix="// ❌ DANGEROUS:\n// function multicall(bytes[] calldata data) external payable {\n//   for (uint i = 0; i < data.length; i++) {\n//     (bool ok,) = address(this).delegatecall(data[i]); // msg.value reused!\n// ✅ SAFE: Use Uniswap V3's approach — pass value per call, not globally",
-                    confidence="medium", category="defi", rule_id="WG-SOL-MULTI-001",
-                    references=["Uniswap multicall msg.value bug", "msg.value in loops", "Smart contract security pitfalls"],
-                ))
-                idx += 1
+        risky_value_context = bool(re.search(r"msg\.value", code) or re.search(r"function\s+\w*(?:multicall|multiCall|multiExecute|batchExecute)\w*[^{};]*payable", code, re.IGNORECASE))
+        delegatecall_loop_context = bool(re.search(r"delegatecall\s*\(", code, re.IGNORECASE) and re.search(r"for\s*\(", code))
+        if (risky_value_context or delegatecall_loop_context) and not re.search(r"nonReentrant|_checkMsgValue|valueUsed|perCallValue|spentValue", code):
+            line, _ = first_match_line(code, r"multicall|multiCall|multiExecute|batchExecute|delegatecall")
+            _add_unique(findings, _finding(
+                idx, severity="critical" if risky_value_context and delegatecall_loop_context else "medium",
+                title="Multicall / Delegatecall Value-Reuse Review",
+                description="A multicall-style function uses payable/delegatecall execution without an obvious per-call value accounting guard.",
+                line=line, code=line_text(code, line),
+                business="Multicall value accounting mistakes can let attackers reuse one ETH payment across multiple internal operations or create unexpected state transitions.",
+                dev="Payable multicall and delegatecall loops need explicit value accounting and reentrancy controls.",
+                fix="Track per-call value consumption, block msg.value reuse, add nonReentrant where value-bearing logic exists, and test multi-call payment edge cases.",
+                confidence="medium", category="defi", rule_id="WG-SOL-MULTI-001",
+                references=["Uniswap multicall msg.value bug", "msg.value in loops", "Smart contract security pitfalls"],
+            ))
+            idx += 1
     return idx
