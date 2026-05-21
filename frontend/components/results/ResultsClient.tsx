@@ -85,7 +85,10 @@ function findingFromRecord(value: unknown): Finding | null {
     severity: toSeverity(value.severity),
     title: asString(value.title, "Untitled finding"),
     description: asString(value.description, "No description provided."),
+    affected_file: typeof value.affected_file === "string" ? value.affected_file : null,
     affected_line: asNumber(value.affected_line),
+    affected_column: asNumber(value.affected_column),
+    end_line: asNumber(value.end_line),
     affected_function: typeof value.affected_function === "string" ? value.affected_function : null,
     affected_code: typeof value.affected_code === "string" ? value.affected_code : null,
     confidence: value.confidence === "high" || value.confidence === "medium" || value.confidence === "low" ? value.confidence : "medium",
@@ -157,6 +160,11 @@ function FindingCard({ finding }: { finding: Finding }) {
         <SeverityBadge severity={finding.severity} />
       </div>
       <p className="mt-3 text-sm leading-6 text-slate-300">{finding.description}</p>
+      {(finding.affected_file || finding.affected_line) ? (
+        <p className="mt-3 rounded-xl border border-white/[0.07] bg-white/[0.035] p-3 text-sm leading-6 text-slate-200">
+          Exact location: <b>{finding.affected_file || "Supplied source"}</b>{finding.affected_line ? `:${finding.affected_line}` : ""}{finding.affected_column ? `:${finding.affected_column}` : ""}
+        </p>
+      ) : null}
       <p className="mt-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.04] p-3 text-sm leading-6 text-cyan-50">Fix hint: {finding.recommendation}</p>
       <details className="mt-3 rounded-xl border border-white/[0.07] bg-white/[0.03] p-3 text-xs text-slate-400">
         <summary className="cursor-pointer font-bold text-slate-200">Raw evidence</summary>

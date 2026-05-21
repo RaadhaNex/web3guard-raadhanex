@@ -20,6 +20,7 @@ from app.services.accuracy_upgrade import build_accuracy_upgrade_package
 from app.services.detection_expansion import build_detection_expansion_package
 from app.services.deep_evidence_accuracy import build_deep_evidence_accuracy_package
 from app.services.deep_scan_orchestrator import build_deep_scan_orchestrator
+from app.services.source_evidence_mapper import analyze_source_evidence_artifacts
 
 MODULE_LABELS = {
     "website": "Website Surface",
@@ -378,6 +379,61 @@ def _static_module_card(summary: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+
+def _source_evidence_summary(report: ScanResponse) -> dict[str, Any]:
+    metadata = report.scan_metadata or {}
+    findings = [_finding_to_dict(finding) for finding in report.findings]
+    location_index = metadata.get("location_index", []) if isinstance(metadata, dict) else []
+    return {
+        "state": metadata.get("state", "Assessed" if findings else "Assessed - No Findings"),
+        "report_id": report.report_id,
+        "score": report.module_score.score,
+        "risk_label": report.module_score.risk_label,
+        "engine_version": report.engine_version,
+        "files_parsed": metadata.get("files_parsed", 0),
+        "findings_count": len(findings),
+        "critical_high_count": sum(1 for finding in findings if finding.get("severity") in {"critical", "high"}),
+        "findings_with_exact_location": metadata.get("findings_with_exact_location", 0),
+        "location_index": location_index[:80] if isinstance(location_index, list) else [],
+        "file_inventory": metadata.get("file_inventory", []) if isinstance(metadata, dict) else [],
+        "parse_status": metadata.get("parse_status", []) if isinstance(metadata, dict) else [],
+        "findings": findings[:80],
+        "safety_controls": metadata.get("safety_controls", {}) if isinstance(metadata, dict) else {},
+        "real_only_note": metadata.get("real_only_note") if isinstance(metadata, dict) else None,
+    }
+
+
+def _source_evidence_module_card(summary: dict[str, Any]) -> dict[str, Any]:
+    files_parsed = int(summary.get("files_parsed") or 0)
+    exact_count = int(summary.get("findings_with_exact_location") or 0)
+    findings_count = int(summary.get("findings_count") or 0)
+    return {
+        "module": "source_evidence",
+        "label": "Source File / Path Evidence",
+        "status": "Assessed" if files_parsed else "Not Assessed",
+        "score": summary.get("score") if files_parsed else None,
+        "risk_label": summary.get("risk_label") if files_parsed else "Not Assessed",
+        "assessed": bool(files_parsed),
+        "report_id": summary.get("report_id"),
+        "findings_count": findings_count,
+        "critical_high_count": int(summary.get("critical_high_count") or 0),
+        "evidence": [
+            f"Source files parsed: {files_parsed}",
+            f"Findings with exact path/line: {exact_count}",
+            f"Total source evidence findings: {findings_count}",
+        ] if files_parsed else ["No source-file artifact was supplied for exact file/path/line mapping."],
+        "limitations": [
+            "Static source mapper does not execute code, install dependencies, clone repos, or prove exploitability.",
+            "Findings are based on supplied source artifacts; exact paths/lines depend on artifact quality.",
+            "Secret-like evidence is redacted in output; rotate real secrets before sharing reports.",
+        ],
+        "required_input": [] if files_parsed else [
+            "Expert Evidence → SCA / secrets tool artifact JSON with {files:[{path,content}]} or {sources:{path:{content}}}",
+            "For best results include backend, frontend, smart-contract, config, and env/template files.",
+        ],
+    }
+
+
 def _static_not_assessed_summary() -> dict[str, Any]:
     status = static_analysis_status()
     tools = []
@@ -703,6 +759,13 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         aderyn_json=getattr(payload, "aderyn_json", None),
         project_name=payload.project_name,
     )
+    source_evidence_report = analyze_source_evidence_artifacts(
+        security_tool_artifacts_json=getattr(payload, "security_tool_artifacts_json", None),
+        crawler_artifact_json=getattr(payload, "crawler_artifact_json", None),
+        review_context_json=getattr(payload, "review_context_json", None),
+        project_name=payload.project_name,
+        project_type=payload.project_type,
+    )
 
     if payload.solidity_code and payload.solidity_code.strip():
         contract_report = scan_solidity(payload.solidity_code, payload.project_name, payload.project_type)
@@ -791,6 +854,19 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
                 limitations=["Website URL alone cannot assess smart contract code. Static-analysis artifacts can add real tool evidence, but they do not replace source review."],
             )
         )
+
+    if source_evidence_report:
+        reports.append(source_evidence_report)
+        source_summary = _source_evidence_summary(source_evidence_report)
+        surface_hints["source_evidence_mapper"] = source_summary
+        module_cards.append(_source_evidence_module_card(source_summary))
+    else:
+        surface_hints["source_evidence_mapper"] = {
+            "state": "Not Assessed",
+            "findings": [],
+            "location_index": [],
+            "required_input": "Supply source artifacts in Expert Evidence to produce exact affected_file + affected_line output.",
+        }
 
     module_cards.append(
         _status_card(
@@ -914,7 +990,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "report_id": f"W3G-URL-LAUNCH-{_hash(safe_website_url)[:12]}",
         "generated_at": started.isoformat(),
         "project_name": payload.project_name,
-        "engine_version": "web3guard-unified-url-launch-scanner-v22.0-phase78-orchestrated-deep-scan",
+        "engine_version": "web3guard-unified-url-launch-scanner-v23.0-source-path-line-evidence",
         "mode": "real_only_unified_url_scan",
         "website_url": safe_website_url,
         "chain": payload.chain,
@@ -953,6 +1029,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
             "Complete wallet-flow checklist for approval/signature UX.",
             "Complete founder/admin OpSec checklist for multisig/timelock/key policy.",
             "Provide a public GitHub repo URL to run the Web3Guard read-only repo scanner and dependency-manifest summary.",
+            "For exact file/path/row output, supply source artifacts as JSON: {files:[{path,content}]} or {sources:{path:{content}}}.",
         ],
         "disclaimer": "This is a preliminary security review and does not replace a full manual audit. URL-only scans are partial by design.",
     }

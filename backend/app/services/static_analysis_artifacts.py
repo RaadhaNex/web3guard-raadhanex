@@ -50,6 +50,19 @@ def _line_from_slither(item: dict[str, Any]) -> int | None:
     return lines[0] if lines and isinstance(lines[0], int) else None
 
 
+def _file_from_slither(item: dict[str, Any]) -> str | None:
+    elements = item.get("elements") if isinstance(item.get("elements"), list) else []
+    for element in elements:
+        if not isinstance(element, dict):
+            continue
+        mapping = element.get("source_mapping") if isinstance(element.get("source_mapping"), dict) else {}
+        for key in ("filename_relative", "filename_short", "filename_absolute", "filename"):
+            value = mapping.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.replace("\\", "/")[:300]
+    return None
+
+
 def _artifact_finding(
     idx: int,
     *,
@@ -59,6 +72,9 @@ def _artifact_finding(
     description: str,
     rule_id: str,
     line: int | None = None,
+    column: int | None = None,
+    end_line: int | None = None,
+    file: str | None = None,
     code: str | None = None,
     confidence: str = "medium",
 ) -> Finding:
@@ -68,14 +84,17 @@ def _artifact_finding(
         severity=severity,  # type: ignore[arg-type]
         title=title[:180],
         description=description[:3000],
+        affected_file=file,
         affected_line=line,
+        affected_column=column,
+        end_line=end_line or line,
         affected_function=None,
         affected_code=code[:1200] if code else None,
         confidence=confidence,  # type: ignore[arg-type]
         source=f"User-Supplied {tool.title()} JSON Artifact",
         category="static_analysis_artifact",
         rule_id=rule_id[:160],
-        fingerprint=sha12(f"artifact|{tool}|{rule_id}|{line}|{title}|{description[:160]}"),
+        fingerprint=sha12(f"artifact|{tool}|{rule_id}|{file}|{line}|{title}|{description[:160]}"),
         business_impact="This finding came from a supplied static-analysis artifact. It is stronger than a UI hint, but still needs developer/manual triage before launch.",
         developer_explanation="Web3Guard parsed a Slither/Semgrep/Aderyn JSON artifact instead of inventing a finding. The backend did not claim it independently executed this tool unless tool_runs also show a backend run.",
         recommendation="Review the rule output, confirm true/false positive status in the source code, patch the issue, then rerun the tool and Web3Guard scan.",
@@ -127,6 +146,7 @@ def _parse_slither(data: Any, start_idx: int = 1) -> tuple[list[Finding], dict[s
             description=description,
             rule_id=f"SLITHER-{check}",
             line=_line_from_slither(item),
+            file=_file_from_slither(item),
             confidence="high",
         ))
     return findings, {"artifact_shape": "slither.results.detectors", "raw_detector_count": len(detectors), "parsed_findings": len(findings)}
@@ -140,6 +160,7 @@ def _parse_semgrep(data: Any, start_idx: int = 1) -> tuple[list[Finding], dict[s
             continue
         extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
         start = item.get("start") if isinstance(item.get("start"), dict) else {}
+        end = item.get("end") if isinstance(item.get("end"), dict) else {}
         rule_id = _text(item.get("check_id"), "semgrep-rule")
         findings.append(_artifact_finding(
             local_idx,
@@ -149,6 +170,9 @@ def _parse_semgrep(data: Any, start_idx: int = 1) -> tuple[list[Finding], dict[s
             description=_text(extra.get("message"), "Semgrep reported a pattern match."),
             rule_id=f"SEMGREP-{rule_id}",
             line=start.get("line") if isinstance(start.get("line"), int) else None,
+            column=start.get("col") if isinstance(start.get("col"), int) else None,
+            end_line=end.get("line") if isinstance(end.get("line"), int) else None,
+            file=_text(item.get("path"), "") or None,
             code=extra.get("lines") if isinstance(extra.get("lines"), str) else None,
             confidence="medium",
         ))
@@ -169,6 +193,19 @@ def _candidate_aderyn_items(data: Any) -> list[Any]:
     return []
 
 
+def _path_from_aderyn_item(item: dict[str, Any]) -> str | None:
+    for key in ("path", "file", "filename", "source_file", "sourcePath"):
+        value = item.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.replace("\\", "/")[:300]
+    location = item.get("location") if isinstance(item.get("location"), dict) else {}
+    for key in ("path", "file", "filename"):
+        value = location.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.replace("\\", "/")[:300]
+    return None
+
+
 def _parse_aderyn(data: Any, start_idx: int = 1) -> tuple[list[Finding], dict[str, Any]]:
     findings: list[Finding] = []
     items = _candidate_aderyn_items(data)
@@ -179,7 +216,9 @@ def _parse_aderyn(data: Any, start_idx: int = 1) -> tuple[list[Finding], dict[st
         desc = _text(item.get("description") or item.get("message") or item.get("body"), "Aderyn reported a potential issue.")
         sev = _text(item.get("severity") or item.get("impact"), "medium").lower()
         severity = {"critical": "critical", "high": "high", "medium": "medium", "low": "low", "info": "info", "informational": "info"}.get(sev, "medium")
-        line = item.get("line") or item.get("line_number")
+        location = item.get("location") if isinstance(item.get("location"), dict) else {}
+        line = item.get("line") or item.get("line_number") or location.get("line")
+        column = item.get("column") or location.get("column")
         findings.append(_artifact_finding(
             local_idx,
             tool="aderyn",
@@ -188,6 +227,8 @@ def _parse_aderyn(data: Any, start_idx: int = 1) -> tuple[list[Finding], dict[st
             description=desc,
             rule_id=f"ADERYN-{sha12(title)[:8]}",
             line=line if isinstance(line, int) else None,
+            column=column if isinstance(column, int) else None,
+            file=_path_from_aderyn_item(item),
             confidence="medium",
         ))
     return findings, {"artifact_shape": "aderyn.issues/results/findings", "raw_item_count": len(items), "parsed_findings": len(findings)}

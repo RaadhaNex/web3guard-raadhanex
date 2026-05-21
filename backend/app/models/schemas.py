@@ -24,7 +24,10 @@ class Finding(BaseModel):
     severity: Severity
     title: str
     description: str
+    affected_file: str | None = None
     affected_line: int | None = None
+    affected_column: int | None = None
+    end_line: int | None = None
     affected_function: str | None = None
     affected_code: str | None = None
     confidence: Confidence = "medium"

@@ -6,7 +6,10 @@ export type Finding = {
   severity: Severity;
   title: string;
   description: string;
+  affected_file?: string | null;
   affected_line?: number | null;
+  affected_column?: number | null;
+  end_line?: number | null;
   affected_function?: string | null;
   affected_code?: string | null;
   confidence: "high" | "medium" | "low";
