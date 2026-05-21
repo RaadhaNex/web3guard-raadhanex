@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from app.models.schemas import Finding, ModuleScore, ScanResponse
 from app.services.scoring import priority_actions, risk_label, score_findings, severity_breakdown
+from app.services.finding_normalizer import audit_grade_summary, prepare_professional_findings
 from app.services.solidity_utils import (
     all_match_lines,
     contains_state_write,
@@ -65,6 +66,12 @@ def _finding(
         affected_line=line,
         affected_function=fn,
         affected_code=code,
+        evidence=code or description[:420],
+        impact=business,
+        fix=fix,
+        source_tools=["web3guard_local_rules"],
+        repro_steps=[f"Review Solidity line {line} and confirm the rule evidence." if line else "Review the submitted Solidity source and confirm the rule evidence."],
+        verification_status="rule_detected_needs_triage",
         confidence=confidence,  # type: ignore[arg-type]
         source="Web3Guard Solidity Rule Engine v2",
         category=category,
@@ -526,33 +533,6 @@ def _token_specific_checks(code: str, findings: list[Finding], start_idx: int, c
     return idx
 
 
-
-
-def _deduplicate_findings_by_rule_id(findings: list[Finding]) -> list[Finding]:
-    """Keep one finding per Solidity rule_id for cleaner professional reports.
-
-    Some pattern checks can legitimately match multiple functions/lines with the same
-    rule_id. For the public report, duplicate rule_id spam makes the output noisy.
-    We keep the highest-severity representative finding and preserve all no-rule-id
-    findings by title/line/function.
-    """
-    severity_rank = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
-    seen: dict[str, Finding] = {}
-
-    for finding in findings:
-        key = finding.rule_id or f"no_rule:{finding.title}:{finding.affected_line}:{finding.affected_function}"
-        existing = seen.get(key)
-        if existing is None:
-            seen[key] = finding
-            continue
-
-        existing_rank = severity_rank.get(str(existing.severity), 0)
-        new_rank = severity_rank.get(str(finding.severity), 0)
-        if new_rank > existing_rank:
-            seen[key] = finding
-
-    return list(seen.values())
-
 def scan_solidity(solidity_code: str, project_name: str | None = None, contract_type: str | None = None) -> ScanResponse:
     code = solidity_code.strip()
     findings: list[Finding] = []
@@ -607,8 +587,7 @@ def scan_solidity(solidity_code: str, project_name: str | None = None, contract_
     idx = _eip712_domain_separator_checks(code, findings, idx)
     idx = _multicall_reentrancy(code, findings, idx)
 
-    findings = _deduplicate_findings_by_rule_id(findings)
-
+    findings = prepare_professional_findings(findings, default_source_tool="web3guard_local_rules")
     score = score_findings(findings)
     digest = sha12(code)
     return ScanResponse(
@@ -621,6 +600,11 @@ def scan_solidity(solidity_code: str, project_name: str | None = None, contract_
         priority_actions=priority_actions(findings),
         input_hash=digest,
         engine_version=ENGINE_VERSION,
+        scan_metadata={
+            "audit_grade_finding_summary": audit_grade_summary(findings),
+            "finding_engine": "professional_normalized_rule_engine",
+            "real_only_note": "Local Solidity rules produce preliminary evidence only; findings require triage before certified-audit wording.",
+        },
     )
 
 

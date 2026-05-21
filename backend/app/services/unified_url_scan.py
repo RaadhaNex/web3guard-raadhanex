@@ -1,5 +1,6 @@
 import hashlib
 import re
+from collections import Counter
 from typing import Any
 from datetime import datetime, timezone
 from urllib.parse import urlparse
@@ -202,6 +203,48 @@ def _github_not_assessed() -> dict:
         required_input=["Public GitHub repository URL"],
         limitations=["Provide a GitHub repo URL to run the Web3Guard read-only repository scanner."],
     )
+
+
+
+def _professional_scanner_summary(reports: list[ScanResponse], surface_hints: dict[str, Any]) -> dict[str, Any]:
+    findings: list[Finding] = []
+    tool_status: list[dict[str, Any]] = []
+    report_summaries: list[dict[str, Any]] = []
+    for report in reports:
+        findings.extend(report.findings or [])
+        metadata = report.scan_metadata or {}
+        summary = metadata.get("audit_grade_finding_summary") if isinstance(metadata, dict) else None
+        if isinstance(summary, dict):
+            report_summaries.append({
+                "report_id": report.report_id,
+                "module": report.module_score.module,
+                "score": report.module_score.score,
+                "real_findings_count": summary.get("real_findings_count"),
+                "with_file_or_line_count": summary.get("with_file_or_line_count"),
+                "multi_tool_confirmed_count": summary.get("multi_tool_confirmed_count"),
+                "source_tool_counts": summary.get("source_tool_counts", {}),
+            })
+    static_summary = surface_hints.get("static_analysis") if isinstance(surface_hints, dict) else None
+    if isinstance(static_summary, dict):
+        tool_status = static_summary.get("tools", []) or []
+    real = [f for f in findings if getattr(f, "category", "") != "tool_status"]
+    with_location = [f for f in real if getattr(f, "affected_file", None) or getattr(f, "affected_line", None)]
+    source_counts = Counter(tool for f in real for tool in (getattr(f, "source_tools", []) or []))
+    multi_tool = [f for f in real if len(getattr(f, "source_tools", []) or []) > 1]
+    return {
+        "phase": "Professional Scanner Phase A",
+        "status": "active",
+        "goal": "Audit-grade finding normalization, real tool verification, dedupe and report-ready evidence fields.",
+        "real_findings_count": len(real),
+        "with_file_or_line_count": len(with_location),
+        "multi_tool_confirmed_count": len(multi_tool),
+        "source_tool_counts": dict(source_counts),
+        "tool_status": tool_status,
+        "report_summaries": report_summaries,
+        "report_ready_fields": ["evidence", "impact", "fix", "source_tools", "repro_steps", "verification_status", "affected_file", "affected_line"],
+        "real_only_rule": "Tool status rows are never counted as vulnerabilities. Missing tools/evidence stay Tool Not Installed, Provider Not Configured, Not Applicable or Not Assessed.",
+        "next_upgrade": "Phase B should add benchmark datasets and deeper contract/economic rule packs.",
+    }
 
 
 def _finding_to_dict(finding: Finding) -> dict[str, Any]:
@@ -952,6 +995,7 @@ async def run_unified_url_scan(payload: UnifiedUrlScanRequest) -> dict:
         "coverage_gate": _coverage_gate(module_cards, combined),
         "bug_detection_coverage": _bug_detection_coverage_summary(reports, module_cards),
         "real_evidence_summary": _real_evidence_summary(website_report, module_cards),
+        "professional_scanner_summary": _professional_scanner_summary(reports, surface_hints),
         "dynamic_score_trace": (website_report.scan_metadata or {}).get("dynamic_score_trace", {}),
         "assessed_modules": assessed_modules,
         "not_assessed_modules": not_assessed_modules,

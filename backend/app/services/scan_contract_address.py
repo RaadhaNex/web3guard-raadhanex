@@ -13,6 +13,7 @@ from app.models.schemas import Finding, ModuleScore, ScanResponse
 from app.services.scan_contract import scan_solidity
 from app.services.static_analysis_tools import run_static_analysis
 from app.services.scoring import priority_actions, risk_label, score_findings, severity_breakdown
+from app.services.finding_normalizer import audit_grade_summary, prepare_professional_findings
 
 EVM_ADDRESS_RE = re.compile(r"^0x[a-fA-F0-9]{40}$")
 ROLE_FUNCTION_RE = re.compile(r"(?i)(owner\(|getOwner\(|hasRole\(|DEFAULT_ADMIN_ROLE|grantRole\(|revokeRole\(|MINTER_ROLE|PAUSER_ROLE|UPGRADER_ROLE)")
@@ -183,6 +184,12 @@ def _finding(
         affected_line=line,
         affected_function=None,
         affected_code=snippet,
+        evidence=snippet or description[:420],
+        impact=business_impact,
+        fix=recommendation,
+        source_tools=["explorer" if "Explorer" in source else "web3guard_local_rules"],
+        repro_steps=["Open the verified explorer source/ABI metadata and confirm the cited evidence."],
+        verification_status="rule_detected_needs_triage",
         confidence=confidence,  # type: ignore[arg-type]
         source=source,
         category=category,
@@ -424,7 +431,7 @@ async def scan_contract_address(address: str, chain: str | None = None, project_
             recommendation="Verify the contract source on explorer, then re-run this scanner. Do not publish a fake code score.",
             paid=True,
         )
-        findings = [finding]
+        findings = prepare_professional_findings([finding], default_source_tool="explorer")
         score = score_findings(findings)
         return ScanResponse(
             report_id=_new_report_id(chain_id, normalized_address),
@@ -444,6 +451,7 @@ async def scan_contract_address(address: str, chain: str | None = None, project_
                 "explorer_record": {k: record.get(k) for k in ["ContractName", "CompilerVersion", "Proxy", "Implementation"]},
                 "abi_summary": abi_meta,
                 "safety_controls": {"private_key_collection": False, "wallet_connection": False, "transaction_signing": False, "bytecode_decompilation": False},
+                "audit_grade_finding_summary": audit_grade_summary(findings),
             },
         )
 
@@ -463,10 +471,9 @@ async def scan_contract_address(address: str, chain: str | None = None, project_
     except Exception as exc:
         tool_error = str(exc)[:500]
     tool_findings = tool_report.findings if tool_report else []
-    findings = rule_report.findings + metadata_findings + tool_findings
-    score = score_findings([f for f in findings if f.category != "tool_status"])
-    if findings and all(f.category == "tool_status" for f in findings):
-        score = 98
+    findings = prepare_professional_findings(rule_report.findings + metadata_findings + tool_findings, default_source_tool="explorer_address_scan")
+    real_findings = [f for f in findings if f.category != "tool_status"]
+    score = score_findings(real_findings) if real_findings else 98
     metadata = {
         **(rule_report.scan_metadata or {}),
         "address": normalized_address,
@@ -486,6 +493,7 @@ async def scan_contract_address(address: str, chain: str | None = None, project_
         },
         "abi_summary": abi_meta,
         "static_analysis_tools": (tool_report.scan_metadata if tool_report else {"state": "Tool Not Installed / Provider Not Configured / Not Assessed", "error": tool_error}),
+        "audit_grade_finding_summary": audit_grade_summary(findings, tool_runs=(tool_report.scan_metadata or {}).get("tool_runs", {}) if tool_report else {}),
         "safety_controls": {
             "verified_source_fetch": True,
             "private_key_collection": False,
@@ -502,8 +510,8 @@ async def scan_contract_address(address: str, chain: str | None = None, project_
         project_name=project_name or str(record.get("ContractName") or normalized_address),
         module_score=ModuleScore(module="contract", score=score, risk_label=risk_label(score), assessed=True),
         findings=findings,
-        severity_breakdown=severity_breakdown(findings),
-        priority_actions=priority_actions(findings),
+        severity_breakdown=severity_breakdown([f for f in findings if f.category != "tool_status"]),
+        priority_actions=priority_actions([f for f in findings if f.category != "tool_status"]),
         input_hash=_hash(f"{chain_id}:{normalized_address}:{source_text[:5000]}"),
         engine_version="web3guard-contract-address-engine-v13.0",
         scan_metadata=metadata,

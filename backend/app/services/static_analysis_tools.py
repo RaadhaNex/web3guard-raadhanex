@@ -15,6 +15,7 @@ from uuid import uuid4
 from app.core.config import settings
 from app.models.schemas import Finding, ModuleScore, ScanResponse
 from app.services.scoring import priority_actions, risk_label, score_findings, severity_breakdown
+from app.services.finding_normalizer import audit_grade_summary, prepare_professional_findings
 from app.services.solidity_utils import sha12
 
 ENGINE_VERSION = "web3guard-static-analysis-engine-v13.0"
@@ -144,6 +145,12 @@ def _base_finding(idx: int, *, tool: str, severity: str, title: str, description
         affected_column=column,
         affected_function=None,
         affected_code=code,
+        evidence=code or description[:420],
+        impact="Static analysis tool reported a code-level issue that may affect launch readiness.",
+        fix="Triage the tool finding, patch the affected code, add a regression test, and rerun the scanner.",
+        source_tools=[tool],
+        repro_steps=[f"Run {tool} on the supplied Solidity source and review the cited file/line."],
+        verification_status="tool_detected_needs_triage",
         confidence=confidence,  # type: ignore[arg-type]
         source=f"{tool.title()} Real Tool Output" if tool != "tool" else "Static Analysis Tool Runner",
         category=category,
@@ -285,6 +292,12 @@ def _tool_disabled_finding(idx: int, tool: str, reason: str) -> Finding:
         affected_line=None,
         affected_function=None,
         affected_code=None,
+        evidence=reason,
+        impact="This is a status message, not a vulnerability. It documents missing real tool coverage.",
+        fix=f"Install/configure {tool} and set the related environment flags, then rerun the scanner.",
+        source_tools=[tool],
+        repro_steps=["Check backend environment variables and tool binary path, then rerun scan."],
+        verification_status="status_only",
         confidence="high",
         source="Static Analysis Tool Status",
         category="tool_status",
@@ -388,12 +401,13 @@ def run_static_analysis_files(source_files: list[dict[str, str]], project_name: 
                             reason = str(run.get("error"))[:220]
                         findings.append(_tool_disabled_finding(next_idx, tool, f"{tool} attempted a real run but {reason}. Check tool logs in scan metadata.")); next_idx += 1
 
-        score = score_findings(findings)
-        if findings and all(f.category == "tool_status" and f.severity == "info" for f in findings):
-            score = 98
+        findings = prepare_professional_findings(findings, default_source_tool="static_analysis_runner")
+        real_findings = [f for f in findings if f.category != "tool_status"]
+        score = score_findings(real_findings) if real_findings else 98
         metadata = {
             "tool_status": status["tools"],
             "tool_runs": tool_runs,
+            "audit_grade_finding_summary": audit_grade_summary(findings, tool_runs=tool_runs),
             "requested_tools": valid_tools,
             "source_files_written": [str(path.relative_to(workdir)) for path in written_paths],
             "source_file_count": len(written_paths),
@@ -409,8 +423,8 @@ def run_static_analysis_files(source_files: list[dict[str, str]], project_name: 
             project_name=project_name,
             module_score=ModuleScore(module="static_analysis", score=score, risk_label=risk_label(score), assessed=True),  # type: ignore[arg-type]
             findings=findings[: settings.max_total_static_findings],
-            severity_breakdown=severity_breakdown([f for f in findings if f.category != "tool_status"]),
-            priority_actions=priority_actions([f for f in findings if f.category != "tool_status"]),
+            severity_breakdown=severity_breakdown(real_findings),
+            priority_actions=priority_actions(real_findings),
             input_hash=sha12("|".join(item["path"] + item["content"] for item in normalized_files)),
             engine_version=ENGINE_VERSION,
             scan_metadata=metadata,

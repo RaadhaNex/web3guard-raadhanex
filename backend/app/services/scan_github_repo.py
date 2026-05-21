@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.models.schemas import Finding, ModuleScore, ScanResponse
 from app.services.scan_contract import scan_solidity
 from app.services.static_analysis_tools import run_static_analysis_files
+from app.services.finding_normalizer import audit_grade_summary, prepare_professional_findings
 from app.services.scan_dapp_api import scan_api_backend, scan_dapp_frontend
 from app.services.scoring import priority_actions, risk_label, score_findings, severity_breakdown
 
@@ -167,6 +168,12 @@ def _finding(
         affected_line=line,
         affected_function=None,
         affected_code=snippet,
+        evidence=snippet or description[:420],
+        impact=business_impact,
+        fix=recommendation,
+        source_tools=["github"],
+        repro_steps=[f"Open {path} around line {line} and verify the cited evidence." if path and line else "Review the public repository evidence cited by the scanner."],
+        verification_status="rule_detected_needs_triage",
         confidence=confidence,  # type: ignore[arg-type]
         source=source,
         category=category,
@@ -688,7 +695,8 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
 
     findings.extend(_repo_readiness_findings(summary, len(findings) + 1))
 
-    score = score_findings(findings)
+    findings = prepare_professional_findings(findings, default_source_tool="github")
+    score = score_findings([f for f in findings if f.category != "tool_status"])
     metadata = {
         "version": "1.0",
         "mode": "read_only_public_github_api_scan",
@@ -712,6 +720,7 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
         "fetched_files": fetched_files,
         "linked_contract_reports": linked_reports,
         "static_analysis_tools": static_tool_summary,
+        "audit_grade_finding_summary": audit_grade_summary(findings, tool_runs=(static_tool_summary or {}).get("tool_runs", {}) if isinstance(static_tool_summary, dict) else {}),
         "safety_controls": {
             "clone_repo": False,
             "execute_code": False,
@@ -728,8 +737,8 @@ async def scan_github_repository(repo_url: str, *, project_name: str | None = No
         project_name=project_name or repo,
         module_score=ModuleScore(module="github", score=score, risk_label=risk_label(score)),  # type: ignore[arg-type]
         findings=findings,
-        severity_breakdown=severity_breakdown(findings),
-        priority_actions=priority_actions(findings, limit=8),
+        severity_breakdown=severity_breakdown([f for f in findings if f.category != "tool_status"]),
+        priority_actions=priority_actions([f for f in findings if f.category != "tool_status"], limit=8),
         input_hash=_hash(f"{owner}/{repo}@{effective_branch}|{len(limited_paths)}")[:16],
         engine_version="web3guard-github-repo-scanner-v11.0",
         scan_metadata=metadata,

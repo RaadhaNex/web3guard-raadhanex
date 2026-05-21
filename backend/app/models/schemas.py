@@ -35,6 +35,17 @@ class Finding(BaseModel):
     category: str = "general"
     rule_id: str | None = None
     fingerprint: str | None = None
+    evidence: str | None = None
+    impact: str | None = None
+    fix: str | None = None
+    source_tools: list[str] = Field(default_factory=list)
+    merged_from: list[str] = Field(default_factory=list)
+    occurrence_count: int = 1
+    repro_steps: list[str] = Field(default_factory=list)
+    verification_status: str = "unreviewed"
+    risk_path: str | None = None
+    exploitability: str | None = None
+    remediation_priority: str | None = None
     business_impact: str
     developer_explanation: str
     recommendation: str
